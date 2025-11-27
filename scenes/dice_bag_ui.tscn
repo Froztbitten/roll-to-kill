@@ -1,7 +1,7 @@
-[gd_scene load_steps=3 format=3 uid="uid://d1x2y3r4q5w6e"]
+[gd_scene load_steps=3 format=3 uid="uid://imh8eq8iee1n"]
 
-[ext_resource type="Texture2D" uid="uid://cfyguis60k7p6" path="res://icon.svg" id="1_abcde"]
-[ext_resource type="Script" path="res://scripts/dice_bag_ui.gd" id="2_fghij"]
+[ext_resource type="Texture2D" uid="uid://cu7tnjr1bbds7" path="res://icon.svg" id="1_abcde"]
+[ext_resource type="Script" uid="uid://b12wbq3fb34a" path="res://scripts/dice_bag_ui.gd" id="2_fghij"]
 
 [node name="DiceBagUI" type="HBoxContainer"]
 script = ExtResource("2_fghij")

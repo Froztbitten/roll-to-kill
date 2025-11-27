@@ -1,23 +1,31 @@
 extends HBoxContainer
 class_name DiceUI
 
-signal intent_created(die, roll, target)
+signal die_clicked(die_display)
 
-var die_display_scene = preload("res://scenes/die_display.tscn")
+# You must replace this placeholder path with the actual path to your DieDisplay scene.
+const DIE_DISPLAY_SCENE = preload("res://scenes/die_display.tscn")
 
-func clear_arrows():
-	get_tree().call_group("arrows", "queue_free")
+var die_displays = []
 
-func _on_intent_created(die, roll, target):
-	emit_signal("intent_created", die, roll, target)
 
-func set_hand(dice_hand):
-	# Clear existing dice displays
-	for child in get_children():
-		child.queue_free()
-
-	for die_data in dice_hand:
-		var die_display = die_display_scene.instantiate()
-		die_display.die = die_data
-		die_display.intent_created.connect(_on_intent_created)
+func set_hand(rolled_dice: Array):
+	# First, clear out the old dice from the previous turn.
+	clear_displays()
+	
+	# Now, create and display the new hand.
+	for die_data in rolled_dice:
+		var die_display = DIE_DISPLAY_SCENE.instantiate()
 		add_child(die_display)
+		die_display.set_die(die_data)
+		die_display.die_clicked.connect(func(display): emit_signal("die_clicked", display))
+		die_displays.append(die_display)
+
+
+func clear_displays():
+	"""
+	Removes all die display nodes that are children of this container.
+	"""
+	for display in get_children():
+		display.queue_free()
+	die_displays.clear()

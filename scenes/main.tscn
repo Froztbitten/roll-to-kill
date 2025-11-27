@@ -4,7 +4,7 @@
 [ext_resource type="Script" path="res://scripts/main.gd" id="1_v4h7v"]
 [ext_resource type="PackedScene" uid="uid://c6x0j2f3a2w0g" path="res://scenes/enemy.tscn" id="2_r1axt"]
 [ext_resource type="PackedScene" uid="uid://bdo2y3r4q5w6e" path="res://scenes/dice_ui.tscn" id="3_abcde"]
-[ext_resource type="PackedScene" uid="uid://d1x2y3r4q5w6e" path="res://scenes/dice_bag_ui.tscn" id="4_fghij"]
+[ext_resource type="PackedScene" path="res://scenes/dice_bag_ui.tscn" id="4_fghij"]
 
 [node name="Main" type="Node2D"]
 script = ExtResource("1_v4h7v")
@@ -12,7 +12,7 @@ script = ExtResource("1_v4h7v")
 [node name="Player" parent="." instance=ExtResource("1_t2esq")]
 position = Vector2(200, 300)
 
-[node name="Enemies" type="Node" parent="."]
+[node name="Enemies" type="Node2D" parent="."]
 
 [node name="Enemy" parent="Enemies" instance=ExtResource("2_r1axt")]
 position = Vector2(800, 150)
