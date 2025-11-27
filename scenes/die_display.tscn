@@ -1,0 +1,35 @@
+[gd_scene load_steps=3 format=3 uid="uid://dci7p7q1v8q2a"]
+
+[ext_resource type="Script" path="res://scripts/die_display.gd" id="1_abcde"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_12345"]
+size = Vector2(50, 50)
+
+[node name="DieDisplay" type="VBoxContainer"]
+script = ExtResource("1_abcde")
+
+[node name="Icon" type="TextureRect" parent="."]
+custom_minimum_size = Vector2(50, 50)
+layout_mode = 2
+expand_mode = 3
+stretch_mode = 5
+
+[node name="RollLabel" type="Label" parent="Icon"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+grow_horizontal = 2
+grow_vertical = 2
+text = "6"
+theme_override_colors/font_color = Color(0, 0, 0, 1)
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="Area2D" type="Area2D" parent="."]
+layout_mode = 2
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Area2D"]
+shape = SubResource("RectangleShape2D_12345")

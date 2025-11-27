@@ -1,0 +1,65 @@
+[gd_scene load_steps=6 format=3 uid="uid://bnpd5h2y0tnye"]
+
+[ext_resource type="PackedScene" uid="uid://bvyv5m1pde7i7" path="res://scenes/player.tscn" id="1_t2esq"]
+[ext_resource type="Script" path="res://scripts/main.gd" id="1_v4h7v"]
+[ext_resource type="PackedScene" uid="uid://c6x0j2f3a2w0g" path="res://scenes/enemy.tscn" id="2_r1axt"]
+[ext_resource type="PackedScene" uid="uid://bdo2y3r4q5w6e" path="res://scenes/dice_ui.tscn" id="3_abcde"]
+[ext_resource type="PackedScene" uid="uid://d1x2y3r4q5w6e" path="res://scenes/dice_bag_ui.tscn" id="4_fghij"]
+
+[node name="Main" type="Node2D"]
+script = ExtResource("1_v4h7v")
+
+[node name="Player" parent="." instance=ExtResource("1_t2esq")]
+position = Vector2(200, 300)
+
+[node name="Enemies" type="Node" parent="."]
+
+[node name="Enemy" parent="Enemies" instance=ExtResource("2_r1axt")]
+position = Vector2(800, 150)
+
+[node name="Enemy2" parent="Enemies" instance=ExtResource("2_r1axt")]
+position = Vector2(800, 300)
+
+[node name="Enemy3" parent="Enemies" instance=ExtResource("2_r1axt")]
+position = Vector2(800, 450)
+
+[node name="UI" type="CanvasLayer" parent="."]
+
+[node name="DiceUI" parent="UI" instance=ExtResource("3_abcde")]
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -150.0
+offset_top = -100.0
+offset_right = 150.0
+offset_bottom = -50.0
+grow_horizontal = 2
+grow_vertical = 0
+
+[node name="DiceBagUI" parent="UI" instance=ExtResource("4_fghij")]
+anchors_preset = 2
+anchor_top = 1.0
+anchor_bottom = 1.0
+offset_left = 20.0
+offset_top = -100.0
+offset_right = 120.0
+offset_bottom = -50.0
+grow_vertical = 0
+
+[node name="EndTurnButton" type="Button" parent="UI"]
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -50.0
+offset_top = -50.0
+offset_right = 50.0
+offset_bottom = -20.0
+grow_horizontal = 2
+grow_vertical = 0
+text = "End Turn"
+
+[connection signal="pressed" from="UI/EndTurnButton" to="." method="_on_end_turn_button_pressed"]
