@@ -3,9 +3,13 @@ extends Node2D
 var end_turn_button: Button
 @onready var dice_ui: DiceUI = $"UI/DiceUI"
 @onready var dice_bag_ui: Control = $"UI/DiceBagUI"
+@onready var intent_lines: Node2D = $IntentLines
+@onready var total_dice_value_label: Label = $"UI/TotalDiceValueLabel"
+@onready var total_incoming_damage_label: Label = $"UI/TotalIncomingDamageLabel"
 
 var intents: Dictionary = {}
 var selected_die_display = null
+
 
 func _ready():
 	end_turn_button = $"UI/EndTurnButton"
@@ -21,15 +25,29 @@ func player_turn():
 	dice_ui.clear_displays()
 	# Reset block at the start of the turn
 	GameManager.player.block = 0
-	intents = {}
+	_clear_intents()
 	_clear_selection()
 	
 	var rolled_dice = []
+	var total_dice_value = 0
 	var hand = GameManager.player.draw_hand()
 	for die in hand:
 		var roll = die.roll()
+		total_dice_value += roll
 		rolled_dice.append({"object": die, "value": roll, "sides": die.sides})
 	
+	total_dice_value_label.text = "Total: " + str(total_dice_value)
+	var total_incoming_damage = 0
+	# Have all living enemies declare their intents for the turn
+	for enemy in $Enemies.get_children():
+		if enemy.hp > 0:
+			enemy.declare_intent()
+			total_incoming_damage += enemy.next_damage
+	
+	total_incoming_damage_label.text = str(total_incoming_damage)
+	_update_intended_block_display()
+	_update_all_intended_damage_displays()
+
 	dice_ui.set_hand(rolled_dice)
 	dice_bag_ui.update_label(GameManager.player.dice.size())
 	end_turn_button.disabled = false
@@ -45,7 +63,7 @@ func resolve_dice_intents():
 		if intent.target is Player:
 			GameManager.player.block += intent.roll
 		else:
-			Utils.take_turn(GameManager.player, intent.target)
+			intent.target.take_damage(intent.roll)
 		
 	print("Player block: " + str(GameManager.player.block))
 
@@ -53,20 +71,37 @@ func enemy_turn():
 	end_turn_button.disabled = true
 	await get_tree().create_timer(1.0).timeout
 	if GameManager.current_turn == GameManager.Turn.ENEMY:
-		Utils.take_turn(GameManager.enemy, GameManager.player)
+		# Each living enemy attacks with its declared damage
+		for enemy in $Enemies.get_children():
+			if enemy.hp > 0:
+				GameManager.player.take_damage(enemy.next_damage)
+				enemy.clear_intent()
 		GameManager.next_turn()
 		player_turn()
 
 func _on_die_clicked(die_display):
-	if selected_die_display == die_display:
-		# If the same die is clicked again, deselect it
+	var just_cleared_intent = false
+	# If the clicked die already has an intent, clear that intent first.
+	if intents.has(die_display):
+		var intent_data = intents[die_display]
+		if intent_data.has("line"):
+			intent_data.line.queue_free()
+		intents.erase(die_display)
+		print("Cleared existing intent for die with value: " + str(die_display.die.value))
+		_update_all_intended_damage_displays()
+		_update_intended_block_display()
+		just_cleared_intent = true
+
+	# If we clicked the currently selected die (and didn't just clear its intent), deselect it.
+	if selected_die_display == die_display and not just_cleared_intent:
 		_clear_selection()
 	else:
-		# Deselect the old one (if any)
+		# A new die was clicked, or an old intent was just cleared.
+		# Deselect any other die that might be selected.
 		if selected_die_display:
 			selected_die_display.deselect()
 		
-		# Select the new one
+		# Select the clicked die and start the intent action.
 		selected_die_display = die_display
 		selected_die_display.select()
 		print("Intent action started. Select a target for die with value: " + str(selected_die_display.die.value))
@@ -108,17 +143,66 @@ func _on_character_clicked(character):
 	# A dictionary (die_data) cannot be used as a key.
 	var die_object = selected_die_display.die.object
 	var die_roll_value = selected_die_display.die.value
-	intents[selected_die_display] = {"die": die_object, "roll": die_roll_value, "target": character}
+
+	# Create and draw the intent line
+	var line = Line2D.new()
+	line.width = 3.0
+	line.default_color = Color.CRIMSON
+	line.add_point(selected_die_display.get_global_transform_with_canvas().get_origin() + selected_die_display.size / 2)
+	line.add_point(character.global_position)
+	intent_lines.add_child(line)
+
+	intents[selected_die_display] = {"die": die_object, "roll": die_roll_value, "target": character, "line": line}
 	print("Intents: " + str(intents))
 
 	# Visually "consume" the die by making it inactive.
 	# This prevents using the same die for multiple intents.
-	selected_die_display.set_process_input(false)
-	selected_die_display.modulate = Color(0.5, 0.5, 0.5)
 	# Deselect the die after using it
 	_clear_selection()
+	_update_intended_block_display()
+	_update_all_intended_damage_displays()
 
 func _clear_selection():
 	if selected_die_display:
 		selected_die_display.deselect()
 	selected_die_display = null
+
+func _clear_intents():
+	# Free the line nodes before clearing the dictionary
+	for intent_data in intents.values():
+		if intent_data.has("line"):
+			intent_data.line.queue_free()
+	intents.clear()
+
+func _update_intended_block_display():
+	var total_intended_block = 0
+	for intent_data in intents.values():
+		if intent_data.target is Player:
+			total_intended_block += intent_data.roll
+	
+	var label = GameManager.player.get_node("IntendedBlockLabel")
+	if total_intended_block > 0:
+		label.text = "+" + str(total_intended_block)
+		label.visible = true
+	else:
+		label.visible = false
+
+func _update_all_intended_damage_displays():
+	# First, reset the display for all enemies
+	for enemy in $Enemies.get_children():
+		var label = enemy.get_node("IntendedDamageLabel")
+		label.visible = false
+
+	# Then, calculate the total for each enemy based on current intents
+	var enemy_damage_map = {}
+	for intent_data in intents.values():
+		if not intent_data.target is Player:
+			if not enemy_damage_map.has(intent_data.target):
+				enemy_damage_map[intent_data.target] = 0
+			enemy_damage_map[intent_data.target] += intent_data.roll
+	
+	# Finally, update the labels for enemies with intended damage
+	for enemy in enemy_damage_map:
+		var label = enemy.get_node("IntendedDamageLabel")
+		label.text = "-" + str(enemy_damage_map[enemy])
+		label.visible = true

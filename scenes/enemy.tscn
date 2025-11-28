@@ -3,6 +3,7 @@
 [ext_resource type="Script" uid="uid://dj62e2af6tm5x" path="res://scripts/enemy.gd" id="1_4qfxc"]
 [ext_resource type="Texture2D" uid="uid://cu7tnjr1bbds7" path="res://icon.svg" id="2_abcde"]
 [ext_resource type="PackedScene" uid="uid://cgrc3aet23kli" path="res://scenes/health_bar.tscn" id="3_m1yav"]
+[ext_resource type="PackedScene" uid="uid://b1c2d3e4f5g6" path="res://scenes/enemy_intent_display.tscn" id="4_hijkl"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_12345"]
 size = Vector2(128, 128)
@@ -18,3 +19,25 @@ position = Vector2(0, -80)
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="."]
 shape = SubResource("RectangleShape2D_12345")
+
+[node name="EnemyIntentDisplay" parent="." instance=ExtResource("4_hijkl")]
+layout_mode = 1
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -32.0
+offset_top = -140.0
+offset_right = 32.0
+offset_bottom = -76.0
+grow_horizontal = 2
+
+[node name="IntendedDamageLabel" type="Label" parent="."]
+visible = false
+offset_left = -120.0
+offset_top = -15.0
+offset_right = -80.0
+offset_bottom = 25.0
+theme_override_colors/font_color = Color(1, 0.6, 0.6, 1)
+theme_override_font_sizes/font_size = 32
+text = "+9"
+horizontal_alignment = 2

@@ -12,16 +12,28 @@ script = ExtResource("1_v4h7v")
 [node name="Player" parent="." instance=ExtResource("1_t2esq")]
 position = Vector2(200, 300)
 
+[node name="IntendedBlockLabel" type="Label" parent="Player"]
+visible = false
+offset_left = 80.0
+offset_top = -15.0
+offset_right = 120.0
+offset_bottom = 25.0
+theme_override_colors/font_color = Color(0.6, 0.7, 1, 1)
+theme_override_font_sizes/font_size = 32
+text = "+5"
+
+[node name="IntentLines" type="Node2D" parent="."]
+
 [node name="Enemies" type="Node2D" parent="."]
 
 [node name="Enemy" parent="Enemies" instance=ExtResource("2_r1axt")]
-position = Vector2(800, 150)
+position = Vector2(850, 150)
 
 [node name="Enemy2" parent="Enemies" instance=ExtResource("2_r1axt")]
-position = Vector2(800, 300)
+position = Vector2(850, 330)
 
 [node name="Enemy3" parent="Enemies" instance=ExtResource("2_r1axt")]
-position = Vector2(800, 450)
+position = Vector2(850, 510)
 
 [node name="UI" type="CanvasLayer" parent="."]
 
@@ -31,10 +43,10 @@ anchor_left = 0.5
 anchor_top = 1.0
 anchor_right = 0.5
 anchor_bottom = 1.0
-offset_left = -150.0
-offset_top = -100.0
-offset_right = 150.0
-offset_bottom = -50.0
+offset_left = -200.0
+offset_top = -125.0
+offset_right = 200.0
+offset_bottom = -75.0
 grow_horizontal = 2
 grow_vertical = 0
 
@@ -61,5 +73,32 @@ offset_bottom = -20.0
 grow_horizontal = 2
 grow_vertical = 0
 text = "End Turn"
+
+[node name="TotalDiceValueLabel" type="Label" parent="UI"]
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -50.0
+offset_top = -75.0
+offset_right = 50.0
+offset_bottom = -52.0
+grow_horizontal = 2
+grow_vertical = 0
+horizontal_alignment = 1
+
+[node name="TotalIncomingDamageLabel" type="Label" parent="UI"]
+anchors_preset = 4
+anchor_top = 0.5
+anchor_bottom = 0.5
+offset_left = 725.0
+offset_top = -23.0
+offset_right = 765.0
+offset_bottom = 23.0
+grow_vertical = 2
+theme_override_font_sizes/font_size = 32
+text = "15"
+horizontal_alignment = 1
 
 [connection signal="pressed" from="UI/EndTurnButton" to="." method="_on_end_turn_button_pressed"]

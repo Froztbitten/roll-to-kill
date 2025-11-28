@@ -1,29 +1,30 @@
-extends Node2D
+extends CharacterBody2D
 class_name Character
 
-signal no_health
-
-@export var max_health: int = 100
-var current_health: int
-var block: int = 0
+@export var hp: int = 100
+@export var max_hp: int = 100
+@export var block: int = 0
 
 @onready var health_bar = $HealthBar
 
 func _ready():
-	current_health = max_health
-	health_bar.max_value = max_health
-	health_bar.value = current_health
+	update_health_display()
 
-func take_damage(damage_amount):
-	var damage_to_take = damage_amount - block
-	block = max(0, block - damage_amount)
-	
-	if damage_to_take > 0:
-		current_health -= damage_to_take
-		health_bar.value = current_health
-		if current_health <= 0:
-			emit_signal("no_health")
-			die()
+func take_damage(damage: int):
+	var damage_to_take = damage
+	if block > 0:
+		var blocked_damage = min(damage_to_take, block)
+		damage_to_take -= blocked_damage
+		block -= blocked_damage
+		print("%s blocked %d damage." % [name, blocked_damage])
 
-func die():
-	queue_free()
+	hp -= damage_to_take
+	if hp < 0:
+		hp = 0
+
+	update_health_display()
+	print("%s took %d damage, has %d HP left." % [name, damage_to_take, hp])
+
+func update_health_display():
+	if health_bar:
+		health_bar.update_display(hp, max_hp)
