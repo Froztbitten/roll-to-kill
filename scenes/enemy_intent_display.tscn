@@ -1,7 +1,9 @@
-[gd_scene load_steps=3 format=3 uid="uid://b1c2d3e4f5g6"]
+[gd_scene load_steps=5 format=3 uid="uid://b1c2d3e4f5g6"]
 
 [ext_resource type="Script" path="res://scripts/enemy_intent_display.gd" id="1_abcde"]
 [ext_resource type="Texture2D" path="res://assets/d8.svg" id="2_fghij"]
+[ext_resource type="Texture2D" path="res://assets/sword.svg" id="3_sword"]
+[ext_resource type="Texture2D" path="res://assets/shield.svg" id="4_shield"]
 
 [node name="EnemyIntentDisplay" type="Control"]
 layout_mode = 3
@@ -19,6 +21,23 @@ grow_horizontal = 2
 grow_vertical = 2
 texture = ExtResource("2_fghij")
 expand_mode = 2
+stretch_mode = 5
+
+[node name="ActionTypeIcon" type="TextureRect" parent="."]
+visible = false
+layout_mode = 1
+anchors_preset = 6
+anchor_left = 1.0
+anchor_top = 0.5
+anchor_right = 1.0
+anchor_bottom = 0.5
+offset_left = 0.0
+offset_top = -16.0
+offset_right = 32.0
+offset_bottom = 16.0
+grow_horizontal = 0
+texture = ExtResource("3_sword")
+expand_mode = 1
 stretch_mode = 5
 
 [node name="RollLabel" type="Label" parent="Icon"]

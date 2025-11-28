@@ -4,12 +4,15 @@ var end_turn_button: Button
 @onready var dice_ui: DiceUI = $"UI/DiceUI"
 @onready var dice_bag_ui: Control = $"UI/DiceBagUI"
 @onready var intent_lines: Node2D = $IntentLines
+@onready var discard_pile_ui = $"UI/DiscardPileUI"
 @onready var total_dice_value_label: Label = $"UI/TotalDiceValueLabel"
 @onready var total_incoming_damage_label: Label = $"UI/TotalIncomingDamageLabel"
 @onready var victory_screen = $"UI/VictoryScreen"
+@onready var defeat_screen = $"UI/DefeatScreen"
 
 var intents: Dictionary = {}
 var selected_die_display = null
+var current_hand_dice: Array[Dice] = []
 var current_incoming_damage: int = 0
 
 
@@ -20,6 +23,7 @@ func _ready():
 
 	# Connect signals
 	dice_ui.die_clicked.connect(_on_die_clicked)
+	GameManager.player.died.connect(_on_player_died)
 	
 	# Connect the died signal for each enemy
 	for enemy in $Enemies.get_children():
@@ -33,12 +37,18 @@ func player_turn():
 	GameManager.player.block = 0
 	_clear_intents()
 	_clear_selection()
+
+	# Discard the dice from the previous hand
+	if not current_hand_dice.is_empty():
+		GameManager.player.discard_pile.append_array(current_hand_dice)
+		current_hand_dice.clear()
 	
 	var rolled_dice = []
 	var total_dice_value = 0
 	var hand = GameManager.player.draw_hand()
 	for die in hand:
 		var roll = die.roll()
+		current_hand_dice.append(die) # Keep track of the dice in the current hand
 		total_dice_value += roll
 		rolled_dice.append({"object": die, "value": roll, "sides": die.sides})
 	
@@ -47,8 +57,12 @@ func player_turn():
 	# Have all living enemies declare their intents for the turn
 	for enemy in $Enemies.get_children():
 		if enemy.hp > 0:
+			# Reset enemy block at the start of the player's turn
+			enemy.block = 0
+			enemy.update_health_display()
+
 			enemy.declare_intent()
-			current_incoming_damage += enemy.next_damage
+			current_incoming_damage += enemy.next_action_value
 	
 	total_incoming_damage_label.text = str(current_incoming_damage)
 	_update_intended_block_display()
@@ -56,6 +70,7 @@ func player_turn():
 
 	dice_ui.set_hand(rolled_dice)
 	dice_bag_ui.update_label(GameManager.player.dice.size())
+	discard_pile_ui.update_label(GameManager.player.discard_pile.size())
 	end_turn_button.disabled = false
 
 func _on_end_turn_button_pressed():
@@ -80,7 +95,11 @@ func enemy_turn():
 		# Each living enemy attacks with its declared damage
 		for enemy in $Enemies.get_children():
 			if enemy.hp > 0:
-				GameManager.player.take_damage(enemy.next_damage)
+				if enemy.next_action.action_type == EnemyAction.ActionType.ATTACK:
+					GameManager.player.take_damage(enemy.next_action_value)
+				elif enemy.next_action.action_type == EnemyAction.ActionType.SHIELD:
+					enemy.block += enemy.next_action_value
+					enemy.update_health_display()
 				enemy.clear_intent()
 		GameManager.next_turn()
 		player_turn()
@@ -283,3 +302,6 @@ func _on_enemy_died():
 func _on_play_again_button_pressed():
 	# Reload the entire main scene to restart the game.
 	get_tree().reload_current_scene()
+
+func _on_player_died():
+	defeat_screen.visible = true

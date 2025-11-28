@@ -1,16 +1,20 @@
-[gd_scene load_steps=5 format=3 uid="uid://goblin_scene_id"]
+[gd_scene load_steps=10 format=3 uid="uid://dnt4jl4dwldgp"]
 
-[ext_resource type="Script" path="res://scripts/goblin.gd" id="1_abcde"]
-[ext_resource type="Texture2D" uid="uid://cu7tnjr1bbds7" path="res://icon.svg" id="2_fghij"]
+[ext_resource type="Script" uid="uid://dmw2ueyju8k7y" path="res://scripts/goblin.gd" id="1_abcde"]
+[ext_resource type="Texture2D" uid="uid://beajvslq8j3h5" path="res://assets/goblin.svg" id="2_fghij"]
+[ext_resource type="Script" uid="uid://djeev1jhalfah" path="res://scripts/enemy_action.gd" id="2_u21pb"]
 [ext_resource type="PackedScene" uid="uid://cgrc3aet23kli" path="res://scenes/health_bar.tscn" id="3_klmno"]
-[ext_resource type="Texture2D" path="res://assets/skull.svg" id="4_skull"]
+[ext_resource type="Resource" uid="uid://dk26jh458g4n" path="res://resources/goblin_prick.tres" id="3_vho8j"]
+[ext_resource type="Resource" uid="uid://yabvtrdrij5w" path="res://resources/goblin_cower.tres" id="4_g2t3q"]
 [ext_resource type="PackedScene" uid="uid://b1c2d3e4f5g6" path="res://scenes/enemy_intent_display.tscn" id="4_pqrst"]
+[ext_resource type="Texture2D" uid="uid://by2uceaetwslb" path="res://assets/skull.svg" id="4_skull"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_12345"]
 size = Vector2(128, 128)
 
 [node name="Goblin" type="CharacterBody2D" groups=["enemies"]]
 script = ExtResource("1_abcde")
+action_pool = Array[ExtResource("2_u21pb")]([ExtResource("3_vho8j"), ExtResource("4_g2t3q")])
 
 [node name="Sprite2D" type="Sprite2D" parent="."]
 scale = Vector2(0.75, 0.75)
@@ -18,7 +22,6 @@ texture = ExtResource("2_fghij")
 
 [node name="LethalDamageIndicator" type="TextureRect" parent="."]
 visible = false
-layout_mode = 1
 anchors_preset = 8
 anchor_left = 0.5
 anchor_top = 0.5
@@ -28,31 +31,45 @@ offset_left = -24.0
 offset_top = -24.0
 offset_right = 24.0
 offset_bottom = 24.0
+grow_horizontal = 2
+grow_vertical = 2
 texture = ExtResource("4_skull")
 
+[node name="NameLabel" type="Label" parent="."]
+offset_left = -50.0
+offset_top = -85.0
+offset_right = 50.0
+offset_bottom = -62.0
+theme_override_font_sizes/font_size = 18
+text = "Goblin"
+horizontal_alignment = 1
+vertical_alignment = 1
+
 [node name="HealthBar" parent="." instance=ExtResource("3_klmno")]
-position = Vector2(0, -60)
+offset_left = -50.0
+offset_top = -60.0
+offset_right = 50.0
+offset_bottom = -33.0
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="."]
 scale = Vector2(0.75, 0.75)
 shape = SubResource("RectangleShape2D_12345")
 
 [node name="EnemyIntentDisplay" parent="." instance=ExtResource("4_pqrst")]
-layout_mode = 1
 anchors_preset = 5
 anchor_left = 0.5
 anchor_right = 0.5
-offset_left = -80.0
+offset_left = -120.0
 offset_top = -24.0
-offset_right = -32.0
+offset_right = -72.0
 offset_bottom = 40.0
 grow_horizontal = 2
 
 [node name="IntendedDamageLabel" type="Label" parent="."]
 visible = false
-offset_left = -120.0
+offset_left = -160.0
 offset_top = -15.0
-offset_right = -80.0
+offset_right = -120.0
 offset_bottom = 12.0
 theme_override_colors/font_color = Color(1, 0.6, 0.6, 1)
 theme_override_font_sizes/font_size = 32

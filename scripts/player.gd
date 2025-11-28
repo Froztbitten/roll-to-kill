@@ -38,7 +38,6 @@ func draw_hand():
 			var random_index = randi() % dice.size()
 			var drawn_die = dice.pop_at(random_index)
 			drawn_dice.append(drawn_die)
-			discard_pile.append(drawn_die)
 	return drawn_dice
 
 func shuffle_discard_pile_into_deck():

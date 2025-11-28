@@ -8,6 +8,7 @@ signal died
 @export var block: int = 0
 
 @onready var health_bar = $HealthBar
+@onready var name_label: Label = $NameLabel
 
 func _ready():
 	update_health_display()

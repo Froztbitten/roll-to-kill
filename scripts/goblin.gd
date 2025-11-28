@@ -1,6 +1,9 @@
 extends Enemy
 class_name Goblin
 
+# --- IMPORTANT ---
+# You must create EnemyAction resources in the editor and assign them to this array.
+
 
 func _ready():
 	# Call the parent's _ready function first to ensure nodes are ready.
@@ -17,10 +20,3 @@ func _ready():
 	
 	# Update the health bar display with the new randomized values
 	update_health_display()
-
-
-func declare_intent():
-	# --- Goblins attack with a 1d4 die ---
-	next_damage = randi() % 4 + 1
-	intent_display.update_display(next_damage, 4)
-	intent_display.visible = true

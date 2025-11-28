@@ -2,9 +2,11 @@
 
 [ext_resource type="PackedScene" uid="uid://bvyv5m1pde7i7" path="res://scenes/player.tscn" id="1_t2esq"]
 [ext_resource type="Script" path="res://scripts/main.gd" id="1_v4h7v"]
-[ext_resource type="PackedScene" uid="uid://goblin_scene_id" path="res://scenes/goblin.tscn" id="2_r1axt"]
+[ext_resource type="PackedScene" path="res://scenes/goblin.tscn" id="2_r1axt"]
 [ext_resource type="PackedScene" uid="uid://bdo2y3r4q5w6e" path="res://scenes/dice_ui.tscn" id="3_abcde"]
 [ext_resource type="PackedScene" uid="uid://victory_screen_id" path="res://scenes/victory_screen.tscn" id="5_vwxyz"]
+[ext_resource type="PackedScene" uid="uid://defeat_screen_id" path="res://scenes/defeat_screen.tscn" id="7_abcde"]
+[ext_resource type="PackedScene" uid="uid://discard_pile_ui_id" path="res://scenes/discard_pile_ui.tscn" id="6_klmno"]
 [ext_resource type="PackedScene" path="res://scenes/dice_bag_ui.tscn" id="4_fghij"]
 
 [node name="Main" type="Node2D"]
@@ -64,6 +66,15 @@ offset_right = 120.0
 offset_bottom = -50.0
 grow_vertical = 0
 
+[node name="DiscardPileUI" parent="UI" instance=ExtResource("6_klmno")]
+anchors_preset = 2
+anchor_top = 1.0
+anchor_bottom = 1.0
+offset_left = 140.0
+offset_top = -100.0
+offset_right = 240.0
+offset_bottom = -50.0
+
 [node name="EndTurnButton" type="Button" parent="UI"]
 anchors_preset = 7
 anchor_left = 0.5
@@ -96,9 +107,9 @@ horizontal_alignment = 1
 anchors_preset = 4
 anchor_top = 0.5
 anchor_bottom = 0.5
-offset_left = 725.0
+offset_left = 675.0
 offset_top = -23.0
-offset_right = 765.0
+offset_right = 715.0
 offset_bottom = 23.0
 grow_vertical = 2
 theme_override_font_sizes/font_size = 32
@@ -110,4 +121,9 @@ horizontal_alignment = 1
 [node name="VictoryScreen" parent="UI" instance=ExtResource("5_vwxyz")]
 visible = false
 
+[node name="DefeatScreen" parent="UI" instance=ExtResource("7_abcde")]
+visible = false
+
 [connection signal="pressed" from="UI/VictoryScreen/VBoxContainer/PlayAgainButton" to="." method="_on_play_again_button_pressed"]
+
+[connection signal="pressed" from="UI/DefeatScreen/VBoxContainer/PlayAgainButton" to="." method="_on_play_again_button_pressed"]
