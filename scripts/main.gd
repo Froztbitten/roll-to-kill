@@ -10,6 +10,7 @@ var end_turn_button: Button
 
 var intents: Dictionary = {}
 var selected_die_display = null
+var current_incoming_damage: int = 0
 
 
 func _ready():
@@ -42,14 +43,14 @@ func player_turn():
 		rolled_dice.append({"object": die, "value": roll, "sides": die.sides})
 	
 	total_dice_value_label.text = "Total: " + str(total_dice_value)
-	var total_incoming_damage = 0
+	current_incoming_damage = 0
 	# Have all living enemies declare their intents for the turn
 	for enemy in $Enemies.get_children():
 		if enemy.hp > 0:
 			enemy.declare_intent()
-			total_incoming_damage += enemy.next_damage
+			current_incoming_damage += enemy.next_damage
 	
-	total_incoming_damage_label.text = str(total_incoming_damage)
+	total_incoming_damage_label.text = str(current_incoming_damage)
 	_update_intended_block_display()
 	_update_all_intended_damage_displays()
 
@@ -232,6 +233,10 @@ func _update_intended_block_display():
 		label.visible = true
 	else:
 		label.visible = false
+	
+	# Update the player's health bar to show the damage preview
+	var net_damage = max(0, current_incoming_damage - total_intended_block)
+	GameManager.player.update_health_display(net_damage)
 
 func _update_all_intended_damage_displays():
 	# First, reset the display for all enemies

@@ -11,8 +11,6 @@ bg_color = Color(0.8, 0.2, 0.2, 1)
 [node name="HealthBar" type="ProgressBar"]
 offset_right = 100.0
 offset_bottom = 15.0
-value = 50.0
-theme_override_styles/fill = SubResource("StyleBoxFlat_green")
 show_percentage = false
 script = ExtResource("1_abcde")
 
@@ -24,7 +22,18 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 theme_override_styles/fill = SubResource("StyleBoxFlat_red")
-value = 75.0
+value = 100.0
+show_percentage = false
+
+[node name="HealthBarFill" type="ProgressBar" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+value = 100.0
+theme_override_styles/fill = SubResource("StyleBoxFlat_green")
 show_percentage = false
 
 [node name="Label" type="Label" parent="."]
