@@ -3,6 +3,7 @@
 [ext_resource type="Script" uid="uid://dj62e2af6tm5x" path="res://scripts/enemy.gd" id="1_4qfxc"]
 [ext_resource type="Texture2D" uid="uid://cu7tnjr1bbds7" path="res://icon.svg" id="2_abcde"]
 [ext_resource type="PackedScene" uid="uid://cgrc3aet23kli" path="res://scenes/health_bar.tscn" id="3_m1yav"]
+[ext_resource type="Texture2D" path="res://assets/skull.svg" id="4_skull"]
 [ext_resource type="PackedScene" uid="uid://b1c2d3e4f5g6" path="res://scenes/enemy_intent_display.tscn" id="4_hijkl"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_12345"]
@@ -13,6 +14,20 @@ script = ExtResource("1_4qfxc")
 
 [node name="Sprite2D" type="Sprite2D" parent="."]
 texture = ExtResource("2_abcde")
+
+[node name="LethalDamageIndicator" type="TextureRect" parent="."]
+visible = false
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -32.0
+offset_top = -32.0
+offset_right = 32.0
+offset_bottom = 32.0
+texture = ExtResource("4_skull")
 
 [node name="HealthBar" parent="." instance=ExtResource("3_m1yav")]
 position = Vector2(0, -80)
@@ -25,10 +40,10 @@ layout_mode = 1
 anchors_preset = 5
 anchor_left = 0.5
 anchor_right = 0.5
-offset_left = -32.0
-offset_top = -140.0
-offset_right = 32.0
-offset_bottom = -76.0
+offset_left = -80.0
+offset_top = -32.0
+offset_right = -16.0
+offset_bottom = 32.0
 grow_horizontal = 2
 
 [node name="IntendedDamageLabel" type="Label" parent="."]

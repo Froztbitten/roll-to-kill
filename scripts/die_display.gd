@@ -4,12 +4,7 @@ signal die_clicked(die_display)
 
 # --- IMPORTANT ---
 # You must replace these placeholder paths with the actual paths to your dice face images.
-# The paths have been corrected to match your project structure.
-const FACES = [
-	preload("res://assets/d6.svg"),
-	preload("res://assets/d8.svg"),
-	preload("res://assets/d10.svg")
-]
+var FACES = {}
 
 # When the 'die' variable is set from dice_ui.gd, the 'set_die' function will be called.
 var die: Dictionary:
@@ -20,6 +15,20 @@ var die: Dictionary:
 
 func _ready():
 	print("DieDisplay _ready: die = " + str(die))
+	FACES = {
+		2: load("res://assets/coin.svg"),
+		4: load("res://assets/d4.svg"),
+		6: load("res://assets/d6.svg"),
+		8: load("res://assets/d8.svg"),
+		10: load("res://assets/d10.svg"),
+		12: load("res://assets/d12.svg"),
+		20: load("res://assets/d20.svg")
+	}
+	
+	# Set font color to black with a white outline for better readability
+	roll_label.add_theme_color_override("font_color", Color.BLACK)
+	roll_label.add_theme_color_override("font_outline_color", Color.WHITE)
+	roll_label.add_theme_constant_override("outline_size", 4)
 	# Temporary debug text to see if it gets overwritten
 	roll_label.text = "DEBUG_DEFAULT" 
 	if die:
@@ -44,27 +53,23 @@ func update_display():
 		var die_sides = die["sides"]
 		print("DieDisplay: Displaying Roll: " + str(die_value) + ", Sides: " + str(die_sides))
 		roll_label.text = str(die_value)
-		var icon_index = -1
-		match die_sides:
-			6:
-				icon_index = 0
-			8:
-				icon_index = 1
-			10:
-				icon_index = 2
 		
-		if icon_index != -1 and not FACES.is_empty():
-			icon.texture = FACES[icon_index]
+		if FACES.has(die_sides):
+			icon.texture = FACES[die_sides]
 
 
 func select():
 	# Visually indicate that the die is selected (e.g., make it brighter)
-	modulate = Color(1.5, 1.5, 1.5)
+	modulate = Color(1.8, 1.8, 1.8)
+	var tween = create_tween().set_trans(Tween.TRANS_SINE)
+	tween.tween_property(self, "scale", Vector2(1.15, 1.15), 0.1)
 
 
 func deselect():
 	# Return to normal appearance
 	modulate = Color(1, 1, 1)
+	var tween = create_tween().set_trans(Tween.TRANS_SINE)
+	tween.tween_property(self, "scale", Vector2(1.0, 1.0), 0.1)
 
 
 func _gui_input(event: InputEvent):

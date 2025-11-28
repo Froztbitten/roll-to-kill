@@ -9,16 +9,17 @@ func _ready():
 	super._ready()
 	
 	# Define the initial deck
-	var d6 = preload("res://scripts/dice.gd")
-	var d8 = preload("res://scripts/dice.gd")
-	var d10 = preload("res://scripts/dice.gd")
+	var dice_resource = preload("res://scripts/dice.gd")
 	
-	deck.append(d6.new(6))
-	deck.append(d6.new(6))
-	deck.append(d6.new(6))
-	deck.append(d8.new(8))
-	deck.append(d8.new(8))
-	deck.append(d10.new(10))
+	deck.append(dice_resource.new(4))
+	deck.append(dice_resource.new(6))
+	deck.append(dice_resource.new(6))
+	deck.append(dice_resource.new(6))
+	deck.append(dice_resource.new(8))
+	deck.append(dice_resource.new(8))
+	deck.append(dice_resource.new(10))
+	deck.append(dice_resource.new(12))
+	deck.append(dice_resource.new(20))
 	
 	initialize()
 

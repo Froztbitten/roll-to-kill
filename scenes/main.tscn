@@ -2,8 +2,9 @@
 
 [ext_resource type="PackedScene" uid="uid://bvyv5m1pde7i7" path="res://scenes/player.tscn" id="1_t2esq"]
 [ext_resource type="Script" path="res://scripts/main.gd" id="1_v4h7v"]
-[ext_resource type="PackedScene" uid="uid://c6x0j2f3a2w0g" path="res://scenes/enemy.tscn" id="2_r1axt"]
+[ext_resource type="PackedScene" uid="uid://goblin_scene_id" path="res://scenes/goblin.tscn" id="2_r1axt"]
 [ext_resource type="PackedScene" uid="uid://bdo2y3r4q5w6e" path="res://scenes/dice_ui.tscn" id="3_abcde"]
+[ext_resource type="PackedScene" uid="uid://victory_screen_id" path="res://scenes/victory_screen.tscn" id="5_vwxyz"]
 [ext_resource type="PackedScene" path="res://scenes/dice_bag_ui.tscn" id="4_fghij"]
 
 [node name="Main" type="Node2D"]
@@ -22,18 +23,21 @@ theme_override_colors/font_color = Color(0.6, 0.7, 1, 1)
 theme_override_font_sizes/font_size = 32
 text = "+5"
 
-[node name="IntentLines" type="Node2D" parent="."]
-
 [node name="Enemies" type="Node2D" parent="."]
 
-[node name="Enemy" parent="Enemies" instance=ExtResource("2_r1axt")]
+[node name="IntentLines" type="Node2D" parent="."]
+
+[node name="Goblin" parent="Enemies" instance=ExtResource("2_r1axt")]
 position = Vector2(850, 150)
 
-[node name="Enemy2" parent="Enemies" instance=ExtResource("2_r1axt")]
-position = Vector2(850, 330)
+[node name="Goblin2" parent="Enemies" instance=ExtResource("2_r1axt")]
+position = Vector2(850, 290)
 
-[node name="Enemy3" parent="Enemies" instance=ExtResource("2_r1axt")]
-position = Vector2(850, 510)
+[node name="Goblin3" parent="Enemies" instance=ExtResource("2_r1axt")]
+position = Vector2(850, 430)
+
+[node name="Goblin4" parent="Enemies" instance=ExtResource("2_r1axt")]
+position = Vector2(850, 570)
 
 [node name="UI" type="CanvasLayer" parent="."]
 
@@ -102,3 +106,8 @@ text = "15"
 horizontal_alignment = 1
 
 [connection signal="pressed" from="UI/EndTurnButton" to="." method="_on_end_turn_button_pressed"]
+
+[node name="VictoryScreen" parent="UI" instance=ExtResource("5_vwxyz")]
+visible = false
+
+[connection signal="pressed" from="UI/VictoryScreen/VBoxContainer/PlayAgainButton" to="." method="_on_play_again_button_pressed"]

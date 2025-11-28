@@ -6,6 +6,7 @@ var end_turn_button: Button
 @onready var intent_lines: Node2D = $IntentLines
 @onready var total_dice_value_label: Label = $"UI/TotalDiceValueLabel"
 @onready var total_incoming_damage_label: Label = $"UI/TotalIncomingDamageLabel"
+@onready var victory_screen = $"UI/VictoryScreen"
 
 var intents: Dictionary = {}
 var selected_die_display = null
@@ -18,6 +19,10 @@ func _ready():
 
 	# Connect signals
 	dice_ui.die_clicked.connect(_on_die_clicked)
+	
+	# Connect the died signal for each enemy
+	for enemy in $Enemies.get_children():
+		enemy.died.connect(_on_enemy_died)
 
 	player_turn()
 
@@ -144,15 +149,56 @@ func _on_character_clicked(character):
 	var die_object = selected_die_display.die.object
 	var die_roll_value = selected_die_display.die.value
 
-	# Create and draw the intent line
-	var line = Line2D.new()
-	line.width = 3.0
-	line.default_color = Color.CRIMSON
-	line.add_point(selected_die_display.get_global_transform_with_canvas().get_origin() + selected_die_display.size / 2)
-	line.add_point(character.global_position)
-	intent_lines.add_child(line)
+	# --- Create the full arrow with outline and arrowhead ---
+	var arrow_container = Node2D.new()
 
-	intents[selected_die_display] = {"die": die_object, "roll": die_roll_value, "target": character, "line": line}
+	# 1. Create the black outline line (drawn first)
+	var line_outline = Line2D.new()
+	line_outline.width = 7.0 # Thicker for the outline effect
+	line_outline.default_color = Color.BLACK
+	arrow_container.add_child(line_outline)
+
+	# 2. Create the main colored line
+	var line_main = Line2D.new()
+	line_main.width = 3.0
+	if character is Player:
+		line_main.default_color = Color(0.6, 0.7, 1, 1)
+	else:
+		line_main.default_color = Color.CRIMSON
+	arrow_container.add_child(line_main)
+
+	var start_pos = selected_die_display.get_global_transform_with_canvas().get_origin() + selected_die_display.size / 2
+	var end_pos = character.global_position
+	var control_pos = (start_pos + end_pos) / 2 - Vector2(0, 200)
+	
+	# Generate points for the curve and add them to both lines
+	var point_count = 20
+	for i in range(point_count + 1):
+		var t = float(i) / point_count
+		var point = start_pos.lerp(control_pos, t).lerp(control_pos.lerp(end_pos, t), t)
+		line_main.add_point(point)
+		line_outline.add_point(point)
+
+	# 3. Create the arrowhead
+	var arrowhead = Polygon2D.new()
+	arrowhead.color = line_main.default_color
+	var arrowhead_outline = Polygon2D.new() # For the black outline
+	arrowhead_outline.color = Color.BLACK
+	
+	var last_point = line_main.points[-1]
+	var second_last_point = line_main.points[-2]
+	var direction = (last_point - second_last_point).normalized()
+	
+	# Define arrowhead shape and outline
+	arrowhead.polygon = [last_point, last_point - direction * 15 + direction.orthogonal() * 8, last_point - direction * 15 - direction.orthogonal() * 8]
+	arrowhead_outline.polygon = [last_point + direction * 3, last_point - direction * 19 + direction.orthogonal() * 11, last_point - direction * 19 - direction.orthogonal() * 11]
+	
+	arrow_container.add_child(arrowhead_outline)
+	arrow_container.add_child(arrowhead)
+
+	intent_lines.add_child(arrow_container)
+
+	intents[selected_die_display] = {"die": die_object, "roll": die_roll_value, "target": character, "line": arrow_container}
 	print("Intents: " + str(intents))
 
 	# Visually "consume" the die by making it inactive.
@@ -191,6 +237,9 @@ func _update_all_intended_damage_displays():
 	# First, reset the display for all enemies
 	for enemy in $Enemies.get_children():
 		var label = enemy.get_node("IntendedDamageLabel")
+		var skull = enemy.get_node("LethalDamageIndicator")
+		enemy.update_health_display() # Reset to show no intended damage
+		skull.visible = false
 		label.visible = false
 
 	# Then, calculate the total for each enemy based on current intents
@@ -206,3 +255,26 @@ func _update_all_intended_damage_displays():
 		var label = enemy.get_node("IntendedDamageLabel")
 		label.text = "-" + str(enemy_damage_map[enemy])
 		label.visible = true
+		enemy.update_health_display(enemy_damage_map[enemy]) # Update with intended damage
+		
+		# Check if the intended damage is lethal
+		if enemy_damage_map[enemy] >= enemy.hp:
+			var skull = enemy.get_node("LethalDamageIndicator")
+			skull.visible = true
+
+func _on_enemy_died():
+	# Check for victory after a short delay to let other processes finish.
+	await get_tree().create_timer(0.1).timeout
+	
+	var all_enemies_dead = true
+	for enemy in $Enemies.get_children():
+		if enemy.is_visible(): # Check if the enemy is still visible/alive
+			all_enemies_dead = false
+			break
+	
+	if all_enemies_dead:
+		victory_screen.visible = true
+
+func _on_play_again_button_pressed():
+	# Reload the entire main scene to restart the game.
+	get_tree().reload_current_scene()

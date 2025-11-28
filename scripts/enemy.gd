@@ -6,7 +6,7 @@ var next_damage: int = 0
 
 func declare_intent():
 	next_damage = randi() % 8 + 1
-	intent_display.update_display(next_damage)
+	intent_display.update_display(next_damage, 8)
 	intent_display.visible = true
 
 func clear_intent():
