@@ -12,7 +12,9 @@ func _ready():
 	FACES = {
 		2: load("res://assets/coin.svg"),
 		4: load("res://assets/d4.svg"),
+		6: load("res://assets/d6.svg"),
 		8: load("res://assets/d8.svg"),
+		10: load("res://assets/d10.svg"),
 		12: load("res://assets/d12.svg"),
 		20: load("res://assets/d20.svg")
 	}

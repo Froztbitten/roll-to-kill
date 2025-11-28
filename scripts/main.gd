@@ -84,7 +84,14 @@ func resolve_dice_intents():
 		if intent.target is Player:
 			GameManager.player.block += intent.roll
 		else:
-			intent.target.take_damage(intent.roll)
+			var enemy_target = intent.target
+			# Check if the enemy has a shield intent and apply it before damage.
+			if enemy_target.next_action and enemy_target.next_action.action_type == EnemyAction.ActionType.SHIELD:
+				enemy_target.block += enemy_target.next_action_value
+				# We can clear the intent here since it's now "used"
+				enemy_target.clear_intent()
+
+			enemy_target.take_damage(intent.roll)
 		
 	print("Player block: " + str(GameManager.player.block))
 
@@ -97,8 +104,7 @@ func enemy_turn():
 			if enemy.hp > 0:
 				if enemy.next_action.action_type == EnemyAction.ActionType.ATTACK:
 					GameManager.player.take_damage(enemy.next_action_value)
-				elif enemy.next_action.action_type == EnemyAction.ActionType.SHIELD:
-					enemy.block += enemy.next_action_value
+				elif enemy.next_action.action_type == EnemyAction.ActionType.SHIELD: # Shield was already applied
 					enemy.update_health_display()
 				enemy.clear_intent()
 		GameManager.next_turn()
@@ -279,10 +285,19 @@ func _update_all_intended_damage_displays():
 		var label = enemy.get_node("IntendedDamageLabel")
 		label.text = "-" + str(enemy_damage_map[enemy])
 		label.visible = true
-		enemy.update_health_display(enemy_damage_map[enemy]) # Update with intended damage
+
+		var player_damage = enemy_damage_map[enemy]
+		var enemy_shield = 0
+		if enemy.next_action and enemy.next_action.action_type == EnemyAction.ActionType.SHIELD:
+			enemy_shield = enemy.next_action_value
+		
+		var net_damage = max(0, player_damage - enemy_shield)
+		
+		# Update the health bar preview with the net damage
+		enemy.update_health_display(net_damage)
 		
 		# Check if the intended damage is lethal
-		if enemy_damage_map[enemy] >= enemy.hp:
+		if net_damage >= enemy.hp:
 			var skull = enemy.get_node("LethalDamageIndicator")
 			skull.visible = true
 
