@@ -1,16 +1,20 @@
-[gd_scene load_steps=6 format=3 uid="uid://bnpd5h2y0tnye"]
+[gd_scene load_steps=12 format=3 uid="uid://bnpd5h2y0tnye"]
 
 [ext_resource type="PackedScene" uid="uid://bvyv5m1pde7i7" path="res://scenes/player.tscn" id="1_t2esq"]
-[ext_resource type="Script" path="res://scripts/main.gd" id="1_v4h7v"]
-[ext_resource type="PackedScene" path="res://scenes/goblin.tscn" id="2_r1axt"]
-[ext_resource type="PackedScene" uid="uid://bdo2y3r4q5w6e" path="res://scenes/dice_ui.tscn" id="3_abcde"]
-[ext_resource type="PackedScene" uid="uid://victory_screen_id" path="res://scenes/victory_screen.tscn" id="5_vwxyz"]
-[ext_resource type="PackedScene" uid="uid://defeat_screen_id" path="res://scenes/defeat_screen.tscn" id="7_abcde"]
-[ext_resource type="PackedScene" uid="uid://discard_pile_ui_id" path="res://scenes/discard_pile_ui.tscn" id="6_klmno"]
-[ext_resource type="PackedScene" path="res://scenes/dice_bag_ui.tscn" id="4_fghij"]
+[ext_resource type="Script" uid="uid://bik3wojuaq330" path="res://scripts/main.gd" id="1_v4h7v"]
+[ext_resource type="PackedScene" path="res://scenes/dice_ui.tscn" id="3_abcde"]
+[ext_resource type="PackedScene" uid="uid://imh8eq8iee1n" path="res://scenes/dice_bag_ui.tscn" id="4_fghij"]
+[ext_resource type="PackedScene" path="res://scenes/victory_screen.tscn" id="5_vwxyz"]
+[ext_resource type="PackedScene" path="res://scenes/discard_pile_ui.tscn" id="6_klmno"]
+[ext_resource type="PackedScene" path="res://scenes/defeat_screen.tscn" id="7_abcde"]
+[ext_resource type="PackedScene" uid="uid://bqcpuub6lecwi" path="res://scenes/reward_screen.tscn" id="8_reward"]
+[ext_resource type="Script" uid="uid://dh54ve13ordnt" path="res://scripts/enemy_spawner.gd" id="10_choun"]
+[ext_resource type="Script" uid="uid://ck2drfaun3f25" path="res://scripts/encounter.gd" id="11_eb6dy"]
+[ext_resource type="Resource" uid="uid://dm5j2kfa7b6wj" path="res://resources/pack_o_goblins.tres" id="12_trceg"]
 
-[node name="Main" type="Node2D"]
+[node name="Main" type="Node2D" node_paths=PackedStringArray("player")]
 script = ExtResource("1_v4h7v")
+player = NodePath("Player")
 
 [node name="Player" parent="." instance=ExtResource("1_t2esq")]
 position = Vector2(200, 300)
@@ -28,18 +32,6 @@ text = "+5"
 [node name="Enemies" type="Node2D" parent="."]
 
 [node name="IntentLines" type="Node2D" parent="."]
-
-[node name="Goblin" parent="Enemies" instance=ExtResource("2_r1axt")]
-position = Vector2(850, 150)
-
-[node name="Goblin2" parent="Enemies" instance=ExtResource("2_r1axt")]
-position = Vector2(850, 290)
-
-[node name="Goblin3" parent="Enemies" instance=ExtResource("2_r1axt")]
-position = Vector2(850, 430)
-
-[node name="Goblin4" parent="Enemies" instance=ExtResource("2_r1axt")]
-position = Vector2(850, 570)
 
 [node name="UI" type="CanvasLayer" parent="."]
 
@@ -116,14 +108,18 @@ theme_override_font_sizes/font_size = 32
 text = "15"
 horizontal_alignment = 1
 
-[connection signal="pressed" from="UI/EndTurnButton" to="." method="_on_end_turn_button_pressed"]
-
 [node name="VictoryScreen" parent="UI" instance=ExtResource("5_vwxyz")]
 visible = false
 
 [node name="DefeatScreen" parent="UI" instance=ExtResource("7_abcde")]
 visible = false
 
-[connection signal="pressed" from="UI/VictoryScreen/VBoxContainer/PlayAgainButton" to="." method="_on_play_again_button_pressed"]
+[node name="RewardScreen" parent="UI" instance=ExtResource("8_reward")]
+visible = false
 
-[connection signal="pressed" from="UI/DefeatScreen/VBoxContainer/PlayAgainButton" to="." method="_on_play_again_button_pressed"]
+[node name="EnemySpawner" type="Node" parent="." node_paths=PackedStringArray("enemy_container")]
+script = ExtResource("10_choun")
+encounter_pool = Array[ExtResource("11_eb6dy")]([ExtResource("12_trceg")])
+enemy_container = NodePath("../Enemies")
+
+[connection signal="pressed" from="UI/EndTurnButton" to="." method="_on_end_turn_button_pressed"]

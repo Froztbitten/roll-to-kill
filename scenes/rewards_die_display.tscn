@@ -1,0 +1,55 @@
+[gd_scene load_steps=2 format=3 uid="uid://dci7p7q1v8q2a"]
+
+[ext_resource type="Script" uid="uid://cso1onax2k5xu" path="res://scripts/rewards_die_display.gd" id="1_abcde"]
+
+[node name="RewardsDieDisplay" type="Button"]
+custom_minimum_size = Vector2(80, 80)
+anchors_preset = -1
+anchor_right = 0.143
+anchor_bottom = 0.25500003
+offset_right = 0.2639923
+offset_bottom = -0.24002075
+focus_mode = 0
+flat = true
+script = ExtResource("1_abcde")
+
+[node name="Background" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0.2, 0.2, 0.2, 1)
+
+[node name="VBoxContainer" type="VBoxContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="FaceGrid" type="GridContainer" parent="VBoxContainer"]
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 3
+
+[node name="SideLabel" type="Label" parent="VBoxContainer"]
+layout_mode = 2
+text = "d20"
+horizontal_alignment = 1
+uppercase = true
+
+[node name="Icon" type="TextureRect" parent="VBoxContainer/SideLabel"]
+modulate = Color(1, 1, 1, 0.392157)
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+expand_mode = 1
+stretch_mode = 5

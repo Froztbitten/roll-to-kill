@@ -1,5 +1,6 @@
 extends Node2D
 
+@export var player: Player
 var end_turn_button: Button
 @onready var dice_ui: DiceUI = $"UI/DiceUI"
 @onready var dice_bag_ui: Control = $"UI/DiceBagUI"
@@ -9,43 +10,44 @@ var end_turn_button: Button
 @onready var total_incoming_damage_label: Label = $"UI/TotalIncomingDamageLabel"
 @onready var victory_screen = $"UI/VictoryScreen"
 @onready var defeat_screen = $"UI/DefeatScreen"
+@onready var reward_screen = $"UI/RewardScreen"
+@onready var enemy_spawner = $EnemySpawner
 
+enum Turn { PLAYER, ENEMY }
 var intents: Dictionary = {}
 var selected_die_display = null
 var current_hand_dice: Array[Dice] = []
 var current_incoming_damage: int = 0
 
+var current_turn = Turn.PLAYER
+var round_number := 1
+const BOSS_ROUND = 10
+
 
 func _ready():
 	end_turn_button = $"UI/EndTurnButton"
-	GameManager.player = $Player
-	GameManager.enemy = $Enemies.get_child(0)
 
 	# Connect signals
-	dice_ui.die_clicked.connect(_on_die_clicked)
-	GameManager.player.died.connect(_on_player_died)
-	
-	# Connect the died signal for each enemy
-	for enemy in $Enemies.get_children():
-		enemy.died.connect(_on_enemy_died)
+	player.died.connect(_on_player_died)
+	reward_screen.reward_chosen.connect(_on_reward_chosen)
 
-	player_turn()
+	start_new_round()
 
 func player_turn():
 	dice_ui.clear_displays()
 	# Reset block at the start of the turn
-	GameManager.player.block = 0
+	player.block = 0
 	_clear_intents()
 	_clear_selection()
 
 	# Discard the dice from the previous hand
 	if not current_hand_dice.is_empty():
-		GameManager.player.discard_pile.append_array(current_hand_dice)
+		player.discard_pile.append_array(current_hand_dice)
 		current_hand_dice.clear()
 	
 	var rolled_dice = []
 	var total_dice_value = 0
-	var hand = GameManager.player.draw_hand()
+	var hand = player.draw_hand()
 	for die in hand:
 		var roll = die.roll()
 		current_hand_dice.append(die) # Keep track of the dice in the current hand
@@ -55,34 +57,35 @@ func player_turn():
 	total_dice_value_label.text = "Total: " + str(total_dice_value)
 	current_incoming_damage = 0
 	# Have all living enemies declare their intents for the turn
-	for enemy in $Enemies.get_children():
+	for enemy in get_active_enemies():
 		if enemy.hp > 0:
 			# Reset enemy block at the start of the player's turn
 			enemy.block = 0
 			enemy.update_health_display()
 
 			enemy.declare_intent()
-			current_incoming_damage += enemy.next_action_value
+			if (enemy.next_action.action_type == EnemyAction.ActionType.ATTACK):
+				current_incoming_damage += enemy.next_action_value
 	
 	total_incoming_damage_label.text = str(current_incoming_damage)
 	_update_intended_block_display()
 	_update_all_intended_damage_displays()
 
 	dice_ui.set_hand(rolled_dice)
-	dice_bag_ui.update_label(GameManager.player.dice.size())
-	discard_pile_ui.update_label(GameManager.player.discard_pile.size())
+	dice_bag_ui.update_label(player.dice.size())
+	discard_pile_ui.update_label(player.discard_pile.size())
 	end_turn_button.disabled = false
 
 func _on_end_turn_button_pressed():
-	if GameManager.current_turn == GameManager.Turn.PLAYER:
+	if current_turn == Turn.PLAYER:
 		resolve_dice_intents()
-		GameManager.next_turn()
+		next_turn()
 		enemy_turn()
 
 func resolve_dice_intents():
 	for intent in intents.values():
 		if intent.target is Player:
-			GameManager.player.block += intent.roll
+			player.block += intent.roll
 		else:
 			var enemy_target = intent.target
 			# Check if the enemy has a shield intent and apply it before damage.
@@ -93,21 +96,21 @@ func resolve_dice_intents():
 
 			enemy_target.take_damage(intent.roll)
 		
-	print("Player block: " + str(GameManager.player.block))
+	print("Player block: " + str(player.block))
 
 func enemy_turn():
 	end_turn_button.disabled = true
 	await get_tree().create_timer(1.0).timeout
-	if GameManager.current_turn == GameManager.Turn.ENEMY:
+	if current_turn == Turn.ENEMY:
 		# Each living enemy attacks with its declared damage
-		for enemy in $Enemies.get_children():
+		for enemy in get_active_enemies():
 			if enemy.hp > 0:
 				if enemy.next_action.action_type == EnemyAction.ActionType.ATTACK:
-					GameManager.player.take_damage(enemy.next_action_value)
+					player.take_damage(enemy.next_action_value)
 				elif enemy.next_action.action_type == EnemyAction.ActionType.SHIELD: # Shield was already applied
 					enemy.update_health_display()
 				enemy.clear_intent()
-		GameManager.next_turn()
+		next_turn()
 		player_turn()
 
 func _on_die_clicked(die_display):
@@ -251,8 +254,7 @@ func _update_intended_block_display():
 	for intent_data in intents.values():
 		if intent_data.target is Player:
 			total_intended_block += intent_data.roll
-	
-	var label = GameManager.player.get_node("IntendedBlockLabel")
+	var label = player.get_node("IntendedBlockLabel")
 	if total_intended_block > 0:
 		label.text = "+" + str(total_intended_block)
 		label.visible = true
@@ -261,11 +263,11 @@ func _update_intended_block_display():
 	
 	# Update the player's health bar to show the damage preview
 	var net_damage = max(0, current_incoming_damage - total_intended_block)
-	GameManager.player.update_health_display(net_damage)
+	player.update_health_display(net_damage)
 
 func _update_all_intended_damage_displays():
 	# First, reset the display for all enemies
-	for enemy in $Enemies.get_children():
+	for enemy in get_active_enemies():
 		var label = enemy.get_node("IntendedDamageLabel")
 		var skull = enemy.get_node("LethalDamageIndicator")
 		enemy.update_health_display() # Reset to show no intended damage
@@ -301,18 +303,87 @@ func _update_all_intended_damage_displays():
 			var skull = enemy.get_node("LethalDamageIndicator")
 			skull.visible = true
 
-func _on_enemy_died():
-	# Check for victory after a short delay to let other processes finish.
+func _on_enemy_died(dead_enemy):
+	# A short delay to prevent issues with processing the death mid-turn.
 	await get_tree().create_timer(0.1).timeout
 	
-	var all_enemies_dead = true
-	for enemy in $Enemies.get_children():
-		if enemy.is_visible(): # Check if the enemy is still visible/alive
-			all_enemies_dead = false
-			break
+	if get_active_enemies().is_empty():
+		# All enemies for the round are defeated
+		if round_number == BOSS_ROUND:
+			victory_screen.visible = true
+		else:
+			_show_reward_screen()
+
+func start_new_round():
+	var spawned_enemies: Array
+	if round_number == BOSS_ROUND:
+		spawned_enemies = enemy_spawner.spawn_boss()
+	else:
+		spawned_enemies = enemy_spawner.spawn_regular_enemy()
 	
-	if all_enemies_dead:
-		victory_screen.visible = true
+	for enemy in spawned_enemies:
+		# Connect to each new enemy's death signal
+		enemy.died.connect(_on_enemy_died.bind(enemy))
+	
+	# Start the player's turn for the new round
+	player_turn()
+
+func get_active_enemies() -> Array[Node]:
+	# Helper function to get living enemies from the container
+	var living_enemies: Array[Node] = []
+	for enemy in $Enemies.get_children():
+		if enemy.hp > 0:
+			living_enemies.append(enemy)
+	return living_enemies
+
+func _show_reward_screen():
+	var reward_dice = _generate_reward_dice()
+	reward_screen.display_rewards(reward_dice)
+	reward_screen.visible = true
+
+func _generate_reward_dice() -> Array[Dice]:
+	var dice_options: Array[Dice] = []
+	# Define a target average value for the dice. This can be adjusted for balance.
+	var target_average = 4.5
+	var possible_sides = [4, 6, 8]
+	possible_sides.shuffle()
+
+	for i in range(3):
+		var new_die = Dice.new()
+		var sides = possible_sides[i]
+		new_die.sides = sides
+		
+		var total_value = int(round(target_average * sides))
+		var faces: Array[int] = []
+		
+		# Initialize faces with a value of 1
+		for _j in range(sides):
+			faces.append(1)
+		
+		var remaining_value = total_value - sides
+		
+		# Distribute the remaining value randomly among the faces
+		for _j in range(remaining_value):
+			var random_index = randi() % sides
+			faces[random_index] += 1
+		
+		new_die.face_values = faces
+		dice_options.append(new_die)
+
+	print(dice_options)
+	return dice_options
+
+func _on_reward_chosen(chosen_die: Dice):
+	# Add the chosen die to the player's deck
+	player.add_die(chosen_die)
+	round_number += 1
+	
+	# Hide the reward screen
+	reward_screen.visible = false
+	
+	# Start the next round
+	start_new_round()
+
 
 func _on_play_again_button_pressed():
 	# Reload the entire main scene to restart the game.
@@ -320,3 +391,9 @@ func _on_play_again_button_pressed():
 
 func _on_player_died():
 	defeat_screen.visible = true
+
+func next_turn():
+	if current_turn == Turn.PLAYER:
+		current_turn = Turn.ENEMY
+	else:
+		current_turn = Turn.PLAYER

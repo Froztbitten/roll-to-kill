@@ -13,12 +13,10 @@ config_version=5
 config/name="Roll To Kill"
 run/main_scene="uid://bnpd5h2y0tnye"
 config/features=PackedStringArray("4.5", "GL Compatibility")
-config/icon="res://icon.svg"
 config/main_scene="res://scenes/main.tscn"
 
 [autoload]
 
-GameManager="*res://scripts/game_manager.gd"
 Utils="*res://scripts/utils.gd"
 
 [rendering]

@@ -8,7 +8,6 @@ const DIE_DISPLAY_SCENE = preload("res://scenes/die_display.tscn")
 
 var die_displays = []
 
-
 func set_hand(rolled_dice: Array):
 	# First, clear out the old dice from the previous turn.
 	clear_displays()

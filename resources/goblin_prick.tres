@@ -1,9 +1,0 @@
-[gd_resource type="Resource" script_class="EnemyAction" load_steps=2 format=3 uid="uid://dk26jh458g4n"]
-
-[ext_resource type="Script" uid="uid://djeev1jhalfah" path="res://scripts/enemy_action.gd" id="1_wboo8"]
-
-[resource]
-script = ExtResource("1_wboo8")
-action_name = "Prick"
-action_type = 0
-dice_to_roll = Array[Dictionary]([{"count": 1, "sides": 4}])

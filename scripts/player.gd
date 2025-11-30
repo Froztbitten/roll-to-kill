@@ -9,17 +9,12 @@ func _ready():
 	super._ready()
 	
 	# Define the initial deck
-	var dice_resource = preload("res://scripts/dice.gd")
+	var starting_deck_sides = [4, 6, 6, 6, 8, 8, 10, 12, 20]
 	
-	deck.append(dice_resource.new(4))
-	deck.append(dice_resource.new(6))
-	deck.append(dice_resource.new(6))
-	deck.append(dice_resource.new(6))
-	deck.append(dice_resource.new(8))
-	deck.append(dice_resource.new(8))
-	deck.append(dice_resource.new(10))
-	deck.append(dice_resource.new(12))
-	deck.append(dice_resource.new(20))
+	for side_count in starting_deck_sides:
+		var new_die = Dice.new()
+		new_die.sides = side_count
+		deck.append(new_die)
 	
 	initialize()
 

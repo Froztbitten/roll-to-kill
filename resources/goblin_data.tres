@@ -1,0 +1,45 @@
+[gd_resource type="Resource" script_class="EnemyData" load_steps=11 format=3 uid="uid://du7ewmwn0eh7n"]
+
+[ext_resource type="Script" uid="uid://dv6r7tro15lnf" path="res://scripts/enemy_data.gd" id="1_enemy_data_script"]
+[ext_resource type="Script" uid="uid://b62erl0h813g2" path="res://scripts/dice.gd" id="2_dice_script"]
+[ext_resource type="Texture2D" uid="uid://beajvslq8j3h5" path="res://assets/goblin.svg" id="3_goblin_sprite"]
+[ext_resource type="Script" uid="uid://djeev1jhalfah" path="res://scripts/enemy_action.gd" id="4_action_script"]
+
+[sub_resource type="Resource" id="Resource_dtq84"]
+script = ExtResource("2_dice_script")
+sides = 4
+metadata/_custom_type_script = "uid://b62erl0h813g2"
+
+[sub_resource type="Resource" id="Resource_u32se"]
+script = ExtResource("4_action_script")
+action_name = "Prick"
+dice_to_roll = Array[ExtResource("2_dice_script")]([SubResource("Resource_dtq84")])
+metadata/_custom_type_script = "uid://djeev1jhalfah"
+
+[sub_resource type="Resource" id="Resource_x7eke"]
+script = ExtResource("2_dice_script")
+sides = 4
+metadata/_custom_type_script = "uid://b62erl0h813g2"
+
+[sub_resource type="Resource" id="Resource_t87w3"]
+script = ExtResource("4_action_script")
+action_name = "Cower"
+action_type = 1
+dice_to_roll = Array[ExtResource("2_dice_script")]([SubResource("Resource_x7eke")])
+metadata/_custom_type_script = "uid://djeev1jhalfah"
+
+[sub_resource type="Resource" id="Resource_ch686"]
+script = ExtResource("2_dice_script")
+metadata/_custom_type_script = "uid://b62erl0h813g2"
+
+[sub_resource type="Resource" id="Resource_n6bjx"]
+script = ExtResource("2_dice_script")
+metadata/_custom_type_script = "uid://b62erl0h813g2"
+
+[resource]
+script = ExtResource("1_enemy_data_script")
+enemy_name = "Goblin"
+sprite_texture = ExtResource("3_goblin_sprite")
+minimum_hp = 6
+hp_dice = Array[ExtResource("2_dice_script")]([SubResource("Resource_ch686"), SubResource("Resource_n6bjx")])
+action_pool = Array[ExtResource("4_action_script")]([SubResource("Resource_u32se"), SubResource("Resource_t87w3")])

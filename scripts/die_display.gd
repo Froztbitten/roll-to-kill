@@ -6,11 +6,10 @@ signal die_clicked(die_display)
 # You must replace these placeholder paths with the actual paths to your dice face images.
 var FACES = {}
 
-# When the 'die' variable is set from dice_ui.gd, the 'set_die' function will be called.
 var die: Dictionary:
 	set = set_die
 
-@onready var icon: TextureRect = $Icon
+@onready var icon_texture: TextureRect = $Icon
 @onready var roll_label: Label = $Icon/RollLabel
 
 func _ready():
@@ -34,14 +33,13 @@ func _ready():
 	if die:
 		update_display()
 	
-	# Make sure the control can receive mouse input
-	mouse_filter = MOUSE_FILTER_PASS
+	# Make sure the control can receive mouse input.
+	mouse_filter = MOUSE_FILTER_STOP
 
 
 func set_die(value: Dictionary):
 	die = value
 	print("DieDisplay set_die: die = " + str(die))
-	# Wait until the node is ready before trying to update its children.
 	if is_node_ready():
 		update_display()
 
@@ -55,7 +53,7 @@ func update_display():
 		roll_label.text = str(die_value)
 		
 		if FACES.has(die_sides):
-			icon.texture = FACES[die_sides]
+			icon_texture.texture = FACES[die_sides]
 
 
 func select():
