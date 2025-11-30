@@ -73,6 +73,7 @@ func deselect():
 func _gui_input(event: InputEvent):
 	if event is InputEventMouseButton:
 		if event.button_index == MOUSE_BUTTON_LEFT and event.is_pressed():
+			print("test2")
 			# When clicked, emit a signal with a reference to itself
 			emit_signal("die_clicked", self)
 			get_viewport().set_input_as_handled()

@@ -1,6 +1,6 @@
-[gd_scene load_steps=2 format=3 uid="uid://dci7p7q1v8q2a"]
+[gd_scene load_steps=2 format=3 uid="uid://bxvj5n1sfkmvw"]
 
-[ext_resource type="Script" uid="uid://cso1onax2k5xu" path="res://scripts/rewards_die_display.gd" id="1_abcde"]
+[ext_resource type="Script" path="res://scripts/rewards_die_display.gd" id="1_a3on2"]
 
 [node name="RewardsDieDisplay" type="Button"]
 custom_minimum_size = Vector2(80, 80)
@@ -11,7 +11,7 @@ offset_right = 0.2639923
 offset_bottom = -0.24002075
 focus_mode = 0
 flat = true
-script = ExtResource("1_abcde")
+script = ExtResource("1_a3on2")
 
 [node name="Background" type="ColorRect" parent="."]
 layout_mode = 1

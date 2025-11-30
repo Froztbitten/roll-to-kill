@@ -29,6 +29,7 @@ func _ready():
 
 	# Connect signals
 	player.died.connect(_on_player_died)
+	dice_ui.die_clicked.connect(_on_die_clicked)
 	reward_screen.reward_chosen.connect(_on_reward_chosen)
 
 	start_new_round()

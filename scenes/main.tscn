@@ -2,14 +2,14 @@
 
 [ext_resource type="PackedScene" uid="uid://bvyv5m1pde7i7" path="res://scenes/player.tscn" id="1_t2esq"]
 [ext_resource type="Script" uid="uid://bik3wojuaq330" path="res://scripts/main.gd" id="1_v4h7v"]
-[ext_resource type="PackedScene" path="res://scenes/dice_ui.tscn" id="3_abcde"]
+[ext_resource type="PackedScene" uid="uid://bdo2y3r4q5w6e" path="res://scenes/dice_ui.tscn" id="3_abcde"]
 [ext_resource type="PackedScene" uid="uid://imh8eq8iee1n" path="res://scenes/dice_bag_ui.tscn" id="4_fghij"]
 [ext_resource type="PackedScene" path="res://scenes/victory_screen.tscn" id="5_vwxyz"]
 [ext_resource type="PackedScene" path="res://scenes/discard_pile_ui.tscn" id="6_klmno"]
 [ext_resource type="PackedScene" path="res://scenes/defeat_screen.tscn" id="7_abcde"]
-[ext_resource type="PackedScene" uid="uid://bqcpuub6lecwi" path="res://scenes/reward_screen.tscn" id="8_reward"]
-[ext_resource type="Script" uid="uid://dh54ve13ordnt" path="res://scripts/enemy_spawner.gd" id="10_choun"]
-[ext_resource type="Script" uid="uid://ck2drfaun3f25" path="res://scripts/encounter.gd" id="11_eb6dy"]
+[ext_resource type="PackedScene" uid="uid://c5hrch0sope6w" path="res://scenes/reward_screen.tscn" id="8_reward"]
+[ext_resource type="Script" path="res://scripts/enemy_spawner.gd" id="10_choun"]
+[ext_resource type="Script" path="res://scripts/encounter.gd" id="11_eb6dy"]
 [ext_resource type="Resource" uid="uid://dm5j2kfa7b6wj" path="res://resources/pack_o_goblins.tres" id="12_trceg"]
 
 [node name="Main" type="Node2D" node_paths=PackedStringArray("player")]
@@ -115,7 +115,6 @@ visible = false
 visible = false
 
 [node name="RewardScreen" parent="UI" instance=ExtResource("8_reward")]
-visible = false
 
 [node name="EnemySpawner" type="Node" parent="." node_paths=PackedStringArray("enemy_container")]
 script = ExtResource("10_choun")

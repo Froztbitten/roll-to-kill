@@ -1,11 +1,17 @@
 [gd_scene load_steps=3 format=3 uid="uid://dci7p7q1v8q2a"]
 
-[ext_resource type="Script" path="res://scripts/die_display.gd" id="1_abcde"]
+[ext_resource type="Script" uid="uid://cso1onax2k5xu" path="res://scripts/die_display.gd" id="1_abcde"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_12345"]
 size = Vector2(50, 50)
 
 [node name="DieDisplay" type="VBoxContainer"]
+anchors_preset = -1
+anchor_right = 0.043
+anchor_bottom = 0.07700001
+offset_right = -49.536003
+offset_bottom = -49.896004
+mouse_default_cursor_shape = 2
 script = ExtResource("1_abcde")
 
 [node name="Icon" type="TextureRect" parent="."]
@@ -23,13 +29,14 @@ anchor_right = 0.5
 anchor_bottom = 0.5
 grow_horizontal = 2
 grow_vertical = 2
-text = "6"
+mouse_filter = 1
 theme_override_colors/font_color = Color(0, 0, 0, 1)
+text = "6"
 horizontal_alignment = 1
 vertical_alignment = 1
 
 [node name="Area2D" type="Area2D" parent="."]
-layout_mode = 2
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Area2D"]
+position = Vector2(25, 25)
 shape = SubResource("RectangleShape2D_12345")
