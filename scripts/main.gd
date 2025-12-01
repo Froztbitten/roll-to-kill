@@ -1,17 +1,18 @@
 extends Node2D
 
 @export var player: Player
-var end_turn_button: Button
-@onready var dice_ui: DiceUI = $"UI/DiceUI"
-@onready var dice_bag_ui: Control = $"UI/DiceBagUI"
+@onready var dice_ui: DiceUI = $UI/DiceUI
+@onready var dice_bag_ui: Control = $UI/DiceBagUI
 @onready var intent_lines: Node2D = $IntentLines
-@onready var discard_pile_ui = $"UI/DiscardPileUI"
-@onready var total_dice_value_label: Label = $"UI/TotalDiceValueLabel"
-@onready var total_incoming_damage_label: Label = $"UI/TotalIncomingDamageLabel"
-@onready var victory_screen = $"UI/VictoryScreen"
-@onready var defeat_screen = $"UI/DefeatScreen"
-@onready var reward_screen = $"UI/RewardScreen"
+@onready var discard_pile_ui = $UI/DiscardPileUI
+@onready var total_dice_value_label: Label = $UI/TotalDiceValueLabel
+@onready var total_incoming_damage_label: Label = $UI/TotalIncomingDamageLabel
+@onready var gold_label: Label = $UI/InfoUI/Container/GoldLabel
+@onready var victory_screen = $UI/VictoryScreen
+@onready var defeat_screen = $UI/DefeatScreen
+@onready var reward_screen = $UI/RewardScreen
 @onready var enemy_spawner = $EnemySpawner
+@onready var end_turn_button = $UI/EndTurnButton
 
 enum Turn { PLAYER, ENEMY }
 var intents: Dictionary = {}
@@ -25,10 +26,9 @@ const BOSS_ROUND = 10
 
 
 func _ready():
-	end_turn_button = $"UI/EndTurnButton"
-
 	# Connect signals
 	player.died.connect(_on_player_died)
+	player.gold_changed.connect(_update_gold)
 	dice_ui.die_clicked.connect(_on_die_clicked)
 	reward_screen.reward_chosen.connect(_on_reward_chosen)
 
@@ -40,11 +40,6 @@ func player_turn():
 	player.block = 0
 	_clear_intents()
 	_clear_selection()
-
-	# Discard the dice from the previous hand
-	if not current_hand_dice.is_empty():
-		player.discard_pile.append_array(current_hand_dice)
-		current_hand_dice.clear()
 	
 	var rolled_dice = []
 	var total_dice_value = 0
@@ -96,6 +91,9 @@ func resolve_dice_intents():
 				enemy_target.clear_intent()
 
 			enemy_target.take_damage(intent.roll)
+		
+	player.discard(current_hand_dice)
+	current_hand_dice.clear()
 		
 	print("Player block: " + str(player.block))
 
@@ -304,7 +302,7 @@ func _update_all_intended_damage_displays():
 			var skull = enemy.get_node("LethalDamageIndicator")
 			skull.visible = true
 
-func _on_enemy_died(dead_enemy):
+func _on_enemy_died():
 	# A short delay to prevent issues with processing the death mid-turn.
 	await get_tree().create_timer(0.1).timeout
 	
@@ -324,7 +322,7 @@ func start_new_round():
 	
 	for enemy in spawned_enemies:
 		# Connect to each new enemy's death signal
-		enemy.died.connect(_on_enemy_died.bind(enemy))
+		enemy.died.connect(_on_enemy_died.bind())
 	
 	# Start the player's turn for the new round
 	player_turn()
@@ -369,22 +367,27 @@ func _generate_reward_dice() -> Array[Dice]:
 			faces[random_index] += 1
 		
 		new_die.face_values = faces
+		new_die.face_values.sort()
 		dice_options.append(new_die)
 
 	print(dice_options)
 	return dice_options
 
 func _on_reward_chosen(chosen_die: Dice):
-	# Add the chosen die to the player's deck
-	player.add_die(chosen_die)
-	round_number += 1
+	print("reward_chosen", chosen_die)
+	if (chosen_die == null):
+		player.add_gold(10)
+	else:
+		# Add the chosen die to the player's deck
+		player.add_die(chosen_die)
 	
-	# Hide the reward screen
+	round_number += 1
 	reward_screen.visible = false
 	
-	# Start the next round
 	start_new_round()
-
+	
+func _update_gold(gold: int):
+	gold_label.text = str(gold)
 
 func _on_play_again_button_pressed():
 	# Reload the entire main scene to restart the game.

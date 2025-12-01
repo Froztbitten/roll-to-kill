@@ -1,7 +1,7 @@
-[gd_scene load_steps=3 format=3 uid="uid://bqcpuub6lecwi"]
+[gd_scene load_steps=3 format=3 uid="uid://c5hrch0sope6w"]
 
 [ext_resource type="Script" uid="uid://coqbfjpvsm1us" path="res://scripts/reward_screen.gd" id="1_script"]
-[ext_resource type="PackedScene" uid="uid://dci7p7q1v8q2a" path="res://scenes/rewards_die_display.tscn" id="2_dice_display"]
+[ext_resource type="PackedScene" uid="uid://bxvj5n1sfkmvw" path="res://scenes/rewards_die_display.tscn" id="2_14dtq"]
 
 [node name="RewardScreen" type="Control"]
 layout_mode = 3
@@ -48,17 +48,46 @@ size_flags_vertical = 3
 theme_override_constants/separation = 30
 alignment = 1
 
-[node name="DiceDisplay1" parent="VBoxContainer/DiceChoices" instance=ExtResource("2_dice_display")]
+[node name="RewardsDieDisplay" parent="VBoxContainer/DiceChoices" instance=ExtResource("2_14dtq")]
 layout_mode = 2
-size_flags_horizontal = 3
-script = null
 
-[node name="DiceDisplay2" parent="VBoxContainer/DiceChoices" instance=ExtResource("2_dice_display")]
+[node name="RewardsDieDisplay2" parent="VBoxContainer/DiceChoices" instance=ExtResource("2_14dtq")]
 layout_mode = 2
-size_flags_horizontal = 3
-script = null
 
-[node name="DiceDisplay3" parent="VBoxContainer/DiceChoices" instance=ExtResource("2_dice_display")]
+[node name="RewardsDieDisplay3" parent="VBoxContainer/DiceChoices" instance=ExtResource("2_14dtq")]
 layout_mode = 2
-size_flags_horizontal = 3
-script = null
+
+[node name="Container" type="MarginContainer" parent="."]
+layout_mode = 1
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -98.0
+offset_top = -144.0
+offset_right = 98.0
+offset_bottom = -104.0
+grow_horizontal = 2
+grow_vertical = 0
+
+[node name="SkipRewards" type="Button" parent="Container"]
+layout_mode = 2
+mouse_default_cursor_shape = 2
+
+[node name="RichTextLabel" type="RichTextLabel" parent="Container/SkipRewards"]
+clip_contents = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 1
+mouse_default_cursor_shape = 2
+bbcode_enabled = true
+text = "Skip Rewards (+10[img=24]res://assets/gold.svg[/img])"
+fit_content = true
+scroll_active = false
+horizontal_alignment = 1
+vertical_alignment = 1

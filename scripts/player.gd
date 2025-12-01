@@ -1,9 +1,11 @@
 extends Character
 class_name Player
 
-var deck: Array[Dice] = []
+signal gold_changed(new_amount)
+
 var dice: Array[Dice] = []
 var discard_pile: Array[Dice] = []
+var gold: int = 0
 
 func _ready():
 	super._ready()
@@ -14,13 +16,8 @@ func _ready():
 	for side_count in starting_deck_sides:
 		var new_die = Dice.new()
 		new_die.sides = side_count
-		deck.append(new_die)
+		dice.append(new_die)
 	
-	initialize()
-
-func initialize():
-	dice = deck.duplicate(true)
-	discard_pile.clear()
 	dice.shuffle()
 
 func draw_hand():
@@ -35,7 +32,18 @@ func draw_hand():
 			drawn_dice.append(drawn_die)
 	return drawn_dice
 
+func discard(dice: Array[Dice]):
+	discard_pile.append_array(dice)
+
 func shuffle_discard_pile_into_deck():
 	dice.append_array(discard_pile)
 	discard_pile.clear()
 	dice.shuffle()
+
+func add_die(new_die: Dice):
+	dice.append(new_die)
+
+func add_gold(new_gold: int):
+	print("gold changed: ", new_gold)
+	gold += new_gold
+	gold_changed.emit(gold)

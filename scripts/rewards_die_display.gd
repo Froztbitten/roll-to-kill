@@ -1,39 +1,41 @@
 extends Button
 
 signal die_hovered(die_display)
-signal die_clicked(die_display)
 
 @onready var background: ColorRect = $Background
-@onready var side_label: Label = $VBoxContainer/SideLabel
-@onready var die_icon: TextureRect = $VBoxContainer/SideLabel/Icon
-@onready var face_grid: GridContainer = $VBoxContainer/FaceGrid
+@onready var die_label: Label = $DieLabel
+@onready var die_icon: TextureRect = $DieLabel/DieIcon
+@onready var face_grid: GridContainer = $FaceGrid
+@onready var average_label: Label = $AverageLabel
 const DiceGridCell = preload("res://scenes/dice_grid_cell.tscn")
 
 var die: Dictionary # {"object": Dice, "value": int, "sides": int}
 var original_grid_text: String # Used for the Alt-hover average display
-var selected = false
+var is_selected = false # Renamed from 'selected' for clarity
+var average_roll = 0
 
 func _ready():
 	# Hide by default until set_die is called.
 	# This is useful for the reward screen where displays are pre-placed.
 	visible = false
-	$VBoxContainer.clip_contents = true
 
-func _gui_input(event: InputEvent):
-	if event is InputEventMouseMotion:
-		if Input.is_key_pressed(KEY_ALT):
-			var average_roll = (float(die.sides) + 1.0) / 2.0
-			# Show average in the first cell if it exists
-			if face_grid.get_child_count() > 0:
-				var first_cell_label = face_grid.get_child(0).get_node("Label") as Label
-				first_cell_label.text = "Avg: " + str(average_roll)
+func _process(_delta):
+	# On every frame, check if the mouse is over this control and if ALT is pressed.
+	# This provides immediate feedback to the user.
+	if get_global_rect().has_point(get_global_mouse_position()):
+		if Input.is_key_pressed(KEY_ALT) and average_roll > 0:
+			average_label.text = "Avg:\n%.1f" % average_roll
+			average_label.visible = true
 		else:
-			# Revert to original text
-			if face_grid.get_child_count() > 0 and original_grid_text != "":
-				var first_cell_label = face_grid.get_child(0).get_node("Label") as Label
-				first_cell_label.text = original_grid_text
+			average_label.visible = false
+	else:
+		# Ensure the label is hidden if the mouse is not hovering.
+		average_label.visible = false
+
 
 func set_die(die_data: Dictionary):
+	deselect()
+	
 	self.die = die_data
 	var die_object: Dice = die_data.object
 
@@ -87,7 +89,7 @@ func set_die(die_data: Dictionary):
 			face_grid.add_child(cell)
 		original_grid_text = "" # Not needed for multi-cell grid
 		
-	side_label.text = "d" + str(die.sides)
+	die_label.text = "d" + str(die.sides)
 	
 	# Set the icon behind the side label
 	if die_icon:
@@ -99,15 +101,17 @@ func set_die(die_data: Dictionary):
 				die_icon.texture = null # Clear texture if no icon is found
 		else:
 			die_icon.texture = null
+	
+	average_roll = (float(die.sides) + 1.0) / 2.0
 
 	visible = true
 
 func select():
-	selected = true
+	is_selected = true
 	background.color = Color(0.9, 0.7, 0.2) # Gold color for selection
 	
 func deselect():
-	selected = false
+	is_selected = false
 	background.color = Color(0.2, 0.2, 0.2) # Default dark gray
 
 func _on_mouse_entered():

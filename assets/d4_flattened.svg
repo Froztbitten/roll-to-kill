@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="210" height="185" viewBox="0 0 210 185">
+  <title>Flattened 4-Sided Die (Tetrahedron Net)</title>
+  <desc>A net of a tetrahedron with thick black outlines and a white fill for the die faces. The exterior background is transparent.</desc>
+
+  <g fill="white" stroke="black" stroke-width="5" stroke-linejoin="round" stroke-linecap="round">
+    <path d="M105,5 L205,178.2 L5,178.2 Z" />
+    
+    <path d="M55,91.6 L155,91.6 L105,178.2 Z" />
+  </g>
+</svg>

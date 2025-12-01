@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="185" height="245" viewBox="0 0 185 245">
+  <title>Flattened 6-Sided Die (Cube Net)</title>
+  <desc>A net of a cube with thick black outlines and a white fill for the die faces. The exterior background is transparent.</desc>
+
+  <g fill="white" stroke="black" stroke-width="5" stroke-linejoin="round" stroke-linecap="round">
+    <path d="M62.5,2.5 H122.5 V62.5 H182.5 V122.5 H122.5 V242.5 H62.5 V122.5 H2.5 V62.5 H62.5 Z" />
+    
+    <path d="M62.5,62.5 H122.5 M2.5,122.5 H182.5 M62.5,182.5 H122.5" />
+    <path d="M62.5,62.5 V242.5 M122.5,62.5 V242.5" />
+  </g>
+</svg>
