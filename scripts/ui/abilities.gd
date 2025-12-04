@@ -1,5 +1,5 @@
 extends PanelContainer
-class_name AbilityUI
+class_name Abilities
 
 @onready var title_label: Label = $MarginContainer/VBoxContainer/Header/Title
 @onready var description_label: RichTextLabel = $MarginContainer/VBoxContainer/Description

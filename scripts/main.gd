@@ -1,9 +1,9 @@
 extends Node2D
 
 @export var player: Player
-@onready var dice_ui: DiceUI = $UI/DicePool
+@onready var dice_ui: DicePool = $UI/DicePool
 @onready var dice_bag_ui: Control = $UI/Dice/DiceBag
-@onready var abilities_ui: AbilityUI = $UI/Abilities
+@onready var abilities_ui: Abilities = $UI/Abilities
 @onready var intent_lines: Node2D = $IntentLines
 @onready var total_dice_value_label: Label = $UI/TotalDiceValueLabel
 @onready var total_incoming_damage_label: Label = $UI/TotalIncomingDamageLabel

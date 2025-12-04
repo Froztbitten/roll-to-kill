@@ -2,5 +2,5 @@
 
 [ext_resource type="Script" uid="uid://iwtnyu5s2qus" path="res://scripts/dice/dice_pool.gd" id="1_abcde"]
 
-[node name="DiceUI" type="HBoxContainer"]
+[node name="DicePool" type="HBoxContainer"]
 script = ExtResource("1_abcde")

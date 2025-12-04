@@ -1,5 +1,5 @@
 extends HBoxContainer
-class_name DiceUI
+class_name DicePool
 
 signal die_clicked(die_display)
 
