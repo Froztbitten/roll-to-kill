@@ -4,7 +4,7 @@ class_name DiceUI
 signal die_clicked(die_display)
 
 # You must replace this placeholder path with the actual path to your DieDisplay scene.
-const DIE_DISPLAY_SCENE = preload("res://scenes/die_display.tscn")
+const DIE_DISPLAY_SCENE = preload("res://scenes/dice/die_display.tscn")
 
 var die_displays = []
 

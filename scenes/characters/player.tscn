@@ -1,0 +1,42 @@
+[gd_scene load_steps=5 format=3 uid="uid://bvyv5m1pde7i7"]
+
+[ext_resource type="Script" uid="uid://2e3o4437htl" path="res://scripts/character/player/player.gd" id="1_5x0h4"]
+[ext_resource type="Texture2D" uid="uid://bulxxtlabqtiy" path="res://assets/ai/characters/icon.svg" id="1_prhyt"]
+[ext_resource type="PackedScene" uid="uid://cgrc3aet23kli" path="res://scenes/characters/health_bar.tscn" id="3_2x3j7"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_76oj4"]
+
+[node name="Player" type="CharacterBody2D"]
+script = ExtResource("1_5x0h4")
+
+[node name="Sprite2D" type="Sprite2D" parent="."]
+position = Vector2(0, -20)
+texture = ExtResource("1_prhyt")
+
+[node name="NameLabel" type="Label" parent="."]
+offset_left = -50.0
+offset_top = -105.0
+offset_right = 50.0
+offset_bottom = -82.0
+theme_override_font_sizes/font_size = 18
+text = "Player"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="HealthBar" parent="." instance=ExtResource("3_2x3j7")]
+offset_left = -50.0
+offset_top = -80.0
+offset_right = 50.0
+offset_bottom = -53.0
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("RectangleShape2D_76oj4")
+
+[node name="IntendedBlockLabel" type="Label" parent="."]
+offset_left = 60.0
+offset_top = -40.0
+offset_right = 100.0
+offset_bottom = 5.0
+theme_override_colors/font_color = Color(0.6, 0.7, 1, 1)
+theme_override_font_sizes/font_size = 32
+text = "+5"

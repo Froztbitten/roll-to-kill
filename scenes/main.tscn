@@ -1,16 +1,16 @@
 [gd_scene load_steps=14 format=3 uid="uid://bnpd5h2y0tnye"]
 
-[ext_resource type="PackedScene" uid="uid://bvyv5m1pde7i7" path="res://scenes/player.tscn" id="1_t2esq"]
+[ext_resource type="PackedScene" uid="uid://bvyv5m1pde7i7" path="res://scenes/characters/player.tscn" id="1_t2esq"]
 [ext_resource type="Script" uid="uid://bik3wojuaq330" path="res://scripts/main.gd" id="1_v4h7v"]
-[ext_resource type="PackedScene" uid="uid://bdo2y3r4q5w6e" path="res://scenes/dice_ui.tscn" id="3_abcde"]
-[ext_resource type="Texture2D" uid="uid://jeil72umhxgy" path="res://assets/gold.svg" id="3_eb6dy"]
-[ext_resource type="PackedScene" uid="uid://imh8eq8iee1n" path="res://scenes/dice_bag_ui.tscn" id="4_fghij"]
-[ext_resource type="PackedScene" uid="uid://c6gq7w8j1xvyv" path="res://scenes/ability_ui.tscn" id="4_trceg"]
-[ext_resource type="PackedScene" path="res://scenes/victory_screen.tscn" id="6_vwxyz"]
-[ext_resource type="PackedScene" path="res://scenes/discard_pile_ui.tscn" id="7_klmno"]
-[ext_resource type="PackedScene" path="res://scenes/defeat_screen.tscn" id="8_abcde"]
-[ext_resource type="PackedScene" uid="uid://c5hrch0sope6w" path="res://scenes/reward_screen.tscn" id="8_reward"]
+[ext_resource type="PackedScene" uid="uid://bdo2y3r4q5w6e" path="res://scenes/ui/dice_pool.tscn" id="3_abcde"]
+[ext_resource type="Texture2D" uid="uid://jeil72umhxgy" path="res://assets/ai/ui/gold.svg" id="3_eb6dy"]
+[ext_resource type="Script" uid="uid://583in5m6jwjr" path="res://scripts/ui/abilities.gd" id="4_a8y0u"]
+[ext_resource type="PackedScene" path="res://scenes/screens/victory_screen.tscn" id="6_vwxyz"]
+[ext_resource type="PackedScene" path="res://scenes/screens/defeat_screen.tscn" id="8_abcde"]
+[ext_resource type="PackedScene" uid="uid://c5hrch0sope6w" path="res://scenes/screens/reward_screen.tscn" id="8_reward"]
 [ext_resource type="Script" uid="uid://dh54ve13ordnt" path="res://scripts/enemy_spawner.gd" id="10_choun"]
+[ext_resource type="Texture2D" uid="uid://bjqx06qgqmopi" path="res://assets/ai/ui/dice_bag.svg" id="10_jbj1t"]
+[ext_resource type="Texture2D" uid="uid://bd2c437hy5mh7" path="res://assets/ai/ui/discard_pile.svg" id="11_a8y0u"]
 [ext_resource type="Script" uid="uid://ck2drfaun3f25" path="res://scripts/encounter.gd" id="11_eb6dy"]
 [ext_resource type="Resource" uid="uid://dm5j2kfa7b6wj" path="res://resources/pack_o_goblins.tres" id="12_trceg"]
 
@@ -21,36 +21,26 @@ player = NodePath("Player")
 [node name="Player" parent="." instance=ExtResource("1_t2esq")]
 position = Vector2(343, 316)
 
-[node name="IntendedBlockLabel" type="Label" parent="Player"]
-visible = false
-offset_left = 80.0
-offset_top = -15.0
-offset_right = 120.0
-offset_bottom = 25.0
-theme_override_colors/font_color = Color(0.6, 0.7, 1, 1)
-theme_override_font_sizes/font_size = 32
-text = "+5"
-
 [node name="Enemies" type="Node2D" parent="."]
 
 [node name="IntentLines" type="Node2D" parent="."]
 
 [node name="UI" type="CanvasLayer" parent="."]
 
-[node name="InfoUI" type="PanelContainer" parent="UI"]
+[node name="GameInfo" type="PanelContainer" parent="UI"]
 anchors_preset = 10
 anchor_right = 1.0
 offset_bottom = 53.0
 grow_horizontal = 2
 
-[node name="Container" type="HFlowContainer" parent="UI/InfoUI"]
+[node name="Container" type="HFlowContainer" parent="UI/GameInfo"]
 custom_minimum_size = Vector2(75, 0)
 layout_mode = 2
 size_flags_horizontal = 0
 size_flags_vertical = 4
 alignment = 1
 
-[node name="GoldIcon" type="TextureRect" parent="UI/InfoUI/Container"]
+[node name="GoldIcon" type="TextureRect" parent="UI/GameInfo/Container"]
 custom_minimum_size = Vector2(50, 50)
 layout_mode = 2
 size_flags_horizontal = 0
@@ -59,17 +49,19 @@ texture = ExtResource("3_eb6dy")
 expand_mode = 1
 stretch_mode = 4
 
-[node name="GoldLabel" type="Label" parent="UI/InfoUI/Container"]
+[node name="GoldLabel" type="Label" parent="UI/GameInfo/Container"]
 layout_mode = 2
 text = "0"
 
-[node name="AbilityUI" parent="UI" instance=ExtResource("4_trceg")]
+[node name="Abilities" type="PanelContainer" parent="UI"]
 offset_left = 15.0
 offset_top = 64.0
 offset_right = 265.0
 offset_bottom = 529.0
+script = ExtResource("4_a8y0u")
+metadata/_custom_type_script = "uid://583in5m6jwjr"
 
-[node name="DiceUI" parent="UI" instance=ExtResource("3_abcde")]
+[node name="DicePool" parent="UI" instance=ExtResource("3_abcde")]
 anchors_preset = 7
 anchor_left = 0.5
 anchor_top = 1.0
@@ -81,25 +73,6 @@ offset_right = 247.0
 offset_bottom = -55.0
 grow_horizontal = 2
 grow_vertical = 0
-
-[node name="DiceBagUI" parent="UI" instance=ExtResource("4_fghij")]
-anchors_preset = 2
-anchor_top = 1.0
-anchor_bottom = 1.0
-offset_left = 20.0
-offset_top = -100.0
-offset_right = 120.0
-offset_bottom = -50.0
-grow_vertical = 0
-
-[node name="DiscardPileUI" parent="UI" instance=ExtResource("7_klmno")]
-anchors_preset = 2
-anchor_top = 1.0
-anchor_bottom = 1.0
-offset_left = 140.0
-offset_top = -100.0
-offset_right = 240.0
-offset_bottom = -50.0
 
 [node name="EndTurnButton" type="Button" parent="UI"]
 anchors_preset = 7
@@ -121,10 +94,10 @@ anchor_left = 0.5
 anchor_top = 1.0
 anchor_right = 0.5
 anchor_bottom = 1.0
-offset_left = -50.0
-offset_top = -75.0
-offset_right = 50.0
-offset_bottom = -52.0
+offset_left = -49.0
+offset_top = -181.0
+offset_right = 51.0
+offset_bottom = -129.0
 grow_horizontal = 2
 grow_vertical = 0
 horizontal_alignment = 1
@@ -150,6 +123,38 @@ visible = false
 
 [node name="RewardScreen" parent="UI" instance=ExtResource("8_reward")]
 visible = false
+
+[node name="RoundInfo" type="HBoxContainer" parent="UI"]
+offset_left = 51.0
+offset_top = 556.0
+offset_right = 219.0
+offset_bottom = 607.0
+
+[node name="DiceBag" type="HBoxContainer" parent="UI/RoundInfo"]
+layout_mode = 2
+
+[node name="DiceBagIcon" type="TextureRect" parent="UI/RoundInfo/DiceBag"]
+layout_mode = 2
+texture = ExtResource("10_jbj1t")
+expand_mode = 3
+stretch_mode = 5
+
+[node name="DiceBagLabel" type="Label" parent="UI/RoundInfo/DiceBag"]
+layout_mode = 2
+text = "10"
+
+[node name="DiceDiscard" type="HBoxContainer" parent="UI/RoundInfo"]
+layout_mode = 2
+
+[node name="DiceDiscardIcon" type="TextureRect" parent="UI/RoundInfo/DiceDiscard"]
+layout_mode = 2
+texture = ExtResource("11_a8y0u")
+expand_mode = 3
+stretch_mode = 5
+
+[node name="DiceDiscardLabel" type="Label" parent="UI/RoundInfo/DiceDiscard"]
+layout_mode = 2
+text = "0"
 
 [node name="EnemySpawner" type="Node" parent="." node_paths=PackedStringArray("enemy_container")]
 script = ExtResource("10_choun")

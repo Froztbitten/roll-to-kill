@@ -1,7 +1,7 @@
 [gd_scene load_steps=3 format=3 uid="uid://c5hrch0sope6w"]
 
-[ext_resource type="Script" uid="uid://coqbfjpvsm1us" path="res://scripts/reward_screen.gd" id="1_script"]
-[ext_resource type="PackedScene" uid="uid://bxvj5n1sfkmvw" path="res://scenes/rewards_die_display.tscn" id="2_14dtq"]
+[ext_resource type="Script" uid="uid://coqbfjpvsm1us" path="res://scripts/screens/reward_screen.gd" id="1_script"]
+[ext_resource type="PackedScene" uid="uid://bxvj5n1sfkmvw" path="res://scenes/screens/rewards_die_display.tscn" id="2_14dtq"]
 
 [node name="RewardScreen" type="Control"]
 layout_mode = 3

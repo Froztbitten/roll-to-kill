@@ -1,14 +1,16 @@
 extends Node2D
 
 @export var player: Player
-@onready var dice_ui: DiceUI = $UI/DiceUI
-@onready var dice_bag_ui: Control = $UI/DiceBagUI
-@onready var abilities_ui: AbilityUI = $UI/AbilityUI
+@onready var dice_ui: DiceUI = $UI/DicePool
+@onready var dice_bag_ui: Control = $UI/Dice/DiceBag
+@onready var abilities_ui: AbilityUI = $UI/Abilities
 @onready var intent_lines: Node2D = $IntentLines
-@onready var discard_pile_ui = $UI/DiscardPileUI
 @onready var total_dice_value_label: Label = $UI/TotalDiceValueLabel
 @onready var total_incoming_damage_label: Label = $UI/TotalIncomingDamageLabel
 @onready var gold_label: Label = $UI/InfoUI/Container/GoldLabel
+
+@onready var dice_bag_label: Label = $UI/RoundInfo/DiceBag/DiceBagLabel
+@onready var dice_discard_label: Label = $UI/RoundInfo/DiceDiscard/DiceDiscardLabel
 
 @onready var victory_screen = $UI/VictoryScreen
 @onready var defeat_screen = $UI/DefeatScreen
@@ -18,7 +20,7 @@ extends Node2D
 
 enum Turn { PLAYER, ENEMY }
 
-const AbilityUI = preload("res://scenes/ability_ui.tscn")
+const AbilityUI = preload("res://scenes/ui/ability.tscn")
 var intents: Dictionary = {}
 var selected_die_display = null
 var current_hand_dice: Array[Dice] = []
@@ -89,8 +91,8 @@ func player_turn():
 	_update_all_intended_damage_displays()
 
 	dice_ui.set_hand(rolled_dice)
-	dice_bag_ui.update_label(player.dice.size())
-	discard_pile_ui.update_label(player.discard_pile.size())
+	update_dice_bag_label(player.dice.size())
+	update_dice_discard_label(player.discard_pile.size())
 	end_turn_button.disabled = false
 
 func _on_end_turn_button_pressed():
@@ -422,3 +424,9 @@ func next_turn():
 		current_turn = Turn.ENEMY
 	else:
 		current_turn = Turn.PLAYER
+
+func update_dice_bag_label(count: int):
+	dice_bag_label.text = str(count)
+
+func update_dice_discard_label(count: int):
+	dice_discard_label.text = str(count)

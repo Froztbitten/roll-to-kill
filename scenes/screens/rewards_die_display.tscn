@@ -1,7 +1,7 @@
 [gd_scene load_steps=6 format=3 uid="uid://bxvj5n1sfkmvw"]
 
-[ext_resource type="Script" uid="uid://dmnu38q0peuqt" path="res://scripts/rewards_die_display.gd" id="1_a3on2"]
-[ext_resource type="Texture2D" uid="uid://ya4vj67lwy48" path="res://assets/d4.svg" id="2_eho2l"]
+[ext_resource type="Script" uid="uid://dmnu38q0peuqt" path="res://scripts/screens/rewards_die_display.gd" id="1_a3on2"]
+[ext_resource type="Texture2D" uid="uid://ya4vj67lwy48" path="res://assets/ai/dice/d4.svg" id="2_eho2l"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_oksap"]
 

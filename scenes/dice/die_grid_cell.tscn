@@ -8,7 +8,7 @@ border_width_right = 1
 border_width_bottom = 1
 border_color = Color(0.5, 0.5, 0.5, 1)
 
-[node name="DiceGridCell" type="Panel"]
+[node name="DieGridCell" type="Panel"]
 custom_minimum_size = Vector2(20, 20)
 theme_override_styles/panel = SubResource("StyleBoxFlat_o7k1s")
 

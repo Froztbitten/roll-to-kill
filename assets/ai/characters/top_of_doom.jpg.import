@@ -3,15 +3,15 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://bxipc3j50qqyc"
-path="res://.godot/imported/top_of_doom.jpg-7df14a6e699495b19deee57a1b26000f.ctex"
+path="res://.godot/imported/top_of_doom.jpg-5ab02e5ef0a9c5b79aeb4c0214df88ea.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/top_of_doom.jpg"
-dest_files=["res://.godot/imported/top_of_doom.jpg-7df14a6e699495b19deee57a1b26000f.ctex"]
+source_file="res://assets/ai/characters/top_of_doom.jpg"
+dest_files=["res://.godot/imported/top_of_doom.jpg-5ab02e5ef0a9c5b79aeb4c0214df88ea.ctex"]
 
 [params]
 

@@ -1,9 +1,9 @@
 [gd_resource type="Resource" script_class="EnemyData" load_steps=11 format=3 uid="uid://du7ewmwn0eh7n"]
 
-[ext_resource type="Script" path="res://scripts/enemy_data.gd" id="1_enemy_data_script"]
-[ext_resource type="Script" uid="uid://b62erl0h813g2" path="res://scripts/dice.gd" id="2_dice_script"]
-[ext_resource type="Texture2D" uid="uid://beajvslq8j3h5" path="res://assets/goblin.svg" id="3_goblin_sprite"]
-[ext_resource type="Script" uid="uid://djeev1jhalfah" path="res://scripts/enemy_action.gd" id="4_action_script"]
+[ext_resource type="Script" uid="uid://dv6r7tro15lnf" path="res://scripts/character/enemy/enemy_data.gd" id="1_enemy_data_script"]
+[ext_resource type="Script" uid="uid://b62erl0h813g2" path="res://scripts/dice/die.gd" id="2_dice_script"]
+[ext_resource type="Texture2D" uid="uid://beajvslq8j3h5" path="res://assets/ai/characters/goblin.svg" id="3_goblin_sprite"]
+[ext_resource type="Script" uid="uid://djeev1jhalfah" path="res://scripts/character/enemy/enemy_action.gd" id="4_action_script"]
 
 [sub_resource type="Resource" id="Resource_dtq84"]
 script = ExtResource("2_dice_script")

@@ -3,15 +3,15 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://duol0mwxddxyo"
-path="res://.godot/imported/hobo.jpg-27dce1f91ddee18f368ea7ea08f8dc56.ctex"
+path="res://.godot/imported/hobo.jpg-d9705e2bd909c1048dc940e188a85e96.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/hobo.jpg"
-dest_files=["res://.godot/imported/hobo.jpg-27dce1f91ddee18f368ea7ea08f8dc56.ctex"]
+source_file="res://assets/ai/characters/hobo.jpg"
+dest_files=["res://.godot/imported/hobo.jpg-d9705e2bd909c1048dc940e188a85e96.ctex"]
 
 [params]
 

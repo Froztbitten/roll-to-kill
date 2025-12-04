@@ -10,17 +10,17 @@ var ACTION_ICONS = {}
 func _ready():
 	# Use load() at runtime instead of preload() at parse time to avoid importer issues.
 	FACES = {
-		2: load("res://assets/coin.svg"),
-		4: load("res://assets/d4.svg"),
-		6: load("res://assets/d6.svg"),
-		8: load("res://assets/d8.svg"),
-		10: load("res://assets/d10.svg"),
-		12: load("res://assets/d12.svg"),
-		20: load("res://assets/d20.svg")
+		2: load("res://assets/ai/dice/coin.svg"),
+		4: load("res://assets/ai/dice/d4.svg"),
+		6: load("res://assets/ai/dice/d6.svg"),
+		8: load("res://assets/ai/dice/d8.svg"),
+		10: load("res://assets/ai/dice/d10.svg"),
+		12: load("res://assets/ai/dice/d12.svg"),
+		20: load("res://assets/ai/dice/d20.svg")
 	}
 	ACTION_ICONS = {
-		"attack": load("res://assets/sword.svg"),
-		"shield": load("res://assets/shield.svg")
+		"attack": load("res://assets/ai/ui/sword.svg"),
+		"shield": load("res://assets/ai/ui/shield.svg")
 	}
 
 func update_display(value: int, sides: int, action_type: String):

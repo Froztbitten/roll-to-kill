@@ -1,10 +1,10 @@
 [gd_scene load_steps=5 format=3 uid="uid://c6x0j2f3a2w0g"]
 
-[ext_resource type="Script" uid="uid://dj62e2af6tm5x" path="res://scripts/enemy.gd" id="1_4qfxc"]
-[ext_resource type="Texture2D" uid="uid://bulxxtlabqtiy" path="res://assets/icon.svg" id="2_abcde"]
-[ext_resource type="PackedScene" uid="uid://cgrc3aet23kli" path="res://scenes/health_bar.tscn" id="3_m1yav"]
-[ext_resource type="Texture2D" uid="uid://by2uceaetwslb" path="res://assets/skull.svg" id="4_skull"]
-[ext_resource type="PackedScene" uid="uid://b1c2d3e4f5g6" path="res://scenes/enemy_intent_display.tscn" id="4_hijkl"]
+[ext_resource type="Script" uid="uid://dj62e2af6tm5x" path="res://scripts/character/enemy/enemy.gd" id="1_4qfxc"]
+[ext_resource type="Texture2D" uid="uid://bulxxtlabqtiy" path="res://assets/ai/characters/icon.svg" id="2_abcde"]
+[ext_resource type="PackedScene" uid="uid://cgrc3aet23kli" path="res://scenes/characters/health_bar.tscn" id="3_m1yav"]
+[ext_resource type="Texture2D" uid="uid://by2uceaetwslb" path="res://assets/ai/ui/skull.svg" id="4_skull"]
+[ext_resource type="PackedScene" uid="uid://b1c2d3e4f5g6" path="res://scenes/characters/enemy/enemy_intent_display.tscn" id="4_hijkl"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_12345"]
 size = Vector2(128, 128)

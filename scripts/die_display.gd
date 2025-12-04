@@ -2,7 +2,7 @@ extends Control
 
 signal die_clicked(die_display)
 
-const DiceGridCell = preload("res://scenes/dice_grid_cell.tscn")
+const DieGridCell = preload("res://scenes/dice/die_grid_cell.tscn")
 
 # --- IMPORTANT ---
 # You must replace these placeholder paths with the actual paths to your dice face images.
@@ -80,7 +80,7 @@ func update_display():
 
 	for i in range(faces.size()):
 		var face_value = faces[i]
-		var cell = DiceGridCell.instantiate()
+		var cell = DieGridCell.instantiate()
 		var label = cell.get_node("Label")
 		label.text = str(face_value)
 		

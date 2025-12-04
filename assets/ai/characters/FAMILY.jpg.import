@@ -3,15 +3,15 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://duobst2gp32vl"
-path="res://.godot/imported/FAMILY.jpg-dd5ee231f41d7a2441116d98a6f2d9f4.ctex"
+path="res://.godot/imported/FAMILY.jpg-b59398405e2e825431fda9736082ca96.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/FAMILY.jpg"
-dest_files=["res://.godot/imported/FAMILY.jpg-dd5ee231f41d7a2441116d98a6f2d9f4.ctex"]
+source_file="res://assets/ai/characters/FAMILY.jpg"
+dest_files=["res://.godot/imported/FAMILY.jpg-b59398405e2e825431fda9736082ca96.ctex"]
 
 [params]
 

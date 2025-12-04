@@ -7,7 +7,7 @@ signal die_hovered(die_display)
 @onready var die_icon: TextureRect = $DieLabel/DieIcon
 @onready var face_grid: GridContainer = $FaceGrid
 @onready var average_label: Label = $AverageLabel
-const DiceGridCell = preload("res://scenes/dice_grid_cell.tscn")
+const DiceGridCell = preload("res://scenes/dice/die_grid_cell.tscn")
 
 var die: Dictionary # {"object": Dice, "value": int, "sides": int}
 var original_grid_text: String # Used for the Alt-hover average display

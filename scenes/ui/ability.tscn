@@ -1,6 +1,7 @@
-[gd_scene load_steps=3 format=3 uid="uid://c6gq7w8j1xvyv"]
+[gd_scene load_steps=4 format=3 uid="uid://cihuho6da82op"]
 
-[ext_resource type="Script" uid="uid://583in5m6jwjr" path="res://scripts/ability_ui.gd" id="1_abcde"]
+[ext_resource type="Script" uid="uid://583in5m6jwjr" path="res://scripts/ui/abilities.gd" id="1_abcde"]
+[ext_resource type="PackedScene" uid="uid://cgrd2w2flg23s" path="res://scenes/ui/die_slot.tscn" id="2_smjc0"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_abcde"]
 bg_color = Color(0.1, 0.1, 0.15, 0.7)
@@ -52,3 +53,6 @@ fit_content = true
 [node name="DiceSlots" type="HBoxContainer" parent="MarginContainer/VBoxContainer"]
 layout_mode = 2
 alignment = 1
+
+[node name="DieSlotUI" parent="MarginContainer/VBoxContainer/DiceSlots" instance=ExtResource("2_smjc0")]
+layout_mode = 2

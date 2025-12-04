@@ -6,7 +6,7 @@ class_name AbilityUI
 @onready var icon_texture_rect: TextureRect = $MarginContainer/VBoxContainer/Header/Icon
 @onready var dice_slots_container: HBoxContainer = $MarginContainer/VBoxContainer/DiceSlots
 
-const DieSlotUI = preload("res://scenes/die_slot_ui.tscn")
+const DieSlotUI = preload("res://scenes/ui/die_slot.tscn")
 
 @export var ability: Ability:
 	set(value):

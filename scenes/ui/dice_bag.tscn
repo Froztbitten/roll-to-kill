@@ -1,0 +1,15 @@
+[gd_scene load_steps=2 format=3 uid="uid://cbxflb3eucfw7"]
+
+[ext_resource type="Script" uid="uid://b12wbq3fb34a" path="res://scripts/ui/dice_bag.gd" id="2_fghij"]
+
+[node name="DiceBagUI" type="HBoxContainer"]
+script = ExtResource("2_fghij")
+
+[node name="Icon" type="TextureRect" parent="."]
+layout_mode = 2
+expand_mode = 3
+stretch_mode = 5
+
+[node name="Label" type="Label" parent="."]
+layout_mode = 2
+text = "10"

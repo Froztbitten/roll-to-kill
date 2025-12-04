@@ -3,15 +3,15 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://e20xoafsbmfc"
-path="res://.godot/imported/sentai_mech.jpg-891d47a06e86829f4ae462dc067a8b20.ctex"
+path="res://.godot/imported/sentai_mech.jpg-fec83e6365d99be66dbd277b846059a6.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/sentai_mech.jpg"
-dest_files=["res://.godot/imported/sentai_mech.jpg-891d47a06e86829f4ae462dc067a8b20.ctex"]
+source_file="res://assets/ai/characters/sentai_mech.jpg"
+dest_files=["res://.godot/imported/sentai_mech.jpg-fec83e6365d99be66dbd277b846059a6.ctex"]
 
 [params]
 
