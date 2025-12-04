@@ -3,11 +3,13 @@ extends Node2D
 @export var player: Player
 @onready var dice_ui: DiceUI = $UI/DiceUI
 @onready var dice_bag_ui: Control = $UI/DiceBagUI
+@onready var abilities_ui: AbilityUI = $UI/AbilityUI
 @onready var intent_lines: Node2D = $IntentLines
 @onready var discard_pile_ui = $UI/DiscardPileUI
 @onready var total_dice_value_label: Label = $UI/TotalDiceValueLabel
 @onready var total_incoming_damage_label: Label = $UI/TotalIncomingDamageLabel
 @onready var gold_label: Label = $UI/InfoUI/Container/GoldLabel
+
 @onready var victory_screen = $UI/VictoryScreen
 @onready var defeat_screen = $UI/DefeatScreen
 @onready var reward_screen = $UI/RewardScreen
@@ -15,6 +17,8 @@ extends Node2D
 @onready var end_turn_button = $UI/EndTurnButton
 
 enum Turn { PLAYER, ENEMY }
+
+const AbilityUI = preload("res://scenes/ability_ui.tscn")
 var intents: Dictionary = {}
 var selected_die_display = null
 var current_hand_dice: Array[Dice] = []
@@ -31,8 +35,25 @@ func _ready():
 	player.gold_changed.connect(_update_gold)
 	dice_ui.die_clicked.connect(_on_die_clicked)
 	reward_screen.reward_chosen.connect(_on_reward_chosen)
-
+	
+	_display_player_abilities()
 	start_new_round()
+
+func _display_player_abilities():
+	# Clear any previously displayed abilities
+	for child in abilities_ui.get_children():
+		child.queue_free()
+
+	# Instantiate and display a UI element for each ability the player has
+	for ability_resource in player.abilities:
+		var ability_ui_instance = AbilityUI.instantiate()
+		# Defer setting the ability until after the node has fully entered the scene tree.
+		# This ensures that its @onready variables have been initialized.
+		ability_ui_instance.tree_entered.connect(
+			func(): ability_ui_instance.ability = ability_resource,
+			CONNECT_ONE_SHOT
+		)
+		abilities_ui.add_child(ability_ui_instance)
 
 func player_turn():
 	dice_ui.clear_displays()

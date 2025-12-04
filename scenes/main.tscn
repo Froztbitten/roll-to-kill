@@ -1,16 +1,17 @@
-[gd_scene load_steps=13 format=3 uid="uid://bnpd5h2y0tnye"]
+[gd_scene load_steps=14 format=3 uid="uid://bnpd5h2y0tnye"]
 
 [ext_resource type="PackedScene" uid="uid://bvyv5m1pde7i7" path="res://scenes/player.tscn" id="1_t2esq"]
 [ext_resource type="Script" uid="uid://bik3wojuaq330" path="res://scripts/main.gd" id="1_v4h7v"]
 [ext_resource type="PackedScene" uid="uid://bdo2y3r4q5w6e" path="res://scenes/dice_ui.tscn" id="3_abcde"]
 [ext_resource type="Texture2D" uid="uid://jeil72umhxgy" path="res://assets/gold.svg" id="3_eb6dy"]
 [ext_resource type="PackedScene" uid="uid://imh8eq8iee1n" path="res://scenes/dice_bag_ui.tscn" id="4_fghij"]
-[ext_resource type="PackedScene" path="res://scenes/victory_screen.tscn" id="5_vwxyz"]
-[ext_resource type="PackedScene" path="res://scenes/discard_pile_ui.tscn" id="6_klmno"]
-[ext_resource type="PackedScene" path="res://scenes/defeat_screen.tscn" id="7_abcde"]
+[ext_resource type="PackedScene" uid="uid://c6gq7w8j1xvyv" path="res://scenes/ability_ui.tscn" id="4_trceg"]
+[ext_resource type="PackedScene" path="res://scenes/victory_screen.tscn" id="6_vwxyz"]
+[ext_resource type="PackedScene" path="res://scenes/discard_pile_ui.tscn" id="7_klmno"]
+[ext_resource type="PackedScene" path="res://scenes/defeat_screen.tscn" id="8_abcde"]
 [ext_resource type="PackedScene" uid="uid://c5hrch0sope6w" path="res://scenes/reward_screen.tscn" id="8_reward"]
 [ext_resource type="Script" uid="uid://dh54ve13ordnt" path="res://scripts/enemy_spawner.gd" id="10_choun"]
-[ext_resource type="Script" path="res://scripts/encounter.gd" id="11_eb6dy"]
+[ext_resource type="Script" uid="uid://ck2drfaun3f25" path="res://scripts/encounter.gd" id="11_eb6dy"]
 [ext_resource type="Resource" uid="uid://dm5j2kfa7b6wj" path="res://resources/pack_o_goblins.tres" id="12_trceg"]
 
 [node name="Main" type="Node2D" node_paths=PackedStringArray("player")]
@@ -18,7 +19,7 @@ script = ExtResource("1_v4h7v")
 player = NodePath("Player")
 
 [node name="Player" parent="." instance=ExtResource("1_t2esq")]
-position = Vector2(200, 300)
+position = Vector2(343, 316)
 
 [node name="IntendedBlockLabel" type="Label" parent="Player"]
 visible = false
@@ -62,16 +63,22 @@ stretch_mode = 4
 layout_mode = 2
 text = "0"
 
+[node name="AbilityUI" parent="UI" instance=ExtResource("4_trceg")]
+offset_left = 15.0
+offset_top = 64.0
+offset_right = 265.0
+offset_bottom = 529.0
+
 [node name="DiceUI" parent="UI" instance=ExtResource("3_abcde")]
 anchors_preset = 7
 anchor_left = 0.5
 anchor_top = 1.0
 anchor_right = 0.5
 anchor_bottom = 1.0
-offset_left = -200.0
-offset_top = -125.0
-offset_right = 200.0
-offset_bottom = -75.0
+offset_left = -254.0
+offset_top = -140.0
+offset_right = 247.0
+offset_bottom = -55.0
 grow_horizontal = 2
 grow_vertical = 0
 
@@ -85,7 +92,7 @@ offset_right = 120.0
 offset_bottom = -50.0
 grow_vertical = 0
 
-[node name="DiscardPileUI" parent="UI" instance=ExtResource("6_klmno")]
+[node name="DiscardPileUI" parent="UI" instance=ExtResource("7_klmno")]
 anchors_preset = 2
 anchor_top = 1.0
 anchor_bottom = 1.0
@@ -135,10 +142,10 @@ theme_override_font_sizes/font_size = 32
 text = "15"
 horizontal_alignment = 1
 
-[node name="VictoryScreen" parent="UI" instance=ExtResource("5_vwxyz")]
+[node name="VictoryScreen" parent="UI" instance=ExtResource("6_vwxyz")]
 visible = false
 
-[node name="DefeatScreen" parent="UI" instance=ExtResource("7_abcde")]
+[node name="DefeatScreen" parent="UI" instance=ExtResource("8_abcde")]
 visible = false
 
 [node name="RewardScreen" parent="UI" instance=ExtResource("8_reward")]

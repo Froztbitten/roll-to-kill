@@ -3,12 +3,19 @@ class_name Player
 
 signal gold_changed(new_amount)
 
+@export var starting_abilities: Array[Ability] = [load("res://resources/abilities/heal.tres")]
+@export var abilities: Array[Ability] = []
+
 var dice: Array[Dice] = []
 var discard_pile: Array[Dice] = []
 var gold: int = 0
 
+
 func _ready():
 	super._ready()
+
+	# Add predefined starting abilities to the player's ability list
+	abilities.append_array(starting_abilities)
 	
 	# Define the initial deck
 	var starting_deck_sides = [4, 6, 6, 6, 8, 8, 10, 12, 20]
