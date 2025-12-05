@@ -5,6 +5,7 @@
 [ext_resource type="PackedScene" uid="uid://cgrc3aet23kli" path="res://scenes/characters/health_bar.tscn" id="3_2x3j7"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_76oj4"]
+size = Vector2(92, 76)
 
 [node name="Player" type="CharacterBody2D"]
 script = ExtResource("1_5x0h4")
@@ -30,6 +31,7 @@ offset_right = 50.0
 offset_bottom = -53.0
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+position = Vector2(1, -11)
 shape = SubResource("RectangleShape2D_76oj4")
 
 [node name="IntendedBlockLabel" type="Label" parent="."]
