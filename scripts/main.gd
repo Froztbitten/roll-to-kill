@@ -21,7 +21,7 @@ enum Turn { PLAYER, ENEMY }
 
 const AbilityUI = preload("res://scenes/ui/ability.tscn")
 var intents: Dictionary = {}
-var selected_die_display: DieDisplay = null
+var selected_dice_display: Array[DieDisplay] = []
 var current_incoming_damage: int = 0
 
 var current_turn = Turn.PLAYER
@@ -61,7 +61,7 @@ func player_turn():
 	# Reset block at the start of the turn
 	player.block = 0
 	_clear_intents()
-	_clear_selection()
+	selected_dice_display = []
 	
 	var rolled_dice: Array[Die] = []
 	var total_dice_value = 0
@@ -144,18 +144,14 @@ func _on_die_clicked(die_display):
 		just_cleared_intent = true
 
 	# If we clicked the currently selected die (and didn't just clear its intent), deselect it.
-	if selected_die_display == die_display and not just_cleared_intent:
-		_clear_selection()
+	if selected_dice_display.has(die_display) and not just_cleared_intent:
+		selected_dice_display.erase(die_display)
+		die_display.deselect()
 	else:
-		# A new die was clicked, or an old intent was just cleared.
-		# Deselect any other die that might be selected.
-		if selected_die_display:
-			selected_die_display.deselect()
-		
 		# Select the clicked die and start the intent action.
-		selected_die_display = die_display
-		selected_die_display.select()
-		print("Intent action started. Select a target for die with value: " + str(selected_die_display.die.result_value))
+		selected_dice_display.append(die_display)
+		die_display.select()
+		print("Intent action started. Select a target for die with value: " + str(die_display.die.result_value))
 
 func _unhandled_input(event: InputEvent):
 	# This function catches input that was not handled by the UI.
@@ -183,79 +179,72 @@ func _unhandled_input(event: InputEvent):
 func _on_character_clicked(character):
 	print("Character clicked: " + str(character))
 	# If no die is selected, do nothing
-	if not selected_die_display:
+	if selected_dice_display.size() == 0:
 		return
 
-	var die_roll_value = selected_die_display.die.result_value
-	print("Intent action: Use die with value %d on %s." % [die_roll_value, character.name])
+	for die_display: DieDisplay in selected_dice_display:
+		print("Intent action: Use die with value %d on %s." % [die_display.die.result_value, character.name])
 
-	# Create an intent using the selected die's data
-	# Use the die_display object as the key, since it's a unique reference.
-	# A dictionary (die_data) cannot be used as a key.
+		# Create an intent using the selected die's data
+		# Use the die_display object as the key, since it's a unique reference.
+		# A dictionary (die_data) cannot be used as a key.
 
-	# --- Create the full arrow with outline and arrowhead ---
-	var arrow_container = Node2D.new()
+		# --- Create the full arrow with outline and arrowhead ---
+		var arrow_container = Node2D.new()
 
-	# 1. Create the black outline line (drawn first)
-	var line_outline = Line2D.new()
-	line_outline.width = 7.0 # Thicker for the outline effect
-	line_outline.default_color = Color.BLACK
-	arrow_container.add_child(line_outline)
+		# 1. Create the black outline line (drawn first)
+		var line_outline = Line2D.new()
+		line_outline.width = 7.0 # Thicker for the outline effect
+		line_outline.default_color = Color.BLACK
+		arrow_container.add_child(line_outline)
 
-	# 2. Create the main colored line
-	var line_main = Line2D.new()
-	line_main.width = 3.0
-	if character is Player:
-		line_main.default_color = Color(0.6, 0.7, 1, 1)
-	else:
-		line_main.default_color = Color.CRIMSON
-	arrow_container.add_child(line_main)
+		# 2. Create the main colored line
+		var line_main = Line2D.new()
+		line_main.width = 3.0
+		if character is Player:
+			line_main.default_color = Color(0.6, 0.7, 1, 1)
+		else:
+			line_main.default_color = Color.CRIMSON
+		arrow_container.add_child(line_main)
 
-	var start_pos = selected_die_display.get_global_transform_with_canvas().get_origin() + selected_die_display.size / 2
-	var end_pos = character.global_position
-	var control_pos = (start_pos + end_pos) / 2 - Vector2(0, 200)
-	
-	# Generate points for the curve and add them to both lines
-	var point_count = 20
-	for i in range(point_count + 1):
-		var t = float(i) / point_count
-		var point = start_pos.lerp(control_pos, t).lerp(control_pos.lerp(end_pos, t), t)
-		line_main.add_point(point)
-		line_outline.add_point(point)
+		var start_pos = die_display.get_global_transform_with_canvas().get_origin() + die_display.size / 2
+		var end_pos = character.global_position
+		var control_pos = (start_pos + end_pos) / 2 - Vector2(0, 200)
+		
+		# Generate points for the curve and add them to both lines
+		var point_count = 20
+		for i in range(point_count + 1):
+			var t = float(i) / point_count
+			var point = start_pos.lerp(control_pos, t).lerp(control_pos.lerp(end_pos, t), t)
+			line_main.add_point(point)
+			line_outline.add_point(point)
 
-	# 3. Create the arrowhead
-	var arrowhead = Polygon2D.new()
-	arrowhead.color = line_main.default_color
-	var arrowhead_outline = Polygon2D.new() # For the black outline
-	arrowhead_outline.color = Color.BLACK
-	
-	var last_point = line_main.points[-1]
-	var second_last_point = line_main.points[-2]
-	var direction = (last_point - second_last_point).normalized()
-	
-	# Define arrowhead shape and outline
-	arrowhead.polygon = [last_point, last_point - direction * 15 + direction.orthogonal() * 8, last_point - direction * 15 - direction.orthogonal() * 8]
-	arrowhead_outline.polygon = [last_point + direction * 3, last_point - direction * 19 + direction.orthogonal() * 11, last_point - direction * 19 - direction.orthogonal() * 11]
-	
-	arrow_container.add_child(arrowhead_outline)
-	arrow_container.add_child(arrowhead)
+		# 3. Create the arrowhead
+		var arrowhead = Polygon2D.new()
+		arrowhead.color = line_main.default_color
+		var arrowhead_outline = Polygon2D.new() # For the black outline
+		arrowhead_outline.color = Color.BLACK
+		
+		var last_point = line_main.points[-1]
+		var second_last_point = line_main.points[-2]
+		var direction = (last_point - second_last_point).normalized()
+		
+		# Define arrowhead shape and outline
+		arrowhead.polygon = [last_point, last_point - direction * 15 + direction.orthogonal() * 8, last_point - direction * 15 - direction.orthogonal() * 8]
+		arrowhead_outline.polygon = [last_point + direction * 3, last_point - direction * 19 + direction.orthogonal() * 11, last_point - direction * 19 - direction.orthogonal() * 11]
+		
+		arrow_container.add_child(arrowhead_outline)
+		arrow_container.add_child(arrowhead)
 
-	intent_lines.add_child(arrow_container)
+		intent_lines.add_child(arrow_container)
 
-	intents[selected_die_display] = {"die": selected_die_display.die, "roll": die_roll_value, "target": character, "line": arrow_container}
+		intents[die_display] = {"die": die_display.die, "roll": die_display.die.result_value, "target": character, "line": arrow_container}
+		die_display.deselect()
 	print("Intents: " + str(intents))
 
-	# Visually "consume" the die by making it inactive.
-	# This prevents using the same die for multiple intents.
-	# Deselect the die after using it
-	_clear_selection()
+	selected_dice_display = []
 	_update_intended_block_display()
 	_update_all_intended_damage_displays()
-
-func _clear_selection():
-	if selected_die_display:
-		selected_die_display.deselect()
-	selected_die_display = null
 
 func _clear_intents():
 	# Free the line nodes before clearing the dictionary
