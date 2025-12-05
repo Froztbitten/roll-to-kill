@@ -1,23 +1,27 @@
 extends Button
+class_name RewardsDieDisplay
 
 signal die_hovered(die_display)
 
-@onready var background: ColorRect = $Background
 @onready var die_label: Label = $DieLabel
 @onready var die_icon: TextureRect = $DieLabel/DieIcon
 @onready var face_grid: GridContainer = $FaceGrid
 @onready var average_label: Label = $AverageLabel
-const DiceGridCell = preload("res://scenes/dice/die_grid_cell.tscn")
+const DieGridCell = preload("res://scenes/dice/die_grid_cell.tscn")
 
-var die: Dictionary # {"object": Dice, "value": int, "sides": int}
+var die: Die
 var original_grid_text: String # Used for the Alt-hover average display
-var is_selected = false # Renamed from 'selected' for clarity
+var is_selected = false
 var average_roll = 0
 
 func _ready():
-	# Hide by default until set_die is called.
-	# This is useful for the reward screen where displays are pre-placed.
-	visible = false
+	# 1. Create a new stylebox
+	var new_style = StyleBoxFlat.new()
+	new_style.bg_color = Color(0.9, 0.7, 0.2)
+		
+	# Optional: Apply it to hover/pressed so it doesn't flicker gray
+	add_theme_stylebox_override("hover", new_style)
+	add_theme_stylebox_override("pressed", new_style)
 
 func _process(_delta):
 	# On every frame, check if the mouse is over this control and if ALT is pressed.
@@ -33,28 +37,28 @@ func _process(_delta):
 		average_label.visible = false
 
 
-func set_die(die_data: Dictionary):
+func set_die(die_data: Die):
 	deselect()
 	
 	self.die = die_data
-	var die_object: Dice = die_data.object
+	var die_object: Die = die_data
 
 	# Clear previous contents of the grid
 	for child in face_grid.get_children():
 		child.queue_free()
 
-	if die.value > 0:
+	if die.result_value > 0:
 		# Standard display for rolled dice in hand
 		scale = Vector2(1, 1) # Reset scale for hand display
 		face_grid.columns = 1
 		
-		var cell = DiceGridCell.instantiate()
+		var cell = DieGridCell.instantiate()
 		var label = cell.get_node("Label")
-		label.text = str(die.value)
+		label.text = str(die.result_value)
 		label.set("theme_override_font_sizes/font_size", 48) # Make the single number large
 		cell.add_theme_stylebox_override("panel", StyleBoxEmpty.new()) # Remove panel style for single value
 		face_grid.add_child(cell)
-		original_grid_text = str(die.value)
+		original_grid_text = str(die.result_value)
 	else:
 		# Larger display for unrolled dice on the reward screen
 		scale = Vector2(1.5, 1.5) # Scale up the entire control
@@ -84,7 +88,7 @@ func set_die(die_data: Dictionary):
 			faces = range(1, die.sides + 1)
 		
 		for face in faces:
-			var cell = DiceGridCell.instantiate()
+			var cell = DieGridCell.instantiate()
 			cell.get_node("Label").text = str(face)
 			face_grid.add_child(cell)
 		original_grid_text = "" # Not needed for multi-cell grid
@@ -94,7 +98,7 @@ func set_die(die_data: Dictionary):
 	# Set the icon behind the side label
 	if die_icon:
 		if die_object:
-			var icon_path = die_object.get_icon_path()
+			var icon_path = die_object.icon_path
 			if not icon_path.is_empty():
 				die_icon.texture = load(icon_path)
 			else:
@@ -108,11 +112,11 @@ func set_die(die_data: Dictionary):
 
 func select():
 	is_selected = true
-	background.color = Color(0.9, 0.7, 0.2) # Gold color for selection
+	#self.color = Color(0.9, 0.7, 0.2) # Gold color for selection
 	
 func deselect():
 	is_selected = false
-	background.color = Color(0.2, 0.2, 0.2) # Default dark gray
+	#self.colo color = Color(0.2, 0.2, 0.2) # Default dark gray
 
 func _on_mouse_entered():
 	emit_signal("die_hovered", self)

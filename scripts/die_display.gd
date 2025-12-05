@@ -1,14 +1,11 @@
 extends Control
+class_name DieDisplay
 
 signal die_clicked(die_display)
 
 const DieGridCell = preload("res://scenes/dice/die_grid_cell.tscn")
 
-# --- IMPORTANT ---
-# You must replace these placeholder paths with the actual paths to your dice face images.
-var FACES = {}
-
-var die: Dictionary:
+var die: Die:
 	set = set_die
 
 @onready var main_display: PanelContainer = $MainDisplay
@@ -17,46 +14,23 @@ var die: Dictionary:
 @onready var face_grid: PanelContainer = $FaceGrid
 @onready var grid_container: GridContainer = $FaceGrid/Grid
 
-func _ready():
-	FACES = {
-		4: load("res://assets/d4.svg"),
-		6: load("res://assets/d6.svg"),
-		8: load("res://assets/d8.svg"),
-		10: load("res://assets/d10.svg"),
-		12: load("res://assets/d12.svg"),
-		20: load("res://assets/d20.svg")
-	}
-	
-	# Add a black outline to the main roll label for better readability
-	roll_label.add_theme_color_override("font_outline_color", Color.BLACK)
-	roll_label.add_theme_constant_override("outline_size", 8)
-	
-	# Remove the default panel background from the main display area
-	main_display.add_theme_stylebox_override("panel", StyleBoxEmpty.new())
-
-
-func set_die(value: Dictionary):
+func set_die(value: Die):
 	die = value
 	if is_node_ready():
 		update_display()
 
 func update_display():
-	if not die or not die.has("object"):
+	if not die:
 		return
 
 	# --- 1. Update the default display (Icon and RollLabel) ---
-	var rolled_value = die.value
-	var die_sides = die.sides
-	roll_label.text = str(rolled_value)
-	if FACES.has(die_sides):
-		icon_texture.texture = FACES[die_sides]
+	roll_label.text = str(die.result_value)
+	icon_texture.texture = load(die.icon_path)
 
 	# --- 2. Populate the hidden hover grid ---
 	# Clear previous grid contents
 	for child in grid_container.get_children():
 		child.queue_free()
-
-	var die_object: Dice = die.object
 	
 	# Set separation to -1 so that 1px borders on adjacent cells overlap perfectly
 	# This creates a "shared border" look for the grid.
@@ -73,13 +47,8 @@ func update_display():
 		20: grid_container.columns = 5
 		_: grid_container.columns = 4
 
-	var faces = die_object.face_values
-	if faces.is_empty():
-		# Fallback if face_values isn't set on the Dice resource
-		faces = range(1, die.sides + 1)
-
-	for i in range(faces.size()):
-		var face_value = faces[i]
+	for i in range(die.face_values.size()):
+		var face_value = die.face_values[i]
 		var cell = DieGridCell.instantiate()
 		var label = cell.get_node("Label")
 		label.text = str(face_value)
@@ -99,7 +68,7 @@ func update_display():
 		cell.add_theme_stylebox_override("panel", default_style)
 		
 		# Highlight the rolled face
-		if i == die_object.result_face:
+		if i == die.result_face:
 			# Create a unique stylebox to highlight the rolled face
 			var style = StyleBoxFlat.new()
 			style.bg_color = Color(0.9, 0.7, 0.2, 0.5) # Translucent gold

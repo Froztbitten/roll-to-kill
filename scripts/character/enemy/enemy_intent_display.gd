@@ -10,7 +10,7 @@ var ACTION_ICONS = {}
 func _ready():
 	# Use load() at runtime instead of preload() at parse time to avoid importer issues.
 	FACES = {
-		2: load("res://assets/ai/dice/coin.svg"),
+		2: load("res://assets/ai/dice/d2.svg"),
 		4: load("res://assets/ai/dice/d4.svg"),
 		6: load("res://assets/ai/dice/d6.svg"),
 		8: load("res://assets/ai/dice/d8.svg"),

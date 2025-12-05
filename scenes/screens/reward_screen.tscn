@@ -86,7 +86,7 @@ grow_vertical = 2
 mouse_filter = 1
 mouse_default_cursor_shape = 2
 bbcode_enabled = true
-text = "Skip Rewards (+10[img=24]res://assets/gold.svg[/img])"
+text = "Skip Rewards (+10[img=24]res://assets/ai/ui/gold.svg[/img])"
 fit_content = true
 scroll_active = false
 horizontal_alignment = 1

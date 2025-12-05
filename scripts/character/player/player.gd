@@ -1,14 +1,19 @@
 extends Character
 class_name Player
 
+signal dice_bag_changed(new_amount)
+signal dice_discard_changed(new_amount)
 signal gold_changed(new_amount)
 
 @export var starting_abilities: Array[Ability] = [load("res://resources/abilities/heal.tres")]
 @export var abilities: Array[Ability] = []
 
-var dice: Array[Dice] = []
-var discard_pile: Array[Dice] = []
+var _game_dice_bag: Array[Die] = []
+var _round_dice_bag: Array[Die] = []
+var _dice_discard: Array[Die] = []
 var gold: int = 0
+
+var dice_pool_size = 4
 
 
 func _ready():
@@ -18,37 +23,51 @@ func _ready():
 	abilities.append_array(starting_abilities)
 	
 	# Define the initial deck
-	var starting_deck_sides = [4, 6, 6, 6, 8, 8, 10, 12, 20]
+	var starting_deck_sides = [2, 4, 4, 6, 6, 6, 8, 10, 12]
 	
 	for side_count in starting_deck_sides:
-		var new_die = Dice.new()
+		var new_die = Die.new(side_count)
 		new_die.sides = side_count
-		dice.append(new_die)
-	
-	dice.shuffle()
+		add_to_game_bag([new_die])
+	print("added default dice bag of size: ", _game_dice_bag.size())
 
 func draw_hand():
-	var drawn_dice: Array[Dice] = []
-	for i in range(3):
-		if dice.size() == 0:
-			shuffle_discard_pile_into_deck()
+	var drawn_dice: Array[Die] = []
+	for i in range(dice_pool_size):
+		if _round_dice_bag.size() == 0:
+			shuffle_dice_discard_into_bag()
 		
-		if dice.size() > 0:
-			var random_index = randi() % dice.size()
-			var drawn_die = dice.pop_at(random_index)
+		if _round_dice_bag.size() > 0:
+			var random_index = randi() % _round_dice_bag.size()
+			var drawn_die = _round_dice_bag.pop_at(random_index)
+			dice_bag_changed.emit(_round_dice_bag.size())
 			drawn_dice.append(drawn_die)
 	return drawn_dice
 
-func discard(dice: Array[Dice]):
-	discard_pile.append_array(dice)
+func discard(dice_to_discard: Array[Die]):
+	_dice_discard.append_array(dice_to_discard)
+	dice_discard_changed.emit(_dice_discard.size())
 
-func shuffle_discard_pile_into_deck():
-	dice.append_array(discard_pile)
-	discard_pile.clear()
-	dice.shuffle()
+func shuffle_dice_discard_into_bag():
+	add_to_round_bag(_dice_discard)
+	
+	_dice_discard.clear()
+	dice_discard_changed.emit(_dice_discard.size())
+	_round_dice_bag.shuffle()
+	
+func reset_for_new_round():
+	_round_dice_bag = _game_dice_bag.duplicate()
+	dice_bag_changed.emit(_round_dice_bag.size())
+	
+	_dice_discard.clear()
+	dice_discard_changed.emit(_dice_discard.size())
+	
+func add_to_game_bag(dice_to_add: Array[Die]):
+	_game_dice_bag.append_array(dice_to_add)
 
-func add_die(new_die: Dice):
-	dice.append(new_die)
+func add_to_round_bag(dice_to_add: Array[Die]):
+	_round_dice_bag.append_array(dice_to_add)
+	dice_bag_changed.emit(_round_dice_bag.size())
 
 func add_gold(new_gold: int):
 	print("gold changed: ", new_gold)

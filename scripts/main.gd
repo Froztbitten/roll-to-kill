@@ -1,13 +1,12 @@
 extends Node2D
 
 @export var player: Player
-@onready var dice_ui: DicePool = $UI/DicePool
-@onready var dice_bag_ui: Control = $UI/Dice/DiceBag
+@onready var dice_pool_ui: DicePool = $UI/DicePool
 @onready var abilities_ui: Abilities = $UI/Abilities
 @onready var intent_lines: Node2D = $IntentLines
 @onready var total_dice_value_label: Label = $UI/TotalDiceValueLabel
 @onready var total_incoming_damage_label: Label = $UI/TotalIncomingDamageLabel
-@onready var gold_label: Label = $UI/InfoUI/Container/GoldLabel
+@onready var gold_label: Label = $UI/GameInfo/GoldContainer/GoldLabel
 
 @onready var dice_bag_label: Label = $UI/RoundInfo/DiceBag/DiceBagLabel
 @onready var dice_discard_label: Label = $UI/RoundInfo/DiceDiscard/DiceDiscardLabel
@@ -22,8 +21,7 @@ enum Turn { PLAYER, ENEMY }
 
 const AbilityUI = preload("res://scenes/ui/ability.tscn")
 var intents: Dictionary = {}
-var selected_die_display = null
-var current_hand_dice: Array[Dice] = []
+var selected_die_display: DieDisplay = null
 var current_incoming_damage: int = 0
 
 var current_turn = Turn.PLAYER
@@ -35,7 +33,9 @@ func _ready():
 	# Connect signals
 	player.died.connect(_on_player_died)
 	player.gold_changed.connect(_update_gold)
-	dice_ui.die_clicked.connect(_on_die_clicked)
+	player.dice_bag_changed.connect(_update_dice_bag)
+	player.dice_discard_changed.connect(_update_dice_discard)
+	dice_pool_ui.die_clicked.connect(_on_die_clicked)
 	reward_screen.reward_chosen.connect(_on_reward_chosen)
 	
 	_display_player_abilities()
@@ -58,20 +58,18 @@ func _display_player_abilities():
 		abilities_ui.add_child(ability_ui_instance)
 
 func player_turn():
-	dice_ui.clear_displays()
 	# Reset block at the start of the turn
 	player.block = 0
 	_clear_intents()
 	_clear_selection()
 	
-	var rolled_dice = []
+	var rolled_dice: Array[Die] = []
 	var total_dice_value = 0
-	var hand = player.draw_hand()
-	for die in hand:
+	var hand: Array[Die] = player.draw_hand()
+	for die: Die in hand:
 		var roll = die.roll()
-		current_hand_dice.append(die) # Keep track of the dice in the current hand
 		total_dice_value += roll
-		rolled_dice.append({"object": die, "value": roll, "sides": die.sides})
+		rolled_dice.append(die)
 	
 	total_dice_value_label.text = "Total: " + str(total_dice_value)
 	current_incoming_damage = 0
@@ -90,9 +88,7 @@ func player_turn():
 	_update_intended_block_display()
 	_update_all_intended_damage_displays()
 
-	dice_ui.set_hand(rolled_dice)
-	update_dice_bag_label(player.dice.size())
-	update_dice_discard_label(player.discard_pile.size())
+	dice_pool_ui.set_hand(rolled_dice)
 	end_turn_button.disabled = false
 
 func _on_end_turn_button_pressed():
@@ -115,9 +111,8 @@ func resolve_dice_intents():
 
 			enemy_target.take_damage(intent.roll)
 		
-	player.discard(current_hand_dice)
-	current_hand_dice.clear()
-		
+	# Discard all dice that were in the hand this turn.
+	player.discard(dice_pool_ui.get_current_dice())
 	print("Player block: " + str(player.block))
 
 func enemy_turn():
@@ -143,7 +138,7 @@ func _on_die_clicked(die_display):
 		if intent_data.has("line"):
 			intent_data.line.queue_free()
 		intents.erase(die_display)
-		print("Cleared existing intent for die with value: " + str(die_display.die.value))
+		print("Cleared existing intent for die with value: " + str(die_display.die.result_value))
 		_update_all_intended_damage_displays()
 		_update_intended_block_display()
 		just_cleared_intent = true
@@ -160,7 +155,7 @@ func _on_die_clicked(die_display):
 		# Select the clicked die and start the intent action.
 		selected_die_display = die_display
 		selected_die_display.select()
-		print("Intent action started. Select a target for die with value: " + str(selected_die_display.die.value))
+		print("Intent action started. Select a target for die with value: " + str(selected_die_display.die.result_value))
 
 func _unhandled_input(event: InputEvent):
 	# This function catches input that was not handled by the UI.
@@ -191,14 +186,12 @@ func _on_character_clicked(character):
 	if not selected_die_display:
 		return
 
-	var die_value = selected_die_display.die.value
-	print("Intent action: Use die with value %d on %s." % [die_value, character.name])
+	var die_roll_value = selected_die_display.die.result_value
+	print("Intent action: Use die with value %d on %s." % [die_roll_value, character.name])
 
 	# Create an intent using the selected die's data
 	# Use the die_display object as the key, since it's a unique reference.
 	# A dictionary (die_data) cannot be used as a key.
-	var die_object = selected_die_display.die.object
-	var die_roll_value = selected_die_display.die.value
 
 	# --- Create the full arrow with outline and arrowhead ---
 	var arrow_container = Node2D.new()
@@ -249,7 +242,7 @@ func _on_character_clicked(character):
 
 	intent_lines.add_child(arrow_container)
 
-	intents[selected_die_display] = {"die": die_object, "roll": die_roll_value, "target": character, "line": arrow_container}
+	intents[selected_die_display] = {"die": selected_die_display.die, "roll": die_roll_value, "target": character, "line": arrow_container}
 	print("Intents: " + str(intents))
 
 	# Visually "consume" the die by making it inactive.
@@ -337,6 +330,9 @@ func _on_enemy_died():
 			_show_reward_screen()
 
 func start_new_round():
+	print("round start")
+	player.reset_for_new_round()
+	
 	var spawned_enemies: Array
 	if round_number == BOSS_ROUND:
 		spawned_enemies = enemy_spawner.spawn_boss()
@@ -363,15 +359,15 @@ func _show_reward_screen():
 	reward_screen.display_rewards(reward_dice)
 	reward_screen.visible = true
 
-func _generate_reward_dice() -> Array[Dice]:
-	var dice_options: Array[Dice] = []
+func _generate_reward_dice() -> Array[Die]:
+	var dice_options: Array[Die] = []
 	# Define a target average value for the dice. This can be adjusted for balance.
 	var target_average = 4.5
 	var possible_sides = [4, 6, 8]
 	possible_sides.shuffle()
 
 	for i in range(3):
-		var new_die = Dice.new()
+		var new_die = Die.new()
 		var sides = possible_sides[i]
 		new_die.sides = sides
 		
@@ -396,21 +392,18 @@ func _generate_reward_dice() -> Array[Dice]:
 	print(dice_options)
 	return dice_options
 
-func _on_reward_chosen(chosen_die: Dice):
+func _on_reward_chosen(chosen_die: Die):
 	print("reward_chosen", chosen_die)
 	if (chosen_die == null):
 		player.add_gold(10)
 	else:
 		# Add the chosen die to the player's deck
-		player.add_die(chosen_die)
+		player.add_to_game_bag([chosen_die])
 	
 	round_number += 1
 	reward_screen.visible = false
 	
 	start_new_round()
-	
-func _update_gold(gold: int):
-	gold_label.text = str(gold)
 
 func _on_play_again_button_pressed():
 	# Reload the entire main scene to restart the game.
@@ -424,9 +417,12 @@ func next_turn():
 		current_turn = Turn.ENEMY
 	else:
 		current_turn = Turn.PLAYER
+	
+func _update_gold(gold: int):
+	gold_label.text = str(gold)
 
-func update_dice_bag_label(count: int):
+func _update_dice_bag(count: int):
 	dice_bag_label.text = str(count)
 
-func update_dice_discard_label(count: int):
+func _update_dice_discard(count: int):
 	dice_discard_label.text = str(count)

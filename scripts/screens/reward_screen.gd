@@ -1,6 +1,6 @@
 extends Control
 
-signal reward_chosen(die: Dice)
+signal reward_chosen(die: Die)
 
 @onready var dice_choices_container = $VBoxContainer/DiceChoices
 @onready var skip_reward_button = $Container/SkipRewards
@@ -20,13 +20,13 @@ func _ready():
 		get_tree().paused = visible
 	)
 	# Connect the "pressed" signal for each die display button that already exists in the scene.
-	for display_node in dice_choices_container.get_children():
+	for display_node: RewardsDieDisplay  in dice_choices_container.get_children():
 		if display_node is Button and not display_node.is_connected("pressed", _on_die_display_clicked):
 			display_node.pressed.connect(_on_die_display_clicked.bind(display_node))
 			
 	skip_reward_button.pressed.connect(_on_skip_rewards_clicked.bind(skip_reward_button))
 
-func display_rewards(dice_options: Array[Dice]):
+func display_rewards(dice_options: Array[Die]):
 	visible = true
 	var dice_displays = dice_choices_container.get_children()
 	for i in range(dice_options.size()):
@@ -34,19 +34,16 @@ func display_rewards(dice_options: Array[Dice]):
 		if i < dice_displays.size():
 			# Cast the node to its actual script type to access custom functions.
 			var display = dice_displays[i]
-			if display.has_method("set_die"):
-				# The display expects a dictionary, so we create one.
-				# The "value" isn't used here, but the structure is required.
-				display.set_die({"object": die, "value": 0, "sides": die.sides})
+			display.set_die(die)
 
-func _on_die_display_clicked(display):	
+func _on_die_display_clicked(display: RewardsDieDisplay):	
 	# Select the clicked die to give visual feedback
 	if display.has_method("select"):
 		display.select()
 
 	# After a short delay to show the selection, confirm the choice.
 	await get_tree().create_timer(0.3).timeout
-	emit_signal("reward_chosen", display.die.object)
+	emit_signal("reward_chosen", display.die)
 
 func _on_skip_rewards_clicked(display):
 	print("Skipping reward...")
