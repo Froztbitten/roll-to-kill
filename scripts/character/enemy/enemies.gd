@@ -6,7 +6,9 @@ func _ready():
 	arrange_enemies()
 
 func arrange_enemies():
-	var enemies = get_children()
+	# Filter for only living enemies to arrange them.
+	# This prevents trying to position enemies that are in the process of being removed.
+	var enemies = get_children().filter(func(c): return c is Enemy and not c._is_dead)
 	var count = enemies.size()
 	
 	if count == 0 or not spawn_zone:

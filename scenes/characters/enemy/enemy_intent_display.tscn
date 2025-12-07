@@ -5,8 +5,8 @@
 [ext_resource type="Texture2D" uid="uid://mmm881ooxxa" path="res://assets/ai/ui/sword.svg" id="3_odel5"]
 
 [node name="EnemyIntentDisplay" type="VBoxContainer"]
-script = ExtResource("1_abcde")
 alignment = 1
+script = ExtResource("1_abcde")
 
 [node name="ActionNameLabel" type="Label" parent="."]
 layout_mode = 2
@@ -52,12 +52,15 @@ stretch_mode = 5
 [node name="DiceCountLabel" type="Label" parent="IconContainer/Icon"]
 layout_mode = 1
 anchors_preset = 3
+anchor_left = 1.0
 anchor_top = 1.0
+anchor_right = 1.0
 anchor_bottom = 1.0
 offset_left = 4.0
 offset_top = -24.0
 offset_right = 24.0
 offset_bottom = -4.0
+grow_horizontal = 0
 grow_vertical = 0
 theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)

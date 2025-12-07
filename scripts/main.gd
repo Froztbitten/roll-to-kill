@@ -32,7 +32,7 @@ const BOSS_ROUND = 10
 @export var start_with_boss_fight := true
 
 # Testing values
-var starting_abilities: Array[AbilityData] = [load("res://resources/abilities/heal.tres")]
+var starting_abilities: Array[AbilityData] = [load("res://resources/abilities/heal.tres"), load("res://resources/abilities/sweep.tres")]
 
 func _ready():
 	ADVANTAGE_STATUS = load("res://resources/status_effects/advantage.tres")
@@ -66,7 +66,6 @@ func _add_player_ability(new_ability: AbilityData):
 	ability_ui_instance.initialize(new_ability)
 
 func player_turn():
-	enemy_container.arrange_enemies()
 	# Reset block at the start of the turn
 	player.block = 0
 	_clear_intents()
@@ -96,15 +95,17 @@ func player_turn():
 	
 	# Proactively apply shields that are meant to be active for the player's turn
 	for enemy: Enemy in active_enemies:
-		if enemy.next_action and enemy.next_action.action_type == EnemyAction.ActionType.SUPPORT_SHIELD:
-			enemy.block += enemy.next_action_value
-			var other_enemies = active_enemies.filter(func(e): return e != enemy)
-			if not other_enemies.is_empty():
-				var random_ally = other_enemies.pick_random()
-				random_ally.block += enemy.next_action_value
-				random_ally.update_health_display()
-				print("%s shields %s for %d" % [enemy.name, random_ally.name, enemy.next_action_value])
-			enemy.update_health_display()
+		if enemy.next_action:
+			var action_type = enemy.next_action.action_type
+			if action_type == EnemyAction.ActionType.SHIELD:
+				enemy.block += enemy.next_action_value
+			elif action_type == EnemyAction.ActionType.SUPPORT_SHIELD:
+				enemy.block += enemy.next_action_value
+				var other_enemies = active_enemies.filter(func(e): return e != enemy)
+				if not other_enemies.is_empty():
+					var random_ally = other_enemies.pick_random()
+					random_ally.block += enemy.next_action_value
+					print("%s shields %s for %d" % [enemy.name, random_ally.name, enemy.next_action_value])
 
 	total_incoming_damage_label.text = str(current_incoming_damage)
 	_update_intended_block_display()
@@ -126,14 +127,8 @@ func resolve_dice_intents():
 			player.block += intent.roll
 		else:
 			var enemy_target = intent.target
-			# Check if the enemy has a shield intent and apply it before damage.
-			if enemy_target.next_action:
-				var action_type = enemy_target.next_action.action_type
-				if action_type == EnemyAction.ActionType.SHIELD:
-					enemy_target.block += enemy_target.next_action_value
-					# The intent is consumed by this reactive defense, so clear it.
-					enemy_target.clear_intent()
-
+			# Damage is calculated against block that was already applied at the start of the turn.
+			# Reactive shields are no longer a mechanic for enemies.
 			enemy_target.take_damage(intent.roll)
 		
 	# Discard all dice that were in the hand this turn.
@@ -159,6 +154,18 @@ func _on_ability_activated(ability_ui: AbilityUI):
 		
 		player.heal(total_heal)
 		print("Resolved 'Heal' ability for %d health." % total_heal)
+	elif ability_data.title == "Sweep":
+		if slotted_dice_displays.is_empty(): return
+		
+		var die_value = slotted_dice_displays[0].die.result_value
+		var damage = ceili(die_value / 2.0)
+		
+		for enemy in get_active_enemies():
+			enemy.take_damage(damage)
+		print("Resolved 'Sweep' ability for %d damage to all enemies." % damage)
+	
+	# After an ability resolves, the state of the board may have changed, so we need to refresh the UI.
+	_update_all_intended_damage_displays()
 
 func enemy_turn():
 	end_turn_button.disabled = true
@@ -181,10 +188,8 @@ func enemy_turn():
 					EnemyAction.ActionType.PIERCING_ATTACK:
 						player.take_piercing_damage(enemy.next_action_value)
 
-					EnemyAction.ActionType.SHIELD:
-						enemy.block += enemy.next_action_value
-						enemy.update_health_display()
-
+					EnemyAction.ActionType.SHIELD, EnemyAction.ActionType.SUPPORT_SHIELD:
+						pass # Shield is applied proactively at the start of the player's turn.
 					EnemyAction.ActionType.HEAL_ALLY:
 						# Prioritize healing injured allies
 						var injured_allies = active_enemies.filter(func(e): return e != enemy and e.hp < e.max_hp)
@@ -409,15 +414,7 @@ func _update_intended_block_display():
 	player.update_health_display(net_damage, total_intended_block)
 
 func _update_all_intended_damage_displays():
-	# First, reset the display for all enemies
-	for enemy in get_active_enemies():
-		var label = enemy.get_node("IntendedDamageLabel")
-		var skull = enemy.get_node("LethalDamageIndicator")
-		enemy.update_health_display() # Reset to show no intended damage
-		skull.visible = false
-		label.visible = false
-
-	# Then, calculate the total for each enemy based on current intents
+	# Calculate the total damage for each enemy based on current intents
 	var enemy_damage_map = {}
 	for intent_data in intents.values():
 		if not intent_data.target is Player:
@@ -427,27 +424,28 @@ func _update_all_intended_damage_displays():
 	
 	# Finally, update the health bars and labels for all active enemies
 	for enemy in get_active_enemies():
+		# Reset damage-specific UI elements first
+		var label = enemy.get_node("IntendedDamageLabel")
+		var skull = enemy.get_node("LethalDamageIndicator")
+		skull.visible = false
+		label.visible = false
+
 		var player_damage = enemy_damage_map.get(enemy, 0)
-		var intended_shield = 0
-		
-		# SHIELD is reactive, so it's "intended" block.
-		if enemy.next_action and enemy.next_action.action_type == EnemyAction.ActionType.SHIELD:
-			intended_shield = enemy.next_action_value
+		var intended_shield = 0 # All enemy shields are now proactive, not "intended".
 		
 		# SUPPORT_SHIELD is proactive, so its value is already in enemy.block.
 		var total_shield = enemy.block + intended_shield
 		var net_damage = max(0, player_damage - total_shield)
-		enemy.update_health_display(net_damage, intended_shield)
-		
+
 		if player_damage > 0:
-			var label = enemy.get_node("IntendedDamageLabel")
 			label.text = "-" + str(player_damage)
 			label.visible = true
 			
 			# Check if the intended damage is lethal
 			if net_damage >= enemy.hp:
-				var skull = enemy.get_node("LethalDamageIndicator")
 				skull.visible = true
+		
+		enemy.update_health_display(net_damage, intended_shield)
 
 func _on_enemy_died():
 	# A short delay to prevent issues with processing the death mid-turn.
@@ -481,13 +479,13 @@ func start_new_round():
 	player_turn()
 
 func get_active_enemies() -> Array[Enemy]:
-	# Helper function to get living enemies from the container
-	var living_enemies: Array[Enemy] = []
-	for enemy: Enemy in $EnemySpawner/Enemies.get_children():
-		if enemy.hp > 0:
-			living_enemies.append(enemy)
-		else:
-			enemy.queue_free()
+	# Helper function to get living enemies from the container.
+	# We build a new typed array to satisfy the static type checker, which can't
+	# infer the type from the result of the filter() method.
+	var living_enemies: Array[Enemy]
+	for child in enemy_container.get_children():
+		if child is Enemy and not child._is_dead:
+			living_enemies.append(child)
 	return living_enemies
 
 func _show_reward_screen():
