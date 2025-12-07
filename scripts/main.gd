@@ -58,6 +58,7 @@ func _add_player_ability(new_ability: AbilityData):
 	var ability_ui_instance: AbilityUI = ABILITY_UI_SCENE.instantiate() as AbilityUI
 	abilities_ui.add_child(ability_ui_instance)
 	ability_ui_instance.die_returned_from_slot.connect(_on_die_returned_to_pool)
+	ability_ui_instance.ability_activated.connect(_on_ability_activated)
 	ability_ui_instance.initialize(new_ability)
 
 func player_turn():
@@ -98,7 +99,7 @@ func player_turn():
 func _on_end_turn_button_pressed():
 	if current_turn == Turn.PLAYER:
 		resolve_dice_intents()
-		resolve_active_abilities()
+		cleanup_used_abilities()
 		next_turn()
 		enemy_turn()
 
@@ -120,29 +121,25 @@ func resolve_dice_intents():
 	player.discard(dice_pool_ui.get_current_dice())
 	print("Player block: " + str(player.block))
 
-func resolve_active_abilities():
+func cleanup_used_abilities():
 	for ability_ui: AbilityUI in abilities_ui.get_children():
-		if ability_ui.is_active():
-			var ability_data: AbilityData = ability_ui.ability_data
-			var slotted_dice_displays: Array[DieDisplay] = ability_ui.get_slotted_dice_displays()
-			var dice_to_discard: Array[Die] = []
-
-			# --- ABILITY LOGIC ---
-			# This is where you'll implement the effects for different abilities.
-			if ability_data.title == "Heal":
-				var total_heal = 0
-				for die_display in slotted_dice_displays:
-					total_heal += die_display.die.result_value
-					dice_to_discard.append(die_display.die)
-				
-				player.heal(total_heal)
-				print("Resolved 'Heal' ability for %d health." % total_heal)
-
-			# After resolving the ability, consume it.
-			ability_ui.consume_ability()
-			
-			# Discard the Die resources used in the ability.
+		if ability_ui.is_consumed_this_turn:
+			var dice_to_discard = ability_ui.reset_for_new_turn()
 			player.discard(dice_to_discard)
+
+func _on_ability_activated(ability_ui: AbilityUI):
+	var ability_data: AbilityData = ability_ui.ability_data
+	var slotted_dice_displays: Array[DieDisplay] = ability_ui.get_slotted_dice_displays()
+
+	# --- ABILITY LOGIC ---
+	# This is where you'll implement the effects for different abilities.
+	if ability_data.title == "Heal":
+		var total_heal = 0
+		for die_display in slotted_dice_displays:
+			total_heal += die_display.die.result_value
+		
+		player.heal(total_heal)
+		print("Resolved 'Heal' ability for %d health." % total_heal)
 
 func enemy_turn():
 	end_turn_button.disabled = true

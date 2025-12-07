@@ -12,7 +12,10 @@ var ability_data: AbilityData
 var original_stylebox: StyleBox
 var active_stylebox: StyleBoxFlat
 
+var is_consumed_this_turn := false
+
 signal die_returned_from_slot(die_display)
+signal ability_activated(ability_ui)
 
 func initialize(data: AbilityData):
 	self.ability_data = data
@@ -55,6 +58,9 @@ func _on_die_removed(die_display):
 	add_theme_stylebox_override("panel", original_stylebox)
 
 func _check_if_all_slots_filled():
+	if is_consumed_this_turn:
+		return
+
 	var all_filled = true
 	for slot in dice_slots_container.get_children():
 		if slot is DieSlotUI and slot.current_die_display == null:
@@ -62,16 +68,18 @@ func _check_if_all_slots_filled():
 			break
 	
 	if all_filled:
-		print("Ability '%s' is now active!" % ability_data.title)
+		print("Ability '%s' has been triggered!" % ability_data.title)
+		is_consumed_this_turn = true
 		add_theme_stylebox_override("panel", active_stylebox)
-
-func is_active() -> bool:
-	if ability_data.dice_slots == 0 or dice_slots_container.get_child_count() == 0:
-		return false
-	for slot in dice_slots_container.get_children():
-		if slot is DieSlotUI and slot.current_die_display == null:
-			return false # Found an empty slot
-	return true # All slots are filled
+		emit_signal("ability_activated", self)
+		
+		# Gray out the ability to show it's been used this turn.
+		modulate = Color(0.5, 0.5, 0.5)
+		
+		# Disable slots until the end of the turn to prevent further interaction.
+		for slot in dice_slots_container.get_children():
+			if slot is DieSlotUI:
+				slot.mouse_filter = MOUSE_FILTER_IGNORE
 
 func get_slotted_dice_displays() -> Array[DieDisplay]:
 	var displays: Array[DieDisplay] = []
@@ -79,13 +87,19 @@ func get_slotted_dice_displays() -> Array[DieDisplay]:
 		if slot is DieSlotUI and slot.current_die_display:
 			displays.append(slot.current_die_display)
 	return displays
-
-func consume_ability():
+	
+func reset_for_new_turn() -> Array[Die]:
+	is_consumed_this_turn = false
+	modulate = Color.WHITE # Reset the visual state.
 	add_theme_stylebox_override("panel", original_stylebox)
+	var dice_to_discard: Array[Die] = []
 	for slot in dice_slots_container.get_children():
-		if slot is DieSlotUI and slot.current_die_display:
-			var die_display = slot.current_die_display
-			slot.remove_child(die_display)
-			# The DieDisplay node is no longer needed, so we free it.
-			die_display.queue_free()
-			slot.current_die_display = null
+		if slot is DieSlotUI:
+			slot.mouse_filter = MOUSE_FILTER_STOP # Re-enable interaction
+			if slot.current_die_display:
+				var die_display = slot.current_die_display
+				dice_to_discard.append(die_display.die)
+				slot.remove_child(die_display)
+				die_display.queue_free()
+				slot.current_die_display = null
+	return dice_to_discard
