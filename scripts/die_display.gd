@@ -144,7 +144,3 @@ func _get_drag_data(at_position: Vector2):
 	main_display.visible = false
 	
 	return payload
-
-func notify_drop_successful():
-	if dice_pool and dice_pool.has_method("remove_display_from_pool"):
-		dice_pool.remove_display_from_pool(self)

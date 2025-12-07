@@ -42,6 +42,7 @@ func _ready():
 
 	dice_pool_ui.die_clicked.connect(_on_die_clicked)
 	dice_pool_ui.die_drag_started.connect(_on_die_drag_started)
+	dice_pool_ui.layout_changed.connect(_on_dice_pool_layout_changed)
 	reward_screen.reward_chosen.connect(_on_reward_chosen)
 
 	# Initialize player's starting abilities
@@ -226,56 +227,17 @@ func _on_character_clicked(character: Character):
 	if selected_dice_display.size() == 0:
 		return
 
+	var color = Color.CRIMSON
+	if character is Player:
+		color = Color(0.6, 0.7, 1, 1)
+
 	for die_display: DieDisplay in selected_dice_display:
 		print("Intent action: Use die with value %d." % die_display.die.result_value)
-		# --- Create the full arrow with outline and arrowhead ---
-		var arrow_container = Node2D.new()
-
-		# 1. Create the black outline line (drawn first)
-		var line_outline = Line2D.new()
-		line_outline.width = 7.0 # Thicker for the outline effect
-		line_outline.default_color = Color.BLACK
-		arrow_container.add_child(line_outline)
-
-		# 2. Create the main colored line
-		var line_main = Line2D.new()
-		line_main.width = 3.0
-		if character is Player:
-			line_main.default_color = Color(0.6, 0.7, 1, 1)
-		else:
-			line_main.default_color = Color.CRIMSON
-		arrow_container.add_child(line_main)
-
+		
+		var arrow_container = _create_intent_arrow(color)
 		var start_pos = die_display.get_global_transform_with_canvas().get_origin() + die_display.size / 2
 		var end_pos = character.global_position
-		var control_pos = (start_pos + end_pos) / 2 - Vector2(0, 200)
-		
-		# Generate points for the curve and add them to both lines
-		var point_count = 20
-		for i in range(point_count + 1):
-			var t = float(i) / point_count
-			var point = start_pos.lerp(control_pos, t).lerp(control_pos.lerp(end_pos, t), t)
-			line_main.add_point(point)
-			line_outline.add_point(point)
-
-		# 3. Create the arrowhead
-		var arrowhead = Polygon2D.new()
-		arrowhead.color = line_main.default_color
-		var arrowhead_outline = Polygon2D.new() # For the black outline
-		arrowhead_outline.color = Color.BLACK
-		
-		var last_point = line_main.points[-1]
-		var second_last_point = line_main.points[-2]
-		var direction = (last_point - second_last_point).normalized()
-		
-		# Define arrowhead shape and outline
-		arrowhead.polygon = [last_point, last_point - direction * 15 + direction.orthogonal() * 8, last_point - direction * 15 - direction.orthogonal() * 8]
-		arrowhead_outline.polygon = [last_point + direction * 3, last_point - direction * 19 + direction.orthogonal() * 11, last_point - direction * 19 - direction.orthogonal() * 11]
-		
-		arrow_container.add_child(arrowhead_outline)
-		arrow_container.add_child(arrowhead)
-
-		intent_lines.add_child(arrow_container)
+		_update_intent_arrow(arrow_container, start_pos, end_pos)
 
 		intents[die_display] = {"die": die_display.die, "roll": die_display.die.result_value, "target": character, "line": arrow_container}
 		die_display.deselect()
@@ -283,6 +245,71 @@ func _on_character_clicked(character: Character):
 	selected_dice_display = []
 	_update_intended_block_display()
 	_update_all_intended_damage_displays()
+
+func _create_intent_arrow(color: Color) -> Node2D:
+	var arrow_container = Node2D.new()
+
+	# 1. Create the black outline line (drawn first)
+	var line_outline = Line2D.new()
+	line_outline.width = 7.0 # Thicker for the outline effect
+	line_outline.default_color = Color.BLACK
+	arrow_container.add_child(line_outline)
+
+	# 2. Create the main colored line
+	var line_main = Line2D.new()
+	line_main.width = 3.0
+	line_main.default_color = color
+	arrow_container.add_child(line_main)
+
+	# 3. Create the arrowhead
+	var arrowhead_outline = Polygon2D.new() # For the black outline
+	arrowhead_outline.color = Color.BLACK
+	var arrowhead = Polygon2D.new()
+	arrowhead.color = color
+	
+	arrow_container.add_child(arrowhead_outline)
+	arrow_container.add_child(arrowhead)
+
+	intent_lines.add_child(arrow_container)
+	return arrow_container
+
+func _update_intent_arrow(arrow_container: Node2D, start_pos: Vector2, end_pos: Vector2):
+	var line_outline: Line2D = arrow_container.get_child(0)
+	var line_main: Line2D = arrow_container.get_child(1)
+	var arrowhead_outline: Polygon2D = arrow_container.get_child(2)
+	var arrowhead: Polygon2D = arrow_container.get_child(3)
+
+	# Clear existing points before redrawing
+	line_main.clear_points()
+	line_outline.clear_points()
+
+	var control_pos = (start_pos + end_pos) / 2 - Vector2(0, 200)
+
+	# Generate points for the curve and add them to both lines
+	var point_count = 20
+	for i in range(point_count + 1):
+		var t = float(i) / point_count
+		var point = start_pos.lerp(control_pos, t).lerp(control_pos.lerp(end_pos, t), t)
+		line_main.add_point(point)
+		line_outline.add_point(point)
+
+	# Update the arrowhead position and orientation
+	var last_point = line_main.points[-1]
+	var second_last_point = line_main.points[-2]
+	var direction = (last_point - second_last_point).normalized()
+
+	arrowhead.polygon = [last_point, last_point - direction * 15 + direction.orthogonal() * 8, last_point - direction * 15 - direction.orthogonal() * 8]
+	arrowhead_outline.polygon = [last_point + direction * 3, last_point - direction * 19 + direction.orthogonal() * 11, last_point - direction * 19 - direction.orthogonal() * 11]
+
+func _on_dice_pool_layout_changed():
+	# We defer the call to ensure that the HBoxContainer has completed its sorting
+	# and the dice have their new final positions before we try to read them.
+	call_deferred("_redraw_all_intent_lines")
+
+func _redraw_all_intent_lines():
+	for die_display in intents:
+		var intent_data = intents[die_display]
+		_update_intent_arrow(intent_data.line, die_display.get_global_transform_with_canvas().get_origin() + die_display.size / 2, intent_data.target.global_position)
 
 func _clear_intents():
 	# Free the line nodes before clearing the dictionary

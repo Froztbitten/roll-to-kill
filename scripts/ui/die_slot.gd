@@ -22,16 +22,13 @@ func _can_drop_data(at_position: Vector2, data: Variant) -> bool:
 
 # Handles the actual drop.
 func _drop_data(at_position: Vector2, data: Variant):
-	var die_display_node: Control = data.source_display
-	
-	# Notify the die's original pool that it has been successfully moved.
-	if die_display_node.has_method("notify_drop_successful"):
-		die_display_node.notify_drop_successful()
-	
-	# Reparent the die from its old container to this slot.
-	if die_display_node.get_parent():
-		die_display_node.get_parent().remove_child(die_display_node)
-	
+	var die_display_node: DieDisplay = data.source_display
+
+	# Tell the source pool to remove the die. This handles scene tree removal and signals.
+	if die_display_node.dice_pool:
+		die_display_node.dice_pool.remove_die(die_display_node)
+
+	# Now, reparent the die to this slot.
 	add_child(die_display_node)
 	die_display_node.position = size / 2 - die_display_node.size / 2 # Center it
 	die_display_node.main_display.visible = true # Ensure it's visible

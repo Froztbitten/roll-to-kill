@@ -3,6 +3,7 @@ class_name DicePool
 
 signal die_clicked(die_display)
 signal die_drag_started(die_display)
+signal layout_changed
 
 const DIE_DISPLAY_SCENE = preload("res://scenes/dice/die_display.tscn")
 
@@ -44,12 +45,16 @@ func get_current_dice() -> Array[Die]:
 			current_dice.append(display.die)
 	return current_dice
 
-func remove_display_from_pool(display_to_remove: DieDisplay):
-	if dice_pool_display.has(display_to_remove):
-		dice_pool_display.erase(display_to_remove)
+func remove_die(die_to_remove: DieDisplay):
+	if die_to_remove and die_to_remove.get_parent() == self:
+		remove_child(die_to_remove)
+		if dice_pool_display.has(die_to_remove):
+			dice_pool_display.erase(die_to_remove)
+		layout_changed.emit()
 
 func add_die_display(die_display: DieDisplay):
 	"""Adds a die display back to the pool, e.g., when removed from a slot."""
 	add_child(die_display)
 	if not dice_pool_display.has(die_display):
 		dice_pool_display.append(die_display)
+	layout_changed.emit()

@@ -1,22 +1,28 @@
-[gd_resource type="Resource" script_class="EnemyData" load_steps=8 format=3 uid="uid://b7dqjdxtlr5m1"]
+[gd_resource type="Resource" script_class="EnemyData" load_steps=9 format=3 uid="uid://b7dqjdxtlr5m1"]
 
 [ext_resource type="Script" uid="uid://djeev1jhalfah" path="res://scripts/character/enemy/enemy_action.gd" id="1_qu8um"]
 [ext_resource type="Script" uid="uid://b62erl0h813g2" path="res://scripts/dice/die.gd" id="2_g4trc"]
 [ext_resource type="Script" uid="uid://dv6r7tro15lnf" path="res://scripts/character/enemy/enemy_data.gd" id="3_xbyo6"]
 [ext_resource type="Texture2D" uid="uid://ce0tqejetabvb" path="res://assets/ai/characters/goblin_archer.jpg" id="4_g4trc"]
 
-[sub_resource type="Resource" id="Resource_g4trc"]
+[sub_resource type="Resource" id="Resource_fire_die"]
 script = ExtResource("2_g4trc")
 sides = 8
 metadata/_custom_type_script = "uid://b62erl0h813g2"
 
-[sub_resource type="Resource" id="Resource_xbyo6"]
+[sub_resource type="Resource" id="Resource_fire_action"]
 script = ExtResource("1_qu8um")
-action_name = "Toothpick"
-dice_to_roll = Array[ExtResource("2_g4trc")]([SubResource("Resource_g4trc")])
+action_name = "Fire Arrow"
+dice_to_roll = Array[ExtResource("2_g4trc")]([SubResource("Resource_fire_die")])
 metadata/_custom_type_script = "uid://djeev1jhalfah"
 
-[sub_resource type="Resource" id="Resource_v16vd"]
+[sub_resource type="Resource" id="Resource_draw_action"]
+script = ExtResource("1_qu8um")
+action_name = "Draw Arrow"
+dice_to_roll = Array[ExtResource("2_g4trc")]([])
+metadata/_custom_type_script = "uid://djeev1jhalfah"
+
+[sub_resource type="Resource" id="Resource_hp_die"]
 script = ExtResource("2_g4trc")
 sides = 8
 metadata/_custom_type_script = "uid://b62erl0h813g2"
@@ -26,6 +32,6 @@ script = ExtResource("3_xbyo6")
 enemy_name = "Goblin Archer"
 sprite_texture = ExtResource("4_g4trc")
 minimum_hp = 8
-hp_dice = Array[ExtResource("2_g4trc")]([SubResource("Resource_v16vd")])
-action_pool = Array[ExtResource("1_qu8um")]([SubResource("Resource_xbyo6")])
+hp_dice = Array[ExtResource("2_g4trc")]([SubResource("Resource_hp_die")])
+action_pool = Array[ExtResource("1_qu8um")]([SubResource("Resource_draw_action"), SubResource("Resource_fire_action")])
 metadata/_custom_type_script = "uid://dv6r7tro15lnf"
