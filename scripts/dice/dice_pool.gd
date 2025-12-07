@@ -13,7 +13,6 @@ func set_hand(rolled_dice: Array[Die]):
 	# Ensure we have enough display nodes, creating more if necessary.
 	while dice_pool_display.size() < num_new_dice:
 		var die_display = DIE_DISPLAY_SCENE.instantiate()
-		print(die_display)
 		add_child(die_display)
 		die_display.die_clicked.connect(func(display): emit_signal("die_clicked", display))
 		dice_pool_display.append(die_display)

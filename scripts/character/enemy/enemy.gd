@@ -1,16 +1,13 @@
 extends Character
 class_name Enemy
 
-## The core logic for an enemy character in the game.
-## This scene node handles behavior, while the actual stats (HP, name, actions)
-## are defined in an EnemyData resource.
 @export var enemy_data: EnemyData
 
 var next_action: EnemyAction
 var next_action_value: int = 0
 
-@onready var intent_display = $EnemyIntentDisplay
-@onready var sprite = $Sprite2D
+@onready var intent_display: Control = $EnemyIntentDisplay
+@onready var sprite: TextureRect = $Sprite2D
 
 func _ready():
 	super._ready()
@@ -39,6 +36,8 @@ func setup():
 	hp = starting_hp
 
 func declare_intent():
+	print(enemy_data)
+	print(enemy_data.action_pool.is_empty())
 	# Guard against calling this on an enemy that has no data assigned.
 	if not enemy_data or enemy_data.action_pool.is_empty():
 		return
@@ -46,9 +45,10 @@ func declare_intent():
 	# Pick a random action from the pool
 	next_action = enemy_data.action_pool.pick_random()
 	
+	print("Next action: ", next_action.action_name)
 	# Roll the dice for that action and sum the result
 	next_action_value = 0
-	for action_die in next_action.dice_to_roll:
+	for action_die: Die in next_action.dice_to_roll:
 		next_action_value += action_die.roll()
 	
 	# Safely get the icon for the intent display.
@@ -61,6 +61,7 @@ func declare_intent():
 	if next_action.action_type == EnemyAction.ActionType.SHIELD:
 		intent_icon_type = "shield"
 
+	print(next_action_value)
 	# Update the UI to show the intent
 	intent_display.update_display(next_action_value, die_sides_for_icon, intent_icon_type)
 	intent_display.visible = true

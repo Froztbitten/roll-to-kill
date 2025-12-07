@@ -4,9 +4,9 @@ class_name Player
 signal dice_bag_changed(new_amount)
 signal dice_discard_changed(new_amount)
 signal gold_changed(new_amount)
+signal abilities_changed(new_ability)
 
-@export var starting_abilities: Array[Ability] = [load("res://resources/abilities/heal.tres")]
-@export var abilities: Array[Ability] = []
+@export var abilities: Array[AbilityData] = []
 
 var _game_dice_bag: Array[Die] = []
 var _round_dice_bag: Array[Die] = []
@@ -18,12 +18,9 @@ var dice_pool_size = 4
 
 func _ready():
 	super._ready()
-
-	# Add predefined starting abilities to the player's ability list
-	abilities.append_array(starting_abilities)
 	
 	# Define the initial deck
-	var starting_deck_sides = [2, 4, 4, 6, 6, 6, 8, 10, 12]
+	var starting_deck_sides = [2, 4, 4, 6, 6, 6, 8, 8, 10]
 	
 	for side_count in starting_deck_sides:
 		var new_die = Die.new(side_count)
@@ -73,3 +70,7 @@ func add_gold(new_gold: int):
 	print("gold changed: ", new_gold)
 	gold += new_gold
 	gold_changed.emit(gold)
+
+func add_ability(new_ability: AbilityData):
+	abilities.append(new_ability)
+	abilities_changed.emit(new_ability)

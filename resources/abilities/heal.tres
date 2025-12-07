@@ -1,12 +1,11 @@
-[gd_resource type="Resource" script_class="Ability" load_steps=3 format=3]
+[gd_resource type="Resource" script_class="AbilityData" load_steps=3 format=3 uid="uid://cfrbreimvxqgs"]
 
-[ext_resource type="Script" uid="uid://uw8x16ewdua0" path="res://scripts/character/player/ability.gd" id="1_abcde"]
-[ext_resource type="Texture2D" path="res://assets/ability_icons/heal_ability_icon.jpg" id="2_icon"]
-
+[ext_resource type="Script" uid="uid://uw8x16ewdua0" path="res://scripts/character/player/ability_data.gd" id="2_6vm3n"]
+[ext_resource type="Texture2D" uid="uid://otvtxyqu8dfr" path="res://assets/ai/ability_icons/heal_ability_icon.jpg" id="2_icon"]
 
 [resource]
-script = ExtResource("1_abcde")
+script = ExtResource("2_6vm3n")
 title = "Heal"
 description = "Restore [color=green]X/2[/color] health."
 icon = ExtResource("2_icon")
-dice_slots = 1
+metadata/_custom_type_script = "uid://uw8x16ewdua0"

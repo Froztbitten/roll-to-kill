@@ -1,27 +1,46 @@
-[gd_scene load_steps=14 format=3 uid="uid://bnpd5h2y0tnye"]
+[gd_scene load_steps=15 format=3 uid="uid://bnpd5h2y0tnye"]
 
 [ext_resource type="PackedScene" uid="uid://bvyv5m1pde7i7" path="res://scenes/characters/player.tscn" id="1_t2esq"]
 [ext_resource type="Script" uid="uid://bik3wojuaq330" path="res://scripts/main.gd" id="1_v4h7v"]
 [ext_resource type="PackedScene" uid="uid://bdo2y3r4q5w6e" path="res://scenes/ui/dice_pool.tscn" id="3_abcde"]
 [ext_resource type="Texture2D" uid="uid://jeil72umhxgy" path="res://assets/ai/ui/gold.svg" id="3_eb6dy"]
-[ext_resource type="Script" uid="uid://583in5m6jwjr" path="res://scripts/ui/abilities.gd" id="4_a8y0u"]
+[ext_resource type="PackedScene" uid="uid://bcfsqym1cbvfo" path="res://scenes/ui/abilities.tscn" id="4_a8y0u"]
+[ext_resource type="PackedScene" uid="uid://cihuho6da82op" path="res://scenes/ui/ability.tscn" id="5_jkv2x"]
 [ext_resource type="PackedScene" path="res://scenes/screens/victory_screen.tscn" id="6_vwxyz"]
 [ext_resource type="PackedScene" path="res://scenes/screens/defeat_screen.tscn" id="8_abcde"]
 [ext_resource type="PackedScene" uid="uid://c5hrch0sope6w" path="res://scenes/screens/reward_screen.tscn" id="8_reward"]
 [ext_resource type="Script" uid="uid://dh54ve13ordnt" path="res://scripts/enemy_spawner.gd" id="10_choun"]
 [ext_resource type="Texture2D" uid="uid://bjqx06qgqmopi" path="res://assets/ai/ui/dice_bag.svg" id="10_jbj1t"]
 [ext_resource type="Texture2D" uid="uid://bd2c437hy5mh7" path="res://assets/ai/ui/discard_pile.svg" id="11_a8y0u"]
-[ext_resource type="Script" uid="uid://ck2drfaun3f25" path="res://scripts/encounter.gd" id="11_eb6dy"]
-[ext_resource type="Resource" uid="uid://dm5j2kfa7b6wj" path="res://resources/pack_o_goblins.tres" id="12_trceg"]
+[ext_resource type="PackedScene" uid="uid://cgljl8xduck7a" path="res://scenes/ui/enemies.tscn" id="12_a8y0u"]
+[ext_resource type="Script" uid="uid://kby8d4xma06b" path="res://scripts/character/enemy/enemies.gd" id="14_jkv2x"]
 
 [node name="Main" type="Node2D" node_paths=PackedStringArray("player")]
 script = ExtResource("1_v4h7v")
 player = NodePath("Player")
 
+[node name="ReferenceRect" type="ReferenceRect" parent="."]
+custom_minimum_size = Vector2(30, 0)
+anchors_preset = -1
+anchor_left = 0.703
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 795.0
+offset_right = 1152.0
+offset_bottom = 648.0
+grow_horizontal = 2
+grow_vertical = 2
+border_width = 3.4
+
 [node name="Player" parent="." instance=ExtResource("1_t2esq")]
 position = Vector2(343, 316)
 
-[node name="Enemies" type="Node2D" parent="."]
+[node name="EnemySpawner" type="Node" parent="."]
+script = ExtResource("10_choun")
+
+[node name="Enemies" parent="EnemySpawner" instance=ExtResource("12_a8y0u")]
+position = Vector2(971, 328)
+script = ExtResource("14_jkv2x")
 
 [node name="IntentLines" type="Node2D" parent="."]
 
@@ -53,13 +72,20 @@ stretch_mode = 4
 layout_mode = 2
 text = "0"
 
-[node name="Abilities" type="PanelContainer" parent="UI"]
-offset_left = 15.0
-offset_top = 64.0
-offset_right = 265.0
-offset_bottom = 529.0
-script = ExtResource("4_a8y0u")
-metadata/_custom_type_script = "uid://583in5m6jwjr"
+[node name="Abilities" parent="UI" instance=ExtResource("4_a8y0u")]
+anchors_preset = -1
+anchor_top = 0.082
+anchor_right = 0.223
+anchor_bottom = 0.823
+offset_top = 14.863998
+offset_right = 0.104003906
+offset_bottom = -0.3040161
+
+[node name="AbilityUI" parent="UI/Abilities" instance=ExtResource("5_jkv2x")]
+layout_mode = 2
+
+[node name="AbilityUI2" parent="UI/Abilities" instance=ExtResource("5_jkv2x")]
+layout_mode = 2
 
 [node name="DicePool" parent="UI" instance=ExtResource("3_abcde")]
 anchors_preset = 7
@@ -155,10 +181,5 @@ stretch_mode = 5
 [node name="DiceDiscardLabel" type="Label" parent="UI/RoundInfo/DiceDiscard"]
 layout_mode = 2
 text = "0"
-
-[node name="EnemySpawner" type="Node" parent="." node_paths=PackedStringArray("enemy_container")]
-script = ExtResource("10_choun")
-encounter_pool = Array[ExtResource("11_eb6dy")]([ExtResource("12_trceg")])
-enemy_container = NodePath("../Enemies")
 
 [connection signal="pressed" from="UI/EndTurnButton" to="." method="_on_end_turn_button_pressed"]

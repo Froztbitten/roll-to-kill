@@ -5,6 +5,8 @@ signal reward_chosen(die: Die)
 @onready var dice_choices_container = $VBoxContainer/DiceChoices
 @onready var skip_reward_button = $Container/SkipRewards
 
+var rewardChosen = false
+
 func _ready():
 	visible = false
 	# This node and its children should continue processing when the game is paused.
@@ -28,6 +30,7 @@ func _ready():
 
 func display_rewards(dice_options: Array[Die]):
 	visible = true
+	rewardChosen = false
 	var dice_displays = dice_choices_container.get_children()
 	for i in range(dice_options.size()):
 		var die = dice_options[i]
@@ -37,19 +40,23 @@ func display_rewards(dice_options: Array[Die]):
 			display.set_die(die)
 
 func _on_die_display_clicked(display: RewardsDieDisplay):	
-	# Select the clicked die to give visual feedback
-	if display.has_method("select"):
-		display.select()
+	if (!rewardChosen):
+		rewardChosen = true
+		# Select the clicked die to give visual feedback
+		if display.has_method("select"):
+			display.select()
 
-	# After a short delay to show the selection, confirm the choice.
-	await get_tree().create_timer(0.3).timeout
-	emit_signal("reward_chosen", display.die)
+		# After a short delay to show the selection, confirm the choice.
+		await get_tree().create_timer(0.3).timeout
+		emit_signal("reward_chosen", display.die)
 
 func _on_skip_rewards_clicked(display):
-	print("Skipping reward...")
-	# Select the clicked die to give visual feedback
-	if display.has_method("select"):
-		display.select()
+	if (!rewardChosen):
+		rewardChosen = true
+		print("Skipping reward...")
+		# Select the clicked die to give visual feedback
+		if display.has_method("select"):
+			display.select()
 
-	await get_tree().create_timer(0.3).timeout
-	emit_signal("reward_chosen", null)
+		await get_tree().create_timer(0.3).timeout
+		emit_signal("reward_chosen", null)

@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="EncounterData" load_steps=4 format=3 uid="uid://e68kgsddal80"]
+
+[ext_resource type="Script" uid="uid://dv6r7tro15lnf" path="res://scripts/character/enemy/enemy_data.gd" id="1_upcgc"]
+[ext_resource type="Resource" uid="uid://nuoxudbbe41l" path="res://resources/enemies/evil_dice_tower.tres" id="2_w0dle"]
+[ext_resource type="Script" uid="uid://ck2drfaun3f25" path="res://scripts/encounter_data.gd" id="3_kl0l1"]
+
+[resource]
+script = ExtResource("3_kl0l1")
+encounter_type = 2
+enemy_types = Array[ExtResource("1_upcgc")]([ExtResource("2_w0dle")])
+min_count = 1
+max_count = 1
+metadata/_custom_type_script = "uid://ck2drfaun3f25"

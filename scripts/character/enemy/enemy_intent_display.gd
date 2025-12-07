@@ -4,7 +4,7 @@ var FACES = {}
 var ACTION_ICONS = {}
 
 @onready var icon: TextureRect = $Icon
-@onready var roll_label: Label = $Icon/RollLabel
+@onready var roll_label: Label = $RollLabel
 @onready var action_type_icon: TextureRect = $ActionTypeIcon
 
 func _ready():

@@ -1,8 +1,0 @@
-[gd_resource type="Resource" script_class="Encounter" load_steps=3 format=3 uid="uid://dm5j2kfa7b6wj"]
-
-[ext_resource type="PackedScene" uid="uid://dnt4jl4dwldgp" path="res://scenes/goblin.tscn" id="1_2nbaw"]
-[ext_resource type="Script" uid="uid://ck2drfaun3f25" path="res://scripts/encounter.gd" id="1_6r4ra"]
-
-[resource]
-script = ExtResource("1_6r4ra")
-enemy_scene = ExtResource("1_2nbaw")

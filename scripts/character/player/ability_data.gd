@@ -1,7 +1,7 @@
 extends Resource
-class_name Ability
+class_name AbilityData
 
 @export var title: String
 @export var description: String
-@export var icon: Texture2D
+@export var icon: CompressedTexture2D
 @export var dice_slots: int = 1

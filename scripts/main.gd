@@ -1,9 +1,11 @@
 extends Node2D
 
 @export var player: Player
-@onready var dice_pool_ui: DicePool = $UI/DicePool
-@onready var abilities_ui: Abilities = $UI/Abilities
+@onready var enemy_container = $EnemySpawner/Enemies
+@onready var enemy_spawner = $EnemySpawner
 @onready var intent_lines: Node2D = $IntentLines
+@onready var dice_pool_ui: DicePool = $UI/DicePool
+@onready var abilities_ui: VBoxContainer = $UI/Abilities
 @onready var total_dice_value_label: Label = $UI/TotalDiceValueLabel
 @onready var total_incoming_damage_label: Label = $UI/TotalIncomingDamageLabel
 @onready var gold_label: Label = $UI/GameInfo/GoldContainer/GoldLabel
@@ -14,12 +16,11 @@ extends Node2D
 @onready var victory_screen = $UI/VictoryScreen
 @onready var defeat_screen = $UI/DefeatScreen
 @onready var reward_screen = $UI/RewardScreen
-@onready var enemy_spawner = $EnemySpawner
 @onready var end_turn_button = $UI/EndTurnButton
 
-enum Turn { PLAYER, ENEMY }
+enum Turn {PLAYER, ENEMY}
 
-const AbilityUI = preload("res://scenes/ui/ability.tscn")
+const ABILITY_UI_SCENE = preload("res://scenes/ui/ability.tscn")
 var intents: Dictionary = {}
 var selected_dice_display: Array[DieDisplay] = []
 var current_incoming_damage: int = 0
@@ -28,6 +29,8 @@ var current_turn = Turn.PLAYER
 var round_number := 1
 const BOSS_ROUND = 10
 
+# Testing values
+var starting_abilities: Array[AbilityData] = [load("res://resources/abilities/heal.tres")]
 
 func _ready():
 	# Connect signals
@@ -35,29 +38,27 @@ func _ready():
 	player.gold_changed.connect(_update_gold)
 	player.dice_bag_changed.connect(_update_dice_bag)
 	player.dice_discard_changed.connect(_update_dice_discard)
+	player.abilities_changed.connect(_add_player_ability)
+
 	dice_pool_ui.die_clicked.connect(_on_die_clicked)
 	reward_screen.reward_chosen.connect(_on_reward_chosen)
-	
-	_display_player_abilities()
+
+	# Initialize player's starting abilities
+	for child: Node in abilities_ui.get_children():
+		child.queue_free()
+	for ability in starting_abilities:
+		player.add_ability(ability)
+
 	start_new_round()
 
-func _display_player_abilities():
-	# Clear any previously displayed abilities
-	for child in abilities_ui.get_children():
-		child.queue_free()
-
+func _add_player_ability(new_ability: AbilityData):
 	# Instantiate and display a UI element for each ability the player has
-	for ability_resource in player.abilities:
-		var ability_ui_instance = AbilityUI.instantiate()
-		# Defer setting the ability until after the node has fully entered the scene tree.
-		# This ensures that its @onready variables have been initialized.
-		ability_ui_instance.tree_entered.connect(
-			func(): ability_ui_instance.ability = ability_resource,
-			CONNECT_ONE_SHOT
-		)
-		abilities_ui.add_child(ability_ui_instance)
+	var ability_ui_instance: AbilityUI = ABILITY_UI_SCENE.instantiate() as AbilityUI
+	abilities_ui.add_child(ability_ui_instance)
+	ability_ui_instance.initialize(new_ability)
 
 func player_turn():
+	enemy_container.arrange_enemies()
 	# Reset block at the start of the turn
 	player.block = 0
 	_clear_intents()
@@ -74,7 +75,7 @@ func player_turn():
 	total_dice_value_label.text = "Total: " + str(total_dice_value)
 	current_incoming_damage = 0
 	# Have all living enemies declare their intents for the turn
-	for enemy in get_active_enemies():
+	for enemy: Enemy in get_active_enemies():
 		if enemy.hp > 0:
 			# Reset enemy block at the start of the player's turn
 			enemy.block = 0
@@ -176,19 +177,14 @@ func _unhandled_input(event: InputEvent):
 				return
 
 
-func _on_character_clicked(character):
-	print("Character clicked: " + str(character))
+func _on_character_clicked(character: Character):
+	print("Character clicked: " + str(character.name_label.text))
 	# If no die is selected, do nothing
 	if selected_dice_display.size() == 0:
 		return
 
 	for die_display: DieDisplay in selected_dice_display:
-		print("Intent action: Use die with value %d on %s." % [die_display.die.result_value, character.name])
-
-		# Create an intent using the selected die's data
-		# Use the die_display object as the key, since it's a unique reference.
-		# A dictionary (die_data) cannot be used as a key.
-
+		print("Intent action: Use die with value %d." % die_display.die.result_value)
 		# --- Create the full arrow with outline and arrowhead ---
 		var arrow_container = Node2D.new()
 
@@ -240,7 +236,6 @@ func _on_character_clicked(character):
 
 		intents[die_display] = {"die": die_display.die, "roll": die_display.die.result_value, "target": character, "line": arrow_container}
 		die_display.deselect()
-	print("Intents: " + str(intents))
 
 	selected_dice_display = []
 	_update_intended_block_display()
@@ -317,16 +312,19 @@ func _on_enemy_died():
 			victory_screen.visible = true
 		else:
 			_show_reward_screen()
+	else:
+		enemy_container.arrange_enemies()
 
 func start_new_round():
-	print("round start")
+	print("Round start")
 	player.reset_for_new_round()
+	enemy_container.clear_everything()
 	
 	var spawned_enemies: Array
 	if round_number == BOSS_ROUND:
-		spawned_enemies = enemy_spawner.spawn_boss()
+		spawned_enemies = enemy_spawner.spawn_random_encounter(EncounterData.EncounterType.BOSS)
 	else:
-		spawned_enemies = enemy_spawner.spawn_regular_enemy()
+		spawned_enemies = enemy_spawner.spawn_random_encounter(EncounterData.EncounterType.NORMAL)
 	
 	for enemy in spawned_enemies:
 		# Connect to each new enemy's death signal
@@ -335,12 +333,14 @@ func start_new_round():
 	# Start the player's turn for the new round
 	player_turn()
 
-func get_active_enemies() -> Array[Node]:
+func get_active_enemies() -> Array[Enemy]:
 	# Helper function to get living enemies from the container
-	var living_enemies: Array[Node] = []
-	for enemy in $Enemies.get_children():
+	var living_enemies: Array[Enemy] = []
+	for enemy: Enemy in $EnemySpawner/Enemies.get_children():
 		if enemy.hp > 0:
 			living_enemies.append(enemy)
+		else:
+			enemy.queue_free()
 	return living_enemies
 
 func _show_reward_screen():
@@ -377,12 +377,12 @@ func _generate_reward_dice() -> Array[Die]:
 		new_die.face_values = faces
 		new_die.face_values.sort()
 		dice_options.append(new_die)
+		print(new_die.face_values)
 
-	print(dice_options)
 	return dice_options
 
 func _on_reward_chosen(chosen_die: Die):
-	print("reward_chosen", chosen_die)
+	print("Reward chosen: ", chosen_die.face_values)
 	if (chosen_die == null):
 		player.add_gold(10)
 	else:

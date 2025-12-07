@@ -1,0 +1,50 @@
+[gd_resource type="Resource" script_class="EnemyData" load_steps=12 format=3 uid="uid://nuoxudbbe41l"]
+
+[ext_resource type="Script" uid="uid://djeev1jhalfah" path="res://scripts/character/enemy/enemy_action.gd" id="1_na7ep"]
+[ext_resource type="Script" uid="uid://b62erl0h813g2" path="res://scripts/dice/die.gd" id="2_fgw5n"]
+[ext_resource type="Script" uid="uid://dv6r7tro15lnf" path="res://scripts/character/enemy/enemy_data.gd" id="3_sayl4"]
+[ext_resource type="Texture2D" uid="uid://cintk8vw78ojk" path="res://assets/ai/characters/evil_dice_tower.jpg" id="4_owyre"]
+
+[sub_resource type="Resource" id="Resource_na7ep"]
+script = ExtResource("2_fgw5n")
+sides = 4
+metadata/_custom_type_script = "uid://b62erl0h813g2"
+
+[sub_resource type="Resource" id="Resource_fgw5n"]
+script = ExtResource("1_na7ep")
+dice_to_roll = Array[ExtResource("2_fgw5n")]([SubResource("Resource_na7ep")])
+metadata/_custom_type_script = "uid://djeev1jhalfah"
+
+[sub_resource type="Resource" id="Resource_pxbtf"]
+script = ExtResource("2_fgw5n")
+sides = 10
+metadata/_custom_type_script = "uid://b62erl0h813g2"
+
+[sub_resource type="Resource" id="Resource_x6d88"]
+script = ExtResource("2_fgw5n")
+sides = 10
+metadata/_custom_type_script = "uid://b62erl0h813g2"
+
+[sub_resource type="Resource" id="Resource_55ead"]
+script = ExtResource("2_fgw5n")
+sides = 10
+metadata/_custom_type_script = "uid://b62erl0h813g2"
+
+[sub_resource type="Resource" id="Resource_v3n8f"]
+script = ExtResource("2_fgw5n")
+sides = 10
+metadata/_custom_type_script = "uid://b62erl0h813g2"
+
+[sub_resource type="Resource" id="Resource_gnfkx"]
+script = ExtResource("2_fgw5n")
+sides = 10
+metadata/_custom_type_script = "uid://b62erl0h813g2"
+
+[resource]
+script = ExtResource("3_sayl4")
+enemy_name = "Evil Dice Tower"
+sprite_texture = ExtResource("4_owyre")
+minimum_hp = 75
+hp_dice = Array[ExtResource("2_fgw5n")]([SubResource("Resource_pxbtf"), SubResource("Resource_x6d88"), SubResource("Resource_55ead"), SubResource("Resource_v3n8f"), SubResource("Resource_gnfkx")])
+action_pool = Array[ExtResource("1_na7ep")]([SubResource("Resource_fgw5n")])
+metadata/_custom_type_script = "uid://dv6r7tro15lnf"

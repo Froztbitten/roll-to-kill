@@ -1,0 +1,10 @@
+[gd_resource type="Resource" script_class="EncounterData" load_steps=5 format=3 uid="uid://dm5j2kfa7b6wj"]
+
+[ext_resource type="Script" uid="uid://dv6r7tro15lnf" path="res://scripts/character/enemy/enemy_data.gd" id="1_3s3yn"]
+[ext_resource type="Resource" uid="uid://du7ewmwn0eh7n" path="res://resources/enemies/goblin.tres" id="2_yxnbf"]
+[ext_resource type="Script" uid="uid://ck2drfaun3f25" path="res://scripts/encounter_data.gd" id="3_xqvvr"]
+[ext_resource type="Resource" uid="uid://b7dqjdxtlr5m1" path="res://resources/enemies/goblin_archer.tres" id="3_yxnbf"]
+
+[resource]
+script = ExtResource("3_xqvvr")
+enemy_types = Array[ExtResource("1_3s3yn")]([ExtResource("2_yxnbf"), ExtResource("3_yxnbf")])
