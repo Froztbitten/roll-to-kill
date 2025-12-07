@@ -1,6 +1,6 @@
 # Roll To Kill
 
-A simple turn-based combat demo made in Godot.
+Currently, a vibed, STS meets Balatro meets dice made in Godot. Some say it's the dark souls of gambling.
 
 ## How to Play
 

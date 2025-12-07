@@ -1,0 +1,7 @@
+[gd_scene load_steps=2 format=3 uid="uid://b7c8eae0f1g2"]
+
+[ext_resource type="Script" path="res://scripts/ui/status_effect_display.gd" id="1_hijkl"]
+
+[node name="StatusEffectDisplay" type="HBoxContainer"]
+script = ExtResource("1_hijkl")
+alignment = 1

@@ -1,78 +1,66 @@
 [gd_scene load_steps=4 format=3 uid="uid://b1c2d3e4f5g6"]
 
 [ext_resource type="Script" uid="uid://dhnqiuo6xd0g3" path="res://scripts/character/enemy/enemy_intent_display.gd" id="1_abcde"]
-[ext_resource type="Texture2D" uid="uid://mmm881ooxxa" path="res://assets/ai/ui/sword.svg" id="2_odel5"]
-[ext_resource type="Texture2D" uid="uid://bbmpuskbrpu5p" path="res://assets/ai/dice/d20.svg" id="3_2jymk"]
+[ext_resource type="Texture2D" uid="uid://bbmpuskbrpu5p" path="res://assets/ai/dice/d20.svg" id="2_2jymk"]
+[ext_resource type="Texture2D" uid="uid://mmm881ooxxa" path="res://assets/ai/ui/sword.svg" id="3_odel5"]
 
-[node name="EnemyIntentDisplay" type="Control"]
-layout_mode = 3
-anchors_preset = 0
-offset_right = 64.0
-offset_bottom = 64.0
+[node name="EnemyIntentDisplay" type="VBoxContainer"]
 script = ExtResource("1_abcde")
+alignment = 1
 
 [node name="ActionNameLabel" type="Label" parent="."]
-layout_mode = 1
-anchors_preset = 5
-anchor_left = 0.5
-anchor_right = 0.5
-offset_left = -75.0
-offset_top = -20.0
-offset_right = 75.0
-grow_horizontal = 2
+layout_mode = 2
 theme_override_font_sizes/font_size = 16
+text = "Action Name"
 horizontal_alignment = 1
 
-[node name="RollLabel" type="Label" parent="."]
+[node name="IconContainer" type="HBoxContainer" parent="."]
+layout_mode = 2
+alignment = 1
+
+[node name="ActionTypeIcon" type="TextureRect" parent="IconContainer"]
+custom_minimum_size = Vector2(48, 48)
+layout_mode = 2
+texture = ExtResource("3_odel5")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="RollLabel" type="Label" parent="IconContainer/ActionTypeIcon"]
 z_index = 1
 layout_mode = 1
-anchors_preset = -1
-anchor_left = -0.026
+anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_left = 26.664
-offset_top = 16.0
-offset_right = -25.0
-offset_bottom = -14.0
 grow_horizontal = 2
 grow_vertical = 2
 theme_override_colors/font_color = Color(0, 0, 0, 1)
 theme_override_colors/font_outline_color = Color(1, 1, 1, 1)
 theme_override_constants/outline_size = 4
-theme_override_font_sizes/font_size = 24
+theme_override_font_sizes/font_size = 36
 text = "6"
 horizontal_alignment = 1
 vertical_alignment = 1
 
-[node name="ActionTypeIcon" type="TextureRect" parent="."]
-layout_mode = 1
-anchors_preset = 6
-anchor_left = 1.0
-anchor_top = 0.5
-anchor_right = 1.0
-anchor_bottom = 0.5
-offset_left = -75.0
-offset_top = -42.0
-offset_right = 10.0
-offset_bottom = 49.0
-grow_horizontal = 0
-grow_vertical = 2
-texture = ExtResource("2_odel5")
-expand_mode = 1
-stretch_mode = 5
-
-[node name="Icon" type="TextureRect" parent="."]
-self_modulate = Color(1, 1, 1, 0.47058824)
-layout_mode = 1
-anchors_preset = -1
-anchor_right = 1.1090001
-anchor_bottom = 1.0
-offset_left = -4.0
-offset_top = 2.0
-offset_right = -2.7885056
-offset_bottom = 4.0
-grow_horizontal = 2
-grow_vertical = 2
-texture = ExtResource("3_2jymk")
+[node name="Icon" type="TextureRect" parent="IconContainer"]
+self_modulate = Color(1, 1, 1, 0.470588)
+custom_minimum_size = Vector2(64, 64)
+layout_mode = 2
+texture = ExtResource("2_2jymk")
 expand_mode = 2
 stretch_mode = 5
+
+[node name="DiceCountLabel" type="Label" parent="IconContainer/Icon"]
+layout_mode = 1
+anchors_preset = 3
+anchor_top = 1.0
+anchor_bottom = 1.0
+offset_left = 4.0
+offset_top = -24.0
+offset_right = 24.0
+offset_bottom = -4.0
+grow_vertical = 0
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 3
+theme_override_font_sizes/font_size = 14
+text = "x4"

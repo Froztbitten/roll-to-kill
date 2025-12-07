@@ -4,6 +4,7 @@
 [ext_resource type="Texture2D" uid="uid://bulxxtlabqtiy" path="res://assets/ai/characters/icon.svg" id="2_abcde"]
 [ext_resource type="PackedScene" uid="uid://cgrc3aet23kli" path="res://scenes/characters/health_bar.tscn" id="3_m1yav"]
 [ext_resource type="PackedScene" uid="uid://b1c2d3e4f5g6" path="res://scenes/characters/enemy/enemy_intent_display.tscn" id="4_hijkl"]
+[ext_resource type="PackedScene" uid="uid://b7c8d9e0f1g2" path="res://scenes/ui/status_effect_display.tscn" id="5_status"]
 [ext_resource type="Texture2D" uid="uid://by2uceaetwslb" path="res://assets/ai/ui/skull.svg" id="4_skull"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_12345"]
@@ -60,6 +61,12 @@ anchor_right = 0.5
 offset_left = -124.0
 offset_right = -60.0
 grow_horizontal = 2
+
+[node name="StatusEffectDisplay" parent="." instance=ExtResource("5_status")]
+offset_left = -19.0
+offset_top = -5.0
+offset_right = 81.0
+offset_bottom = 19.0
 
 [node name="IntendedDamageLabel" type="Label" parent="."]
 offset_left = 102.0

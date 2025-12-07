@@ -76,6 +76,8 @@ func add_ability(new_ability: AbilityData):
 	abilities_changed.emit(new_ability)
 
 func heal(amount: int):
-	hp = min(hp + ceili(amount / 2.0), max_hp)
+	# Player's heal ability is less effective, healing for half the value.
+	var heal_amount = ceili(amount / 2.0)
+	hp = min(hp + heal_amount, max_hp)
 	update_health_display()
-	print("%s healed for %d, has %d HP left." % [name, amount, hp])
+	print("%s healed for %d (raw) -> %d (actual), has %d HP left." % [name, amount, heal_amount, hp])

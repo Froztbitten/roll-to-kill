@@ -3,11 +3,26 @@ extends Node
 @onready var enemy_container: Node2D = $Enemies
 
 @export var encounter_pool: Array[EncounterData]
+@export var minion_pool: Array[EnemyData]
 
 const ENEMY_UI = preload("res://scenes/characters/enemy/enemy.tscn")
 
 func _ready():
 	encounter_pool.assign(Utils.load_all_resources("res://resources/encounters"))
+	# Auto-populate the minion pool if it's empty, for convenience.
+	if minion_pool.is_empty():
+		var minion_paths = [
+			"res://resources/enemies/d4.tres",
+			"res://resources/enemies/d6.tres",
+			"res://resources/enemies/d8.tres",
+			"res://resources/enemies/d10.tres",
+			"res://resources/enemies/d12.tres",
+			"res://resources/enemies/d20.tres"
+		]
+		for path in minion_paths:
+			var res = load(path)
+			if res:
+				minion_pool.append(res)
 
 func spawn_random_encounter(encounter_type: EncounterData.EncounterType):	
 	var chosen_encounter: EncounterData = encounter_pool.filter(
