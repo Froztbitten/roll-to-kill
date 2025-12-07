@@ -1,4 +1,6 @@
-[gd_scene load_steps=2 format=3 uid="uid://cgrd2w2flg23s"]
+[gd_scene load_steps=3 format=3 uid="uid://cgrd2w2flg23s"]
+
+[ext_resource type="Script" uid="uid://ccefngw5myl78" path="res://scripts/ui/die_slot.gd" id="1_whrak"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_vw15q"]
 bg_color = Color(0.247059, 0.247059, 0.301961, 0.6)
@@ -10,3 +12,4 @@ corner_radius_bottom_left = 4
 [node name="DieSlotUI" type="Panel"]
 custom_minimum_size = Vector2(40, 40)
 theme_override_styles/panel = SubResource("StyleBoxFlat_vw15q")
+script = ExtResource("1_whrak")

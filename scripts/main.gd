@@ -41,6 +41,7 @@ func _ready():
 	player.abilities_changed.connect(_add_player_ability)
 
 	dice_pool_ui.die_clicked.connect(_on_die_clicked)
+	dice_pool_ui.die_drag_started.connect(_on_die_drag_started)
 	reward_screen.reward_chosen.connect(_on_reward_chosen)
 
 	# Initialize player's starting abilities
@@ -55,6 +56,7 @@ func _add_player_ability(new_ability: AbilityData):
 	# Instantiate and display a UI element for each ability the player has
 	var ability_ui_instance: AbilityUI = ABILITY_UI_SCENE.instantiate() as AbilityUI
 	abilities_ui.add_child(ability_ui_instance)
+	ability_ui_instance.die_returned_from_slot.connect(_on_die_returned_to_pool)
 	ability_ui_instance.initialize(new_ability)
 
 func player_turn():
@@ -95,6 +97,7 @@ func player_turn():
 func _on_end_turn_button_pressed():
 	if current_turn == Turn.PLAYER:
 		resolve_dice_intents()
+		resolve_active_abilities()
 		next_turn()
 		enemy_turn()
 
@@ -115,6 +118,30 @@ func resolve_dice_intents():
 	# Discard all dice that were in the hand this turn.
 	player.discard(dice_pool_ui.get_current_dice())
 	print("Player block: " + str(player.block))
+
+func resolve_active_abilities():
+	for ability_ui: AbilityUI in abilities_ui.get_children():
+		if ability_ui.is_active():
+			var ability_data: AbilityData = ability_ui.ability_data
+			var slotted_dice_displays: Array[DieDisplay] = ability_ui.get_slotted_dice_displays()
+			var dice_to_discard: Array[Die] = []
+
+			# --- ABILITY LOGIC ---
+			# This is where you'll implement the effects for different abilities.
+			if ability_data.title == "Heal":
+				var total_heal = 0
+				for die_display in slotted_dice_displays:
+					total_heal += die_display.die.result_value
+					dice_to_discard.append(die_display.die)
+				
+				player.heal(total_heal)
+				print("Resolved 'Heal' ability for %d health." % total_heal)
+
+			# After resolving the ability, consume it.
+			ability_ui.consume_ability()
+			
+			# Discard the Die resources used in the ability.
+			player.discard(dice_to_discard)
 
 func enemy_turn():
 	end_turn_button.disabled = true
@@ -153,6 +180,22 @@ func _on_die_clicked(die_display):
 		selected_dice_display.append(die_display)
 		die_display.select()
 		print("Intent action started. Select a target for die with value: " + str(die_display.die.result_value))
+
+func _on_die_drag_started(die_display: DieDisplay):
+	# If the die being dragged is in the selection, remove it.
+	if selected_dice_display.has(die_display):
+		selected_dice_display.erase(die_display)
+		die_display.deselect()
+
+		# Also clear any intent that was associated with it.
+		if intents.has(die_display):
+			var intent_data = intents[die_display]
+			if intent_data.has("line"):
+				intent_data.line.queue_free()
+			intents.erase(die_display)
+			print("Cleared intent for dragged die.")
+			_update_all_intended_damage_displays()
+			_update_intended_block_display()
 
 func _unhandled_input(event: InputEvent):
 	# This function catches input that was not handled by the UI.
@@ -415,3 +458,7 @@ func _update_dice_bag(count: int):
 
 func _update_dice_discard(count: int):
 	dice_discard_label.text = str(count)
+
+func _on_die_returned_to_pool(die_display: DieDisplay):
+	# This is called when a die is removed from an ability slot via right-click.
+	dice_pool_ui.add_die_display(die_display)

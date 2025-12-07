@@ -74,3 +74,8 @@ func add_gold(new_gold: int):
 func add_ability(new_ability: AbilityData):
 	abilities.append(new_ability)
 	abilities_changed.emit(new_ability)
+
+func heal(amount: int):
+	hp = min(hp + ceili(amount / 2.0), max_hp)
+	update_health_display()
+	print("%s healed for %d, has %d HP left." % [name, amount, hp])

@@ -2,6 +2,7 @@ extends Control
 class_name DieDisplay
 
 signal die_clicked(die_display)
+signal drag_started(die_display)
 
 const DieGridCell = preload("res://scenes/dice/die_grid_cell.tscn")
 
@@ -13,6 +14,8 @@ var die: Die:
 @onready var roll_label: Label = $MainDisplay/RollLabel
 @onready var face_grid: PanelContainer = $FaceGrid
 @onready var grid_container: GridContainer = $FaceGrid/Grid
+
+var dice_pool = null
 
 func set_die(value: Die):
 	die = value
@@ -111,3 +114,37 @@ func _notification(what):
 		face_grid.visible = true
 	elif what == NOTIFICATION_MOUSE_EXIT:
 		face_grid.visible = false
+	elif what == NOTIFICATION_DRAG_END:
+		# If the drag ended and this die display was not successfully dropped
+		# (i.e., it was not reparented), make it visible again.
+		if get_parent() == dice_pool:
+			main_display.visible = true
+
+# Called when a drag is initiated on this control.
+func _get_drag_data(at_position: Vector2):
+	# A die can only be dragged from the dice pool, not from an ability slot.
+	if not get_parent() is DicePool:
+		return null
+
+	# Let the main game know that a drag has started, so it can be deselected.
+	emit_signal("drag_started", self)
+
+	# Create a preview that follows the mouse
+	var preview = self.duplicate() # Duplicate the entire control for the preview
+	preview.scale = Vector2(0.8, 0.8)
+	set_drag_preview(preview)
+
+	# The data payload that will be sent to the drop target
+	var payload = {
+		"source_display": self,
+		"die_data": die
+	}
+	
+	# Hide the original die while it's being dragged
+	main_display.visible = false
+	
+	return payload
+
+func notify_drop_successful():
+	if dice_pool and dice_pool.has_method("remove_display_from_pool"):
+		dice_pool.remove_display_from_pool(self)
