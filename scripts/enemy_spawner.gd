@@ -31,36 +31,42 @@ func spawn_random_encounter(encounter_type: EncounterData.EncounterType):
 	print(encounter_pool.size())
 	if chosen_encounter:
 		var number_to_spawn = randi_range(chosen_encounter.min_count, chosen_encounter.max_count)
-		return _spawn_enemies(chosen_encounter.enemy_types, number_to_spawn)
+		return _spawn_enemies(chosen_encounter, number_to_spawn)
 	
 	push_warning("%s pool is empty!", [encounter_type])
 	return []
 
-func _spawn_enemies(enemy_types: Array[EnemyData], count: int) -> Array:
+func _spawn_enemies(encounter: EncounterData, count: int) -> Array:
 	var spawned_enemies = []
-	var screen_size = get_viewport().get_visible_rect().size
-	var spawn_x = screen_size.x * 0.8 # Move them slightly to the right
+	var enemies_to_spawn_data: Array[EnemyData] = []
+
+	# Check for the special Goblin Warchief encounter
+	var warchief_data: EnemyData = null
+	var bodyguard_data: EnemyData = null
+	var is_warchief_encounter = false
+	for type in encounter.enemy_types:
+		if type.enemy_name == "Goblin Warchief":
+			warchief_data = type
+			is_warchief_encounter = true
+		elif type.enemy_name == "Ogre Bodyguard":
+			bodyguard_data = type
+
+	if is_warchief_encounter and warchief_data and bodyguard_data:
+		# Special logic: 1 warchief, rest are bodyguards
+		enemies_to_spawn_data.append(warchief_data)
+		for i in range(count - 1):
+			enemies_to_spawn_data.append(bodyguard_data)
+	else:
+		# Default logic: pick randomly from the encounter's pool
+		for i in range(count):
+			enemies_to_spawn_data.append(encounter.enemy_types.pick_random())
+
+	# Shuffle the list so the leader doesn't always appear in the same position
+	enemies_to_spawn_data.shuffle()
 	
-	# Define vertical margins to keep enemies from the screen edges
-	var top_margin = 100
-	var bottom_margin = 100
-	var available_height = screen_size.y - top_margin - bottom_margin
-	
-	for i in range(count):
-		var picked_enemy: EnemyData = enemy_types.pick_random()
+	for enemy_data in enemies_to_spawn_data:
 		var enemy: Enemy = ENEMY_UI.instantiate()
-		print(enemy)
-		
-		enemy.enemy_data = picked_enemy
-		
-		var spawn_y: float
-		if count == 1:
-			# If there's only one enemy, center it in the available space
-			spawn_y = top_margin + available_height / 2
-		else:
-			# If there are multiple, distribute them evenly
-			spawn_y = top_margin + (float(i) / (count - 1)) * available_height
-		enemy.position = Vector2(spawn_x, spawn_y)
+		enemy.enemy_data = enemy_data
 		enemy_container.add_child(enemy)
 		spawned_enemies.append(enemy)
 	

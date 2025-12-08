@@ -29,7 +29,7 @@ var current_incoming_damage: int = 0
 var current_turn = Turn.PLAYER
 var round_number := 1
 const BOSS_ROUND = 10
-@export var start_with_boss_fight := true
+@export var start_with_boss_fight := false
 
 # Testing values
 var starting_abilities: Array[AbilityData] = [load("res://resources/abilities/heal.tres"),
@@ -229,6 +229,9 @@ func enemy_turn():
 
 					EnemyAction.ActionType.DO_NOTHING:
 						pass # Do nothing, as intended.
+
+					EnemyAction.ActionType.FLEE:
+						enemy.die()
 
 				if enemy.next_action.self_destructs:
 					enemy.die()

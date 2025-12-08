@@ -1,7 +1,7 @@
 extends Resource
 class_name EnemyAction
 
-enum ActionType { ATTACK, SHIELD, SUPPORT_SHIELD, HEAL_ALLY, PIERCING_ATTACK, SPAWN_MINIONS, BUFF_ADVANTAGE, DO_NOTHING }
+enum ActionType { ATTACK, SHIELD, SUPPORT_SHIELD, HEAL_ALLY, PIERCING_ATTACK, SPAWN_MINIONS, BUFF_ADVANTAGE, DO_NOTHING, FLEE }
 
 @export var action_name: String = "Action"
 @export var action_type: ActionType = ActionType.ATTACK

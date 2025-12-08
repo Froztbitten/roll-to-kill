@@ -77,6 +77,24 @@ func declare_intent(active_enemies: Array):
 						break
 			else:
 				next_action = possible_actions.pick_random()
+	# Special logic for Goblin Warchief
+	elif enemy_data.enemy_name == "Goblin Warchief":
+		var bodyguards_alive = false
+		for e in active_enemies:
+			if e.enemy_data.enemy_name == "Ogre Bodyguard" and not e._is_dead:
+				bodyguards_alive = true
+				break
+		
+		var possible_actions = []
+		if bodyguards_alive:
+			possible_actions = enemy_data.action_pool.filter(func(a): return a.action_name == "King of Cowards" or a.action_name == "Warstrike")
+		else:
+			possible_actions = enemy_data.action_pool.filter(func(a): return a.action_name == "Fight" or a.action_name == "Flight" or a.action_name == "Fright")
+		
+		if not possible_actions.is_empty():
+			next_action = possible_actions.pick_random()
+		else:
+			next_action = enemy_data.action_pool[0]
 	# Special logic for D6 Healer
 	elif enemy_data.enemy_name == "D6":
 		var injured_allies = active_enemies.filter(func(e): return e != self and e.hp < e.max_hp)
