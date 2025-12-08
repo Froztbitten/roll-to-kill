@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100">
+  <defs>
+    <g id="snowflake-arm">
+      <line x1="0" y1="0" x2="0" y2="-45" stroke="#A5F2F3" stroke-width="3" stroke-linecap="round"/>
+      <path d="M0,-35 L-10,-25 M0,-35 L10,-25" stroke="#A5F2F3" stroke-width="3" stroke-linecap="round"/>
+      <path d="M0,-20 L-7,-13 M0,-20 L7,-13" stroke="#A5F2F3" stroke-width="3" stroke-linecap="round"/>
+    </g>
+  </defs>
+
+  <g transform="translate(50, 50)">
+    <use href="#snowflake-arm" />
+    <use href="#snowflake-arm" transform="rotate(60)" />
+    <use href="#snowflake-arm" transform="rotate(120)" />
+    <use href="#snowflake-arm" transform="rotate(180)" />
+    <use href="#snowflake-arm" transform="rotate(240)" />
+    <use href="#snowflake-arm" transform="rotate(300)" />
+  </g>
+</svg>

@@ -98,7 +98,8 @@ func reset_for_new_turn() -> Array[Die]:
 			slot.mouse_filter = MOUSE_FILTER_STOP # Re-enable interaction
 			if slot.current_die_display:
 				var die_display = slot.current_die_display
-				dice_to_discard.append(die_display.die)
+				if ability_data.discard_dice_on_reset:
+					dice_to_discard.append(die_display.die)
 				slot.remove_child(die_display)
 				die_display.queue_free()
 				slot.current_die_display = null

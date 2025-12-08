@@ -11,6 +11,7 @@ signal abilities_changed(new_ability)
 var _game_dice_bag: Array[Die] = []
 var _round_dice_bag: Array[Die] = []
 var _dice_discard: Array[Die] = []
+var _held_dice: Array[Die] = []
 var gold: int = 0
 
 var dice_pool_size = 4
@@ -74,6 +75,14 @@ func add_gold(new_gold: int):
 func add_ability(new_ability: AbilityData):
 	abilities.append(new_ability)
 	abilities_changed.emit(new_ability)
+
+func hold_die(die: Die):
+	_held_dice.append(die)
+
+func get_and_clear_held_dice() -> Array[Die]:
+	var dice_to_return = _held_dice.duplicate()
+	_held_dice.clear()
+	return dice_to_return
 
 func heal(amount: int):
 	# Player's heal ability is less effective, healing for half the value.

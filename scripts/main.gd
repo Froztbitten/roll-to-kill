@@ -32,7 +32,8 @@ const BOSS_ROUND = 10
 @export var start_with_boss_fight := true
 
 # Testing values
-var starting_abilities: Array[AbilityData] = [load("res://resources/abilities/heal.tres"), load("res://resources/abilities/sweep.tres")]
+var starting_abilities: Array[AbilityData] = [load("res://resources/abilities/heal.tres"),
+	load("res://resources/abilities/sweep.tres"), load("res://resources/abilities/hold.tres")]
 
 func _ready():
 	ADVANTAGE_STATUS = load("res://resources/status_effects/advantage.tres")
@@ -66,13 +67,25 @@ func _add_player_ability(new_ability: AbilityData):
 	ability_ui_instance.initialize(new_ability)
 
 func player_turn():
+	# Reset abilities from the previous turn at the start of the new turn.
+	cleanup_used_abilities()
+
 	# Reset block at the start of the turn
 	player.block = 0
 	_clear_intents()
-	selected_dice_display = []
+	for die_display in selected_dice_display:
+		die_display.deselect()
+	selected_dice_display.clear()
 	
 	var rolled_dice: Array[Die] = []
 	var total_dice_value = 0
+	
+	# Add any dice held from the previous turn to the hand first.
+	var held_dice = player.get_and_clear_held_dice()
+	rolled_dice.append_array(held_dice)
+	for die in held_dice:
+		total_dice_value += die.result_value
+	
 	var hand: Array[Die] = player.draw_hand()
 	for die: Die in hand:
 		var roll = die.roll()
@@ -117,7 +130,6 @@ func player_turn():
 func _on_end_turn_button_pressed():
 	if current_turn == Turn.PLAYER:
 		resolve_dice_intents()
-		cleanup_used_abilities()
 		next_turn()
 		enemy_turn()
 
@@ -163,9 +175,16 @@ func _on_ability_activated(ability_ui: AbilityUI):
 		for enemy in get_active_enemies():
 			enemy.take_damage(damage)
 		print("Resolved 'Sweep' ability for %d damage to all enemies." % damage)
+	elif ability_data.title == "Hold":
+		if slotted_dice_displays.is_empty(): return
+		
+		var die_to_hold = slotted_dice_displays[0].die
+		player.hold_die(die_to_hold)
+		print("Resolved 'Hold' ability. Die with value %d will be kept." % die_to_hold.result_value)
 	
 	# After an ability resolves, the state of the board may have changed, so we need to refresh the UI.
 	_update_all_intended_damage_displays()
+	_update_intended_block_display()
 
 func enemy_turn():
 	end_turn_button.disabled = true
