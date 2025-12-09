@@ -34,6 +34,7 @@ func arrange_enemies():
 		# 4. Apply Global Position
 		# We force the X to be the center of the box, and Y to be the calculated step
 		enemy.global_position = Vector2(zone_center_x, new_y)
+		enemy.update_resting_state()
 		
 func clear_everything():
 	for child in get_children():

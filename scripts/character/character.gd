@@ -9,14 +9,19 @@ signal statuses_changed(statuses)
 @export var block: int = 0
 var statuses: Dictionary = {} # {StatusEffect: duration}
 var _is_dead := false
+var _resting_position: Vector2
+var _resting_rotation: float
+var _recoil_tween: Tween
 
 @onready var health_bar = $HealthBar
 @onready var name_label: Label = $NameLabel
 
 func _ready():
+	_resting_position = position
+	_resting_rotation = rotation
 	update_health_display()
 
-func take_damage(damage: int):
+func take_damage(damage: int, play_recoil: bool = true):
 	var old_block = block
 	var damage_to_take = damage
 	if block > 0:
@@ -25,13 +30,16 @@ func take_damage(damage: int):
 		block -= blocked_damage
 		print("%s blocked %d damage." % [name, blocked_damage])
 	
-	await _apply_damage(damage_to_take, "damage", old_block)
+	await _apply_damage(damage_to_take, "damage", old_block, play_recoil)
 
-func take_piercing_damage(damage: int):
+func take_piercing_damage(damage: int, play_recoil: bool = true):
 	# This damage type ignores block.
-	await _apply_damage(damage, "piercing damage", block)
+	await _apply_damage(damage, "piercing damage", block, play_recoil)
 
-func _apply_damage(amount: int, type: String, old_block_value: int) -> void:
+func _apply_damage(amount: int, type: String, old_block_value: int, play_recoil: bool = true) -> void:
+	if amount > 0 and play_recoil:
+		await _recoil(amount)
+
 	var old_hp = hp
 	hp -= amount
 	if hp < 0:
@@ -94,6 +102,46 @@ func tick_down_statuses():
 		statuses.erase(key)
 	if not keys_to_remove.is_empty():
 		statuses_changed.emit(statuses)
+
+func update_resting_state():
+	_resting_position = position
+	_resting_rotation = rotation
+
+func _recoil(damage_amount: int) -> void:
+	if damage_amount <= 0:
+		return
+
+	# Calculate intensity from 0.0 to 1.0, mapping damage from 1 to 20.
+	var intensity = clamp(float(damage_amount), 1.0, 20.0) / 20.0
+
+	# Define the maximum recoil effect.
+	var max_recoil_distance = 25.0
+	var max_recoil_angle_deg = 10.0
+
+	# Calculate the actual recoil based on damage intensity.
+	var recoil_distance = max_recoil_distance * intensity
+	var recoil_angle_rad = deg_to_rad(max_recoil_angle_deg * intensity)
+
+	# Determine direction based on screen position (left half = player, right half = enemy).
+	var direction_multiplier = 1.0 # Recoil to the right for enemies
+	if global_position.x < get_viewport_rect().size.x / 2:
+		direction_multiplier = -1.0 # Recoil to the left for player
+
+	# If a recoil is already in progress, stop it.
+	# This prevents tweens from fighting over the properties.
+	if _recoil_tween and _recoil_tween.is_running():
+		_recoil_tween.kill()
+
+	# The recoil moves the character back and slightly up.
+	var recoil_position = _resting_position + Vector2(recoil_distance * direction_multiplier, -recoil_distance * 0.5)
+	# The character leans away from the impact.
+	var recoil_rotation = _resting_rotation - (recoil_angle_rad * direction_multiplier)
+
+	_recoil_tween = create_tween().set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
+	_recoil_tween.parallel().tween_property(self, "position", recoil_position, 0.08)
+	_recoil_tween.parallel().tween_property(self, "rotation", recoil_rotation, 0.08)
+	_recoil_tween.parallel().tween_property(self, "position", _resting_position, 0.25).set_delay(0.08)
+	_recoil_tween.parallel().tween_property(self, "rotation", _resting_rotation, 0.25).set_delay(0.08)
 
 func die() -> void:
 	if _is_dead: return

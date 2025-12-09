@@ -314,7 +314,7 @@ func _on_character_clicked(character: Character) -> void:
 		player.update_health_display(net_damage)
 	else: # It's an enemy
 		var enemy_target: Enemy = character
-		await enemy_target.take_damage(total_roll)
+		await enemy_target.take_damage(total_roll, false)
 		print("Dealt %d damage to %s" % [total_roll, enemy_target.name])
 
 	player.discard(dice_to_discard)
@@ -332,6 +332,7 @@ func _animate_dice_to_target(dice_displays: Array[DieDisplay], target: Character
 			"start_center": die_display.get_node("MainDisplay").get_global_rect().get_center(),
 			"anim_disp": die_display.get_node("MainDisplay").duplicate(true),
 			"start_scale": die_display.get_node("MainDisplay").scale,
+			"die_data": die_display.die, # Add the Die object here
 			"start_size": die_display.get_node("MainDisplay").size
 		})
 
@@ -381,8 +382,11 @@ func _animate_dice_to_target(dice_displays: Array[DieDisplay], target: Character
 		).set_delay(i * 0.08).set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_CUBIC)
 
 		tween.parallel().tween_property(anim_disp, "scale", anim_disp.scale * 1.2, duration / 2.0).set_delay(i * 0.08)
-		tween.parallel().tween_property(anim_disp, "scale", Vector2.ZERO, duration / 2.0).set_delay(i * 0.08 + duration / 2.0)
+		tween.parallel().tween_property(anim_disp, "scale", Vector2(0.5, 0.5), duration / 2.0).set_delay(i * 0.08 + duration / 2.0)
 
+		# When the die "hits" at the end of its animation, trigger the recoil on the target.
+		# We don't await this, so multiple recoils can overlap for a cool, rapid-fire effect.
+		tween.tween_callback(target._recoil.bind(data.die_data.result_value))
 		tween.tween_callback(anchor.queue_free)
 
 	if not tweens.is_empty():
