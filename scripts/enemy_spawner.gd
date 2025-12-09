@@ -69,6 +69,9 @@ func _spawn_enemies(encounter: EncounterData, count: int) -> Array:
 		enemy.enemy_data = enemy_data
 		enemy_container.add_child(enemy)
 		spawned_enemies.append(enemy)
-	
-	enemy_container.arrange_enemies()
+
+	# Defer the arrangement to the end of the frame. This ensures that the nodes
+	# are fully initialized and their physics bodies are registered correctly
+	# before we try to position them, preventing targeting issues.
+	enemy_container.call_deferred("arrange_enemies")
 	return spawned_enemies

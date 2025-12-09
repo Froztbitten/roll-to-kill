@@ -6,6 +6,7 @@
 
 [node name="EnemyIntentDisplay" type="VBoxContainer"]
 alignment = 1
+mouse_filter = 2
 script = ExtResource("1_abcde")
 
 [node name="ActionNameLabel" type="Label" parent="."]

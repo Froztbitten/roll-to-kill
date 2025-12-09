@@ -58,7 +58,7 @@ func _ready() -> void:
 	# Wait for one frame to ensure all newly created nodes (like abilities) are fully ready.
 	await get_tree().process_frame
 
-	start_new_round()
+	await start_new_round()
 
 func _add_player_ability(new_ability: AbilityData):
 	# Instantiate and display a UI element for each ability the player has
@@ -367,8 +367,14 @@ func _animate_dice_to_target(dice_displays: Array[DieDisplay], target: Character
 		tweens.append(tween)
 		
 		# Get the visual center of the target character's sprite for a more accurate end position.
-		var sprite_node = target.get_node("Sprite2D")
-		var end_pos = sprite_node.get_global_rect().get_center()
+		var sprite_node: Node = target.get_node("Sprite2D")
+		var end_pos: Vector2
+		if sprite_node is Control: # TextureRect is a Control node
+			end_pos = (sprite_node as Control).get_global_rect().get_center()
+		elif sprite_node is Node2D: # Sprite2D is a Node2D
+			end_pos = (sprite_node as Node2D).global_position
+		else: # Fallback to the character's origin if the node is something unexpected
+			end_pos = target.global_position
 		# Define the control point for the quadratic Bezier curve.
 		# A lower Y value creates a higher arc.
 		var control_pos_x = lerp(anchor_start_pos.x, end_pos.x, 0.2)
@@ -403,9 +409,11 @@ func _on_enemy_died():
 		else:
 			_show_reward_screen()
 	else:
-		enemy_container.arrange_enemies()
+		# Defer arrangement to prevent physics race conditions where the collision
+		# shape position doesn't update in the same frame as the visual position.
+		enemy_container.call_deferred("arrange_enemies")
 
-func start_new_round():
+func start_new_round() -> void:
 	print("Round start")
 	player.reset_for_new_round()
 	enemy_container.clear_everything()
@@ -416,10 +424,21 @@ func start_new_round():
 	else:
 		spawned_enemies = enemy_spawner.spawn_random_encounter(EncounterData.EncounterType.NORMAL)
 	
+	if spawned_enemies.is_empty():
+		push_error("No enemies spawned, cannot start round.")
+		return
+
 	for enemy in spawned_enemies:
 		# Connect to each new enemy's death signal
 		enemy.died.connect(_on_enemy_died.bind())
 	
+	# Wait for one frame. This is CRITICAL. It allows the engine to:
+	# 1. Process the `queue_free` from `clear_everything()`.
+	# 2. Process the `call_deferred` for `arrange_enemies()`.
+	# 3. Update the physics server with the new positions of the collision shapes.
+	# Without this, the collision shapes might still be at origin (0,0) when the player's turn starts.
+	await get_tree().process_frame
+
 	# Start the player's turn for the new round
 	player_turn()
 
@@ -471,7 +490,7 @@ func _generate_reward_dice() -> Array[Die]:
 
 	return dice_options
 
-func _on_reward_chosen(chosen_die: Die):
+func _on_reward_chosen(chosen_die: Die) -> void:
 	if (chosen_die == null):
 		player.add_gold(10)
 	else:
@@ -481,7 +500,7 @@ func _on_reward_chosen(chosen_die: Die):
 	round_number += 1
 	reward_screen.visible = false
 	
-	start_new_round()
+	await start_new_round()
 
 func _on_play_again_button_pressed():
 	# Reload the entire main scene to restart the game.

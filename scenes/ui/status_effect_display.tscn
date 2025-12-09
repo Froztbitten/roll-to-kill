@@ -4,4 +4,5 @@
 
 [node name="StatusEffectDisplay" type="HBoxContainer"]
 script = ExtResource("1_hijkl")
+mouse_filter = 2
 alignment = 1
