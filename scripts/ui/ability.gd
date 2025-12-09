@@ -5,6 +5,7 @@ class_name AbilityUI
 @onready var description_label: RichTextLabel = $VBoxContainer/HBoxContainer/Description
 @onready var icon_texture: TextureRect = $VBoxContainer/Header/Icon
 @onready var dice_slots_container: HBoxContainer = $VBoxContainer/HBoxContainer/DiceSlots
+@onready var cooldown_label: Label = $VBoxContainer/Header/CooldownLabel
 
 const DIE_SLOT_SCENE = preload("res://scenes/ui/die_slot.tscn")
 
@@ -13,6 +14,7 @@ var original_stylebox: StyleBox
 var active_stylebox: StyleBoxFlat
 
 var is_consumed_this_turn := false
+var current_cooldown: int = 0
 
 signal die_returned_from_slot(die_display)
 signal ability_activated(ability_ui)
@@ -24,6 +26,7 @@ func initialize(data: AbilityData):
 	title_label.text = ability_data.title
 	description_label.text = ability_data.description
 	icon_texture.texture = ability_data.icon
+	cooldown_label.visible = false
 
 	# Store the original style and create a new one for the "active" state.
 	original_stylebox = get_theme_stylebox("panel")
@@ -58,7 +61,7 @@ func _on_die_removed(die_display):
 	add_theme_stylebox_override("panel", original_stylebox)
 
 func _check_if_all_slots_filled():
-	if is_consumed_this_turn:
+	if is_consumed_this_turn or current_cooldown > 0:
 		return
 
 	var all_filled = true
@@ -76,6 +79,11 @@ func _check_if_all_slots_filled():
 		# Gray out the ability to show it's been used this turn.
 		modulate = Color(0.5, 0.5, 0.5)
 		
+		# Immediately display the cooldown timer when the ability is activated.
+		if ability_data.cooldown_duration > 0:
+			cooldown_label.text = str(ability_data.cooldown_duration)
+			cooldown_label.visible = true
+
 		# Disable slots until the end of the turn to prevent further interaction.
 		for slot in dice_slots_container.get_children():
 			if slot is DieSlotUI:
@@ -89,18 +97,38 @@ func get_slotted_dice_displays() -> Array[DieDisplay]:
 	return displays
 	
 func reset_for_new_turn() -> Array[Die]:
-	is_consumed_this_turn = false
-	modulate = Color.WHITE # Reset the visual state.
-	add_theme_stylebox_override("panel", original_stylebox)
 	var dice_to_discard: Array[Die] = []
-	for slot in dice_slots_container.get_children():
-		if slot is DieSlotUI:
-			slot.mouse_filter = MOUSE_FILTER_STOP # Re-enable interaction
-			if slot.current_die_display:
+
+	if is_consumed_this_turn:
+		# The ability was used last turn. Put it on cooldown.
+		is_consumed_this_turn = false
+		current_cooldown = ability_data.cooldown_duration
+		for slot in dice_slots_container.get_children():
+			if slot is DieSlotUI and slot.current_die_display:
 				var die_display = slot.current_die_display
 				if ability_data.discard_dice_on_reset:
 					dice_to_discard.append(die_display.die)
 				slot.remove_child(die_display)
 				die_display.queue_free()
 				slot.current_die_display = null
+	
+	# Tick down any active cooldown. This happens after setting it,
+	# so a 1-turn cooldown becomes 0 and is ready next turn.
+	if current_cooldown > 0:
+		current_cooldown -= 1
+
+	# Update UI based on the new state
+	if current_cooldown > 0:
+		modulate = Color(0.5, 0.5, 0.5) # Stay grayed out
+		cooldown_label.text = str(current_cooldown)
+		cooldown_label.visible = true
+	else:
+		# Cooldown is over, so make the ability usable again.
+		modulate = Color.WHITE
+		cooldown_label.visible = false
+		add_theme_stylebox_override("panel", original_stylebox)
+		for slot in dice_slots_container.get_children():
+			if slot is DieSlotUI:
+				slot.mouse_filter = MOUSE_FILTER_STOP
+				
 	return dice_to_discard

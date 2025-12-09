@@ -1,11 +1,9 @@
-[gd_resource type="Resource" script_class="AbilityData" load_steps=3 format=3 uid="uid://dsw33pab1l1ty"]
+[gd_resource type="Resource" script_class="AbilityData" load_steps=2 format=3]
 
-[ext_resource type="Script" path="res://scripts/character/player/ability_data.gd" id="1_script"]
-[ext_resource type="Texture2D" path="res://assets/ai/ui/sword.svg" id="2_icon"]
+[ext_resource type="Script" uid="uid://uw8x16ewdua0" path="res://scripts/character/player/ability_data.gd" id="1_script"]
 
 [resource]
 script = ExtResource("1_script")
 title = "Sweep"
 description = "Deal [color=yellow]X/2[/color] (rounded up) damage to all enemies."
-icon = ExtResource("2_icon")
-dice_slots = 1
+cooldown_duration = 1

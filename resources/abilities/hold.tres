@@ -1,11 +1,10 @@
-[gd_resource type="Resource" script_class="AbilityData" load_steps=3 format=3 uid="uid://kn0d3i1v3kcj"]
+[gd_resource type="Resource" script_class="AbilityData" load_steps=2 format=3]
 
-[ext_resource type="Texture2D" uid="uid://57o6fth8o7x8" path="res://assets/ai/ability_icons/hold_ability_icon.svg" id="1_2v1jr"]
 [ext_resource type="Script" uid="uid://uw8x16ewdua0" path="res://scripts/character/player/ability_data.gd" id="1_script"]
 
 [resource]
 script = ExtResource("1_script")
 title = "Hold"
-description = "Keep the slotted die for your next turn."
-icon = ExtResource("1_2v1jr")
+description = "Keep one die for your next turn. The die is not discarded."
 discard_dice_on_reset = false
+cooldown_duration = 1

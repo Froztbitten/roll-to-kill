@@ -8,4 +8,5 @@ script = ExtResource("2_6vm3n")
 title = "Heal"
 description = "Restore [color=green]X/2[/color] health."
 icon = ExtResource("1_6vm3n")
+cooldown_duration = 1
 metadata/_custom_type_script = "uid://uw8x16ewdua0"

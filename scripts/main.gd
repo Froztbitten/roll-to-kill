@@ -68,7 +68,7 @@ func _add_player_ability(new_ability: AbilityData):
 
 func player_turn():
 	# Reset abilities from the previous turn at the start of the new turn.
-	cleanup_used_abilities()
+	_tick_ability_cooldowns()
 
 	# Reset block at the start of the turn
 	player.block = 0
@@ -147,10 +147,11 @@ func resolve_dice_intents():
 	player.discard(dice_pool_ui.get_current_dice())
 	print("Player block: " + str(player.block))
 
-func cleanup_used_abilities():
+func _tick_ability_cooldowns():
 	for ability_ui: AbilityUI in abilities_ui.get_children():
-		if ability_ui.is_consumed_this_turn:
-			var dice_to_discard = ability_ui.reset_for_new_turn()
+		# This function now handles cooldowns for all abilities, not just used ones.
+		var dice_to_discard = ability_ui.reset_for_new_turn()
+		if not dice_to_discard.is_empty():
 			player.discard(dice_to_discard)
 
 func _on_ability_activated(ability_ui: AbilityUI):

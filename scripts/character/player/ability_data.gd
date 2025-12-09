@@ -6,3 +6,4 @@ class_name AbilityData
 @export var icon: CompressedTexture2D
 @export var dice_slots: int = 1
 @export var discard_dice_on_reset: bool = true
+@export var cooldown_duration: int = 1
