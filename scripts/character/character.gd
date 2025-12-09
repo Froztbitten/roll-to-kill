@@ -17,6 +17,7 @@ func _ready():
 	update_health_display()
 
 func take_damage(damage: int):
+	var old_block = block
 	var damage_to_take = damage
 	if block > 0:
 		var blocked_damage = min(damage_to_take, block)
@@ -24,27 +25,48 @@ func take_damage(damage: int):
 		block -= blocked_damage
 		print("%s blocked %d damage." % [name, blocked_damage])
 	
-	_apply_damage(damage_to_take, "damage")
+	await _apply_damage(damage_to_take, "damage", old_block)
 
 func take_piercing_damage(damage: int):
 	# This damage type ignores block.
-	_apply_damage(damage, "piercing damage")
+	await _apply_damage(damage, "piercing damage", block)
 
-func _apply_damage(amount: int, type: String):
+func _apply_damage(amount: int, type: String, old_block_value: int) -> void:
+	var old_hp = hp
 	hp -= amount
 	if hp < 0:
 		hp = 0
 
-	if hp <= 0:
-		die()
+	var should_die = hp <= 0
 
-	update_health_display()
+	if health_bar.has_method("update_with_animation"):
+		health_bar.update_with_animation(old_hp, hp, old_block_value, block, max_hp)
+		if should_die:
+			await health_bar.current_tween.finished
+			await die()
+	else:
+		update_health_display()
+		if should_die:
+			await die()
 	print("%s took %d %s, has %d HP left." % [name, amount, type, hp])
 
 func heal(amount: int):
+	var old_hp = hp
+	var old_block = block
 	hp = min(hp + amount, max_hp)
-	update_health_display()
+	if health_bar.has_method("update_with_animation"):
+		health_bar.update_with_animation(old_hp, hp, old_block, block, max_hp)
+	else:
+		update_health_display()
 	print("%s healed for %d, has %d HP left." % [name, amount, hp])
+
+func add_block(amount: int):
+	var old_block = block
+	block += amount
+	if health_bar.has_method("update_with_animation"):
+		health_bar.update_with_animation(hp, hp, old_block, block, max_hp)
+	else:
+		update_health_display()
 
 func apply_status(status_effect, duration: int):
 	statuses[status_effect] = duration
@@ -73,14 +95,22 @@ func tick_down_statuses():
 	if not keys_to_remove.is_empty():
 		statuses_changed.emit(statuses)
 
-func die():
+func die() -> void:
 	if _is_dead: return
 	_is_dead = true
 	
 	hp = 0
 	emit_signal("died")
-	hide()  # Hide the character visually.
-	get_node("CollisionShape2D").set_deferred("disabled", true)  # Disable collision.
+
+	var tween = create_tween().set_parallel()
+	tween.tween_property(self, "modulate:a", 0.0, 0.4)
+	tween.tween_property(self, "scale", scale * 0.5, 0.4).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_IN)
+	await tween.finished
+
+	hide()
+	get_node("CollisionShape2D").set_deferred("disabled", true)
+	modulate.a = 1.0
+	scale = Vector2.ONE
 
 func update_health_display(intended_damage: int = 0, intended_block: int = 0):
 	if health_bar:

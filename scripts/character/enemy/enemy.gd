@@ -41,6 +41,7 @@ func setup():
 	hp = starting_hp
 	_is_charging = false
 	_turn_count = 0
+	update_health_display()
 
 func declare_intent(active_enemies: Array):
 	_turn_count += 1

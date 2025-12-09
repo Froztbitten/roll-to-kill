@@ -76,8 +76,8 @@ func add_ability(new_ability: AbilityData):
 	abilities.append(new_ability)
 	abilities_changed.emit(new_ability)
 
-func hold_die(die: Die):
-	_held_dice.append(die)
+func hold_die(die_to_hold: Die):
+	_held_dice.append(die_to_hold)
 
 func get_and_clear_held_dice() -> Array[Die]:
 	var dice_to_return = _held_dice.duplicate()
@@ -86,7 +86,12 @@ func get_and_clear_held_dice() -> Array[Die]:
 
 func heal(amount: int):
 	# Player's heal ability is less effective, healing for half the value.
+	var old_hp = hp
+	var old_block = block
 	var heal_amount = ceili(amount / 2.0)
 	hp = min(hp + heal_amount, max_hp)
-	update_health_display()
+	if health_bar.has_method("update_with_animation"):
+		health_bar.update_with_animation(old_hp, hp, old_block, block, max_hp)
+	else:
+		update_health_display()
 	print("%s healed for %d (raw) -> %d (actual), has %d HP left." % [name, amount, heal_amount, hp])

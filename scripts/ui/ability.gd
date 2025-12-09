@@ -19,6 +19,17 @@ var current_cooldown: int = 0
 signal die_returned_from_slot(die_display)
 signal ability_activated(ability_ui)
 
+func _ready():
+	# Store the original style and create a new one for the "active" state.
+	# This is done in _ready to ensure the node is fully initialized and has its theme.
+	original_stylebox = get_theme_stylebox("panel")
+	if original_stylebox:
+		active_stylebox = original_stylebox.duplicate(true) as StyleBoxFlat
+		active_stylebox.set_border_width_all(4)
+		active_stylebox.border_color = Color.GOLD
+	else:
+		push_error("Could not find 'panel' stylebox for AbilityUI. Theming will not work correctly.")
+
 func initialize(data: AbilityData):
 	self.ability_data = data
 	if not ability_data: return
@@ -27,12 +38,6 @@ func initialize(data: AbilityData):
 	description_label.text = ability_data.description
 	icon_texture.texture = ability_data.icon
 	cooldown_label.visible = false
-
-	# Store the original style and create a new one for the "active" state.
-	original_stylebox = get_theme_stylebox("panel")
-	active_stylebox = original_stylebox.duplicate(true) as StyleBoxFlat
-	active_stylebox.set_border_width_all(4)
-	active_stylebox.border_color = Color.GOLD
 
 	# Clear any existing/placeholder slots from the editor
 	for child in dice_slots_container.get_children():

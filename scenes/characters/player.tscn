@@ -33,12 +33,3 @@ offset_bottom = -53.0
 [node name="CollisionShape2D" type="CollisionShape2D" parent="."]
 position = Vector2(1, -11)
 shape = SubResource("RectangleShape2D_76oj4")
-
-[node name="IntendedBlockLabel" type="Label" parent="."]
-offset_left = 60.0
-offset_top = -40.0
-offset_right = 100.0
-offset_bottom = 5.0
-theme_override_colors/font_color = Color(0.6, 0.7, 1, 1)
-theme_override_font_sizes/font_size = 32
-text = "+5"

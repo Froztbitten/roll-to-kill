@@ -84,17 +84,25 @@ func update_display():
 
 		grid_container.add_child(cell)
 
-func select():
+func select(animated: bool = true):
 	# Visually indicate that the die is selected (e.g., make it brighter)
+	main_display.pivot_offset = main_display.size / 2
 	main_display.modulate = Color(1.8, 1.8, 1.8)
-	var tween = create_tween().set_trans(Tween.TRANS_SINE)
-	tween.tween_property(main_display, "scale", Vector2(1.15, 1.15), 0.1)
+	if animated:
+		var tween = create_tween().set_trans(Tween.TRANS_SINE)
+		tween.tween_property(main_display, "scale", Vector2(1.15, 1.15), 0.1)
+	else:
+		main_display.scale = Vector2(1.15, 1.15)
 
-func deselect():
+func deselect(animated: bool = true):
 	# Return to normal appearance
+	main_display.pivot_offset = main_display.size / 2
 	main_display.modulate = Color(1, 1, 1)
-	var tween = create_tween().set_trans(Tween.TRANS_SINE)
-	tween.tween_property(main_display, "scale", Vector2(1.0, 1.0), 0.1)
+	if animated:
+		var tween = create_tween().set_trans(Tween.TRANS_SINE)
+		tween.tween_property(main_display, "scale", Vector2(1.0, 1.0), 0.1)
+	else:
+		main_display.scale = Vector2(1.0, 1.0)
 
 func _on_mouse_entered():
 	face_grid.visible = true

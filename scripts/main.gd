@@ -3,7 +3,6 @@ extends Node2D
 @export var player: Player
 @onready var enemy_container = $EnemySpawner/Enemies
 @onready var enemy_spawner = $EnemySpawner
-@onready var intent_lines: Node2D = $IntentLines
 @onready var dice_pool_ui: DicePool = $UI/DicePool
 @onready var abilities_ui: VBoxContainer = $UI/Abilities
 @onready var total_dice_value_label: Label = $UI/TotalDiceValueLabel
@@ -21,10 +20,11 @@ extends Node2D
 enum Turn {PLAYER, ENEMY}
 
 const ABILITY_UI_SCENE = preload("res://scenes/ui/ability.tscn")
+const DIE_DISPLAY_SCENE = preload("res://scenes/dice/die_display.tscn")
 var ADVANTAGE_STATUS
-var intents: Dictionary = {}
 var selected_dice_display: Array[DieDisplay] = []
 var current_incoming_damage: int = 0
+var is_resolving_action := false
 
 var current_turn = Turn.PLAYER
 var round_number := 1
@@ -32,10 +32,10 @@ const BOSS_ROUND = 10
 @export var start_with_boss_fight := false
 
 # Testing values
-var starting_abilities: Array[AbilityData] = [load("res://resources/abilities/heal.tres"),
+var starting_abilities: Array[AbilityData] = [load("res://resources/abilities/heal.tres"), 
 	load("res://resources/abilities/sweep.tres"), load("res://resources/abilities/hold.tres")]
 
-func _ready():
+func _ready() -> void:
 	ADVANTAGE_STATUS = load("res://resources/status_effects/advantage.tres")
 
 	# Connect signals
@@ -47,7 +47,6 @@ func _ready():
 
 	dice_pool_ui.die_clicked.connect(_on_die_clicked)
 	dice_pool_ui.die_drag_started.connect(_on_die_drag_started)
-	dice_pool_ui.layout_changed.connect(_on_dice_pool_layout_changed)
 	reward_screen.reward_chosen.connect(_on_reward_chosen)
 
 	# Initialize player's starting abilities
@@ -55,6 +54,9 @@ func _ready():
 		child.queue_free()
 	for ability in starting_abilities:
 		player.add_ability(ability)
+
+	# Wait for one frame to ensure all newly created nodes (like abilities) are fully ready.
+	await get_tree().process_frame
 
 	start_new_round()
 
@@ -72,7 +74,6 @@ func player_turn():
 
 	# Reset block at the start of the turn
 	player.block = 0
-	_clear_intents()
 	for die_display in selected_dice_display:
 		die_display.deselect()
 	selected_dice_display.clear()
@@ -100,7 +101,6 @@ func player_turn():
 		if enemy.hp > 0:
 			# Reset enemy block at the start of the player's turn
 			enemy.block = 0
-			enemy.update_health_display()
 
 			enemy.declare_intent(active_enemies)
 			if (enemy.next_action.action_type == EnemyAction.ActionType.ATTACK):
@@ -111,41 +111,28 @@ func player_turn():
 		if enemy.next_action:
 			var action_type = enemy.next_action.action_type
 			if action_type == EnemyAction.ActionType.SHIELD:
-				enemy.block += enemy.next_action_value
+				enemy.add_block(enemy.next_action_value)
 			elif action_type == EnemyAction.ActionType.SUPPORT_SHIELD:
-				enemy.block += enemy.next_action_value
+				enemy.add_block(enemy.next_action_value)
 				var other_enemies = active_enemies.filter(func(e): return e != enemy)
 				if not other_enemies.is_empty():
 					var random_ally = other_enemies.pick_random()
-					random_ally.block += enemy.next_action_value
+					random_ally.add_block(enemy.next_action_value)
 					print("%s shields %s for %d" % [enemy.name, random_ally.name, enemy.next_action_value])
 
 	total_incoming_damage_label.text = str(current_incoming_damage)
-	_update_intended_block_display()
-	_update_all_intended_damage_displays()
+	player.update_health_display(current_incoming_damage)
 
 	dice_pool_ui.set_hand(rolled_dice)
 	end_turn_button.disabled = false
 
 func _on_end_turn_button_pressed():
 	if current_turn == Turn.PLAYER:
-		resolve_dice_intents()
+		# Discard all dice that are left in the hand this turn.
+		player.discard(dice_pool_ui.get_current_dice())
+		print("Player block: " + str(player.block))
 		next_turn()
 		enemy_turn()
-
-func resolve_dice_intents():
-	for intent in intents.values():
-		if intent.target is Player:
-			player.block += intent.roll
-		else:
-			var enemy_target = intent.target
-			# Damage is calculated against block that was already applied at the start of the turn.
-			# Reactive shields are no longer a mechanic for enemies.
-			enemy_target.take_damage(intent.roll)
-		
-	# Discard all dice that were in the hand this turn.
-	player.discard(dice_pool_ui.get_current_dice())
-	print("Player block: " + str(player.block))
 
 func _tick_ability_cooldowns():
 	for ability_ui: AbilityUI in abilities_ui.get_children():
@@ -183,11 +170,11 @@ func _on_ability_activated(ability_ui: AbilityUI):
 		player.hold_die(die_to_hold)
 		print("Resolved 'Hold' ability. Die with value %d will be kept." % die_to_hold.result_value)
 	
-	# After an ability resolves, the state of the board may have changed, so we need to refresh the UI.
-	_update_all_intended_damage_displays()
-	_update_intended_block_display()
+	# After an ability resolves, refresh the player's health bar preview.
+	var net_damage = max(0, current_incoming_damage - player.block)
+	player.update_health_display(net_damage)
 
-func enemy_turn():
+func enemy_turn() -> void:
 	end_turn_button.disabled = true
 
 	var active_enemies = get_active_enemies()
@@ -203,10 +190,10 @@ func enemy_turn():
 			if enemy.hp > 0 and enemy.next_action:
 				match enemy.next_action.action_type:
 					EnemyAction.ActionType.ATTACK:
-						player.take_damage(enemy.next_action_value)
+						await player.take_damage(enemy.next_action_value)
 
 					EnemyAction.ActionType.PIERCING_ATTACK:
-						player.take_piercing_damage(enemy.next_action_value)
+						await player.take_piercing_damage(enemy.next_action_value)
 
 					EnemyAction.ActionType.SHIELD, EnemyAction.ActionType.SUPPORT_SHIELD:
 						pass # Shield is applied proactively at the start of the player's turn.
@@ -232,10 +219,10 @@ func enemy_turn():
 						pass # Do nothing, as intended.
 
 					EnemyAction.ActionType.FLEE:
-						enemy.die()
+						await enemy.die()
 
 				if enemy.next_action.self_destructs:
-					enemy.die()
+					await enemy.die()
 
 				enemy.clear_intent()
 		next_turn()
@@ -262,43 +249,19 @@ func _spawn_boss_minions(count: int):
 	enemy_container.call_deferred("arrange_enemies")
 
 func _on_die_clicked(die_display):
-	var just_cleared_intent = false
-	# If the clicked die already has an intent, clear that intent first.
-	if intents.has(die_display):
-		var intent_data = intents[die_display]
-		if intent_data.has("line"):
-			intent_data.line.queue_free()
-		intents.erase(die_display)
-		print("Cleared existing intent for die with value: " + str(die_display.die.result_value))
-		_update_all_intended_damage_displays()
-		_update_intended_block_display()
-		just_cleared_intent = true
-
-	# If we clicked the currently selected die (and didn't just clear its intent), deselect it.
-	if selected_dice_display.has(die_display) and not just_cleared_intent:
+	# If the clicked die is already selected, deselect it. Otherwise, select it.
+	if selected_dice_display.has(die_display):
 		selected_dice_display.erase(die_display)
 		die_display.deselect()
 	else:
-		# Select the clicked die and start the intent action.
 		selected_dice_display.append(die_display)
 		die_display.select()
-		print("Intent action started. Select a target for die with value: " + str(die_display.die.result_value))
 
 func _on_die_drag_started(die_display: DieDisplay):
 	# If the die being dragged is in the selection, remove it.
 	if selected_dice_display.has(die_display):
 		selected_dice_display.erase(die_display)
 		die_display.deselect()
-
-		# Also clear any intent that was associated with it.
-		if intents.has(die_display):
-			var intent_data = intents[die_display]
-			if intent_data.has("line"):
-				intent_data.line.queue_free()
-			intents.erase(die_display)
-			print("Cleared intent for dragged die.")
-			_update_all_intended_damage_displays()
-			_update_intended_block_display()
 
 func _unhandled_input(event: InputEvent):
 	# This function catches input that was not handled by the UI.
@@ -323,152 +286,107 @@ func _unhandled_input(event: InputEvent):
 				return
 
 
-func _on_character_clicked(character: Character):
-	print("Character clicked: " + str(character.name_label.text))
-	# If no die is selected, do nothing
-	if selected_dice_display.size() == 0:
+func _on_character_clicked(character: Character) -> void:
+	if selected_dice_display.is_empty() or is_resolving_action:
 		return
+	
+	is_resolving_action = true
 
-	var color = Color.CRIMSON
+	var total_roll = 0
+	var dice_to_discard: Array[Die] = []
+	
+	# Make a copy because we will be modifying the dice pool
+	var used_dice_displays = selected_dice_display.duplicate()
+	selected_dice_display.clear()
+	
+	for die_display in used_dice_displays:
+		total_roll += die_display.die.result_value
+		dice_to_discard.append(die_display.die)
+
+	# Animate the dice, which will also remove them from the hand UI.
+	await _animate_dice_to_target(used_dice_displays, character)
+
 	if character is Player:
-		color = Color(0.6, 0.7, 1, 1)
+		player.add_block(total_roll)
+		print("Player blocked for %d. Total block: %d" % [total_roll, player.block])
+		# Update player health preview immediately
+		var net_damage = max(0, current_incoming_damage - player.block)
+		player.update_health_display(net_damage)
+	else: # It's an enemy
+		var enemy_target: Enemy = character
+		await enemy_target.take_damage(total_roll)
+		print("Dealt %d damage to %s" % [total_roll, enemy_target.name])
 
-	for die_display: DieDisplay in selected_dice_display:
-		print("Intent action: Use die with value %d." % die_display.die.result_value)
+	player.discard(dice_to_discard)
+	is_resolving_action = false
+
+func _animate_dice_to_target(dice_displays: Array[DieDisplay], target: Character) -> void:
+	var tweens: Array[Tween] = []
+	var animation_data: Array = []
+
+	# Step 1: Gather all necessary data (start position, node to animate) before
+	# modifying the scene tree. This prevents the HBoxContainer from re-sorting
+	# and giving us incorrect positions for subsequent dice.
+	for die_display in dice_displays:
+		animation_data.append({
+			"start_center": die_display.get_node("MainDisplay").get_global_rect().get_center(),
+			"anim_disp": die_display.get_node("MainDisplay").duplicate(true),
+			"start_scale": die_display.get_node("MainDisplay").scale,
+			"start_size": die_display.get_node("MainDisplay").size
+		})
+
+	# Step 2: Now that we have the data, clear the original dice from the hand.
+	for die_display in dice_displays:
+		dice_pool_ui.remove_die(die_display)
+		die_display.queue_free()
+
+	# Step 3: Add the animation nodes to the scene and start their tweens.
+	for i in range(animation_data.size()):
+		var data = animation_data[i]
+		var anim_disp: PanelContainer = data.anim_disp
+		var start_scale: Vector2 = data.start_scale
+		var start_size: Vector2 = data.start_size
+
+		# Create an anchor to handle position, so the die can be scaled from its center.
+		var anchor = Node2D.new()
+		get_tree().get_root().add_child(anchor)
+		var anchor_start_pos: Vector2 = data.start_center
+		anchor.global_position = anchor_start_pos
+
+		# Add the duplicated display to the anchor and center it.
+		# Manually set scale and pivot to ensure it's a perfect match to the original.
+		anim_disp.size = start_size
+		anim_disp.pivot_offset = start_size / 2.0
+		anchor.add_child(anim_disp)
+		anim_disp.scale = start_scale
+		anim_disp.position = -start_size / 2.0
+		anim_disp.visible = true
+
+		var tween = create_tween()
+		tweens.append(tween)
 		
-		var arrow_container = _create_intent_arrow(color)
-		var start_pos = die_display.get_global_transform_with_canvas().get_origin() + die_display.size / 2
-		var end_pos = character.global_position
-		_update_intent_arrow(arrow_container, start_pos, end_pos)
+		# Get the visual center of the target character's sprite for a more accurate end position.
+		var sprite_node = target.get_node("Sprite2D")
+		var end_pos = sprite_node.get_global_rect().get_center()
+		# Define the control point for the quadratic Bezier curve.
+		# A lower Y value creates a higher arc.
+		var control_pos_x = lerp(anchor_start_pos.x, end_pos.x, 0.2)
+		var control_pos_y = min(anchor_start_pos.y, end_pos.y) - 150
+		var control_pos = Vector2(control_pos_x, control_pos_y)
 
-		intents[die_display] = {"die": die_display.die, "roll": die_display.die.result_value, "target": character, "line": arrow_container}
-		die_display.deselect()
+		var duration = 0.4
+		tween.tween_method(
+			func(t: float): anchor.global_position = anchor_start_pos.lerp(control_pos, t).lerp(control_pos.lerp(end_pos, t), t),
+			0.0, 1.0, duration
+		).set_delay(i * 0.08).set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_CUBIC)
 
-	selected_dice_display = []
-	_update_intended_block_display()
-	_update_all_intended_damage_displays()
+		tween.parallel().tween_property(anim_disp, "scale", anim_disp.scale * 1.2, duration / 2.0).set_delay(i * 0.08)
+		tween.parallel().tween_property(anim_disp, "scale", Vector2.ZERO, duration / 2.0).set_delay(i * 0.08 + duration / 2.0)
 
-func _create_intent_arrow(color: Color) -> Node2D:
-	var arrow_container = Node2D.new()
+		tween.tween_callback(anchor.queue_free)
 
-	# 1. Create the black outline line (drawn first)
-	var line_outline = Line2D.new()
-	line_outline.width = 7.0 # Thicker for the outline effect
-	line_outline.default_color = Color.BLACK
-	arrow_container.add_child(line_outline)
-
-	# 2. Create the main colored line
-	var line_main = Line2D.new()
-	line_main.width = 3.0
-	line_main.default_color = color
-	arrow_container.add_child(line_main)
-
-	# 3. Create the arrowhead
-	var arrowhead_outline = Polygon2D.new() # For the black outline
-	arrowhead_outline.color = Color.BLACK
-	var arrowhead = Polygon2D.new()
-	arrowhead.color = color
-	
-	arrow_container.add_child(arrowhead_outline)
-	arrow_container.add_child(arrowhead)
-
-	intent_lines.add_child(arrow_container)
-	return arrow_container
-
-func _update_intent_arrow(arrow_container: Node2D, start_pos: Vector2, end_pos: Vector2):
-	var line_outline: Line2D = arrow_container.get_child(0)
-	var line_main: Line2D = arrow_container.get_child(1)
-	var arrowhead_outline: Polygon2D = arrow_container.get_child(2)
-	var arrowhead: Polygon2D = arrow_container.get_child(3)
-
-	# Clear existing points before redrawing
-	line_main.clear_points()
-	line_outline.clear_points()
-
-	var control_pos = (start_pos + end_pos) / 2 - Vector2(0, 200)
-
-	# Generate points for the curve and add them to both lines
-	var point_count = 20
-	for i in range(point_count + 1):
-		var t = float(i) / point_count
-		var point = start_pos.lerp(control_pos, t).lerp(control_pos.lerp(end_pos, t), t)
-		line_main.add_point(point)
-		line_outline.add_point(point)
-
-	# Update the arrowhead position and orientation
-	var last_point = line_main.points[-1]
-	var second_last_point = line_main.points[-2]
-	var direction = (last_point - second_last_point).normalized()
-
-	arrowhead.polygon = [last_point, last_point - direction * 15 + direction.orthogonal() * 8, last_point - direction * 15 - direction.orthogonal() * 8]
-	arrowhead_outline.polygon = [last_point + direction * 3, last_point - direction * 19 + direction.orthogonal() * 11, last_point - direction * 19 - direction.orthogonal() * 11]
-
-func _on_dice_pool_layout_changed():
-	# We defer the call to ensure that the HBoxContainer has completed its sorting
-	# and the dice have their new final positions before we try to read them.
-	call_deferred("_redraw_all_intent_lines")
-
-func _redraw_all_intent_lines():
-	for die_display in intents:
-		var intent_data = intents[die_display]
-		_update_intent_arrow(intent_data.line, die_display.get_global_transform_with_canvas().get_origin() + die_display.size / 2, intent_data.target.global_position)
-
-func _clear_intents():
-	# Free the line nodes before clearing the dictionary
-	for intent_data in intents.values():
-		if intent_data.has("line"):
-			intent_data.line.queue_free()
-	intents.clear()
-
-func _update_intended_block_display():
-	var total_intended_block = 0
-	for intent_data in intents.values():
-		if intent_data.target is Player:
-			total_intended_block += intent_data.roll
-	var label = player.get_node("IntendedBlockLabel")
-	if total_intended_block > 0:
-		label.text = "+" + str(total_intended_block)
-		label.visible = true
-	else:
-		label.visible = false
-	
-	# Update the player's health bar to show the damage preview
-	var net_damage = max(0, current_incoming_damage - (player.block + total_intended_block))
-	player.update_health_display(net_damage, total_intended_block)
-
-func _update_all_intended_damage_displays():
-	# Calculate the total damage for each enemy based on current intents
-	var enemy_damage_map = {}
-	for intent_data in intents.values():
-		if not intent_data.target is Player:
-			if not enemy_damage_map.has(intent_data.target):
-				enemy_damage_map[intent_data.target] = 0
-			enemy_damage_map[intent_data.target] += intent_data.roll
-	
-	# Finally, update the health bars and labels for all active enemies
-	for enemy in get_active_enemies():
-		# Reset damage-specific UI elements first
-		var label = enemy.get_node("IntendedDamageLabel")
-		var skull = enemy.get_node("LethalDamageIndicator")
-		skull.visible = false
-		label.visible = false
-
-		var player_damage = enemy_damage_map.get(enemy, 0)
-		var intended_shield = 0 # All enemy shields are now proactive, not "intended".
-		
-		# SUPPORT_SHIELD is proactive, so its value is already in enemy.block.
-		var total_shield = enemy.block + intended_shield
-		var net_damage = max(0, player_damage - total_shield)
-
-		if player_damage > 0:
-			label.text = "-" + str(player_damage)
-			label.visible = true
-			
-			# Check if the intended damage is lethal
-			if net_damage >= enemy.hp:
-				skull.visible = true
-		
-		enemy.update_health_display(net_damage, intended_shield)
+	if not tweens.is_empty():
+		await tweens.back().finished
 
 func _on_enemy_died():
 	# A short delay to prevent issues with processing the death mid-turn.
