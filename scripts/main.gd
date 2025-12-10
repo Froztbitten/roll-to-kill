@@ -69,6 +69,11 @@ func _add_player_ability(new_ability: AbilityData):
 	ability_ui_instance.initialize(new_ability)
 
 func player_turn():
+	# Failsafe: Reset the action lock at the start of the player's turn.
+	# This prevents the player from being locked out if the flag gets stuck
+	# during a previous action, especially when transitioning between rounds.
+	is_resolving_action = false
+
 	# Reset abilities from the previous turn at the start of the new turn.
 	_tick_ability_cooldowns()
 
@@ -101,6 +106,8 @@ func player_turn():
 		if enemy.hp > 0:
 			# Reset enemy block at the start of the player's turn
 			enemy.block = 0
+			# Immediately update the health bar to show the shield has been removed.
+			enemy.update_health_display()
 
 			enemy.declare_intent(active_enemies)
 			if (enemy.next_action.action_type == EnemyAction.ActionType.ATTACK):
@@ -287,6 +294,8 @@ func _unhandled_input(event: InputEvent):
 
 
 func _on_character_clicked(character: Character) -> void:
+	print("Character clicked: " + character.name)
+	print(is_resolving_action)
 	if selected_dice_display.is_empty() or is_resolving_action:
 		return
 	

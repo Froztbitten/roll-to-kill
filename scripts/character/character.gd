@@ -38,7 +38,7 @@ func take_piercing_damage(damage: int, play_recoil: bool = true):
 
 func _apply_damage(amount: int, type: String, old_block_value: int, play_recoil: bool = true) -> void:
 	if amount > 0 and play_recoil:
-		await _recoil(amount)
+		_recoil(amount)
 
 	var old_hp = hp
 	hp -= amount
