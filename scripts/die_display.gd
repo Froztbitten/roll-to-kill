@@ -17,6 +17,14 @@ var die: Die:
 
 var dice_pool = null
 
+func _ready():
+	# To prevent all dice from sharing the same glow state, we need to make
+	# sure each die instance has its own unique material resource.
+	# Duplicating the material ensures that changes to one die's shader
+	# parameters don't affect any others.
+	if icon_texture.material:
+		icon_texture.material = icon_texture.material.duplicate()
+
 func set_die(value: Die):
 	die = value
 	if is_node_ready():
@@ -29,6 +37,15 @@ func update_display():
 	# --- 1. Update the default display (Icon and RollLabel) ---
 	roll_label.text = str(die.result_value)
 	icon_texture.texture = load(die.icon_path)
+
+	# --- Shader Glow Effect Logic ---
+	# By default, turn off the glow by setting its intensity to 0.
+	icon_texture.material.set_shader_parameter("glow_intensity", 0.0)
+	# If the rolled face has an effect, turn on the glow and set its color.
+	if die.result_face and not die.result_face.effects.is_empty():
+		var effect: DieFaceEffect = die.result_face.effects[0] # Use the first effect's glow color
+		icon_texture.material.set_shader_parameter("glow_color", effect.glow_color)
+		icon_texture.material.set_shader_parameter("glow_intensity", 4.0) # Use the shader's default intensity.
 
 	# --- 2. Populate the hidden hover grid ---
 	# Clear previous grid contents
@@ -50,11 +67,10 @@ func update_display():
 		20: grid_container.columns = 5
 		_: grid_container.columns = 4
 
-	for i in range(die.face_values.size()):
-		var face_value = die.face_values[i]
+	for face in die.faces:
 		var cell = DieGridCell.instantiate()
 		var label = cell.get_node("Label")
-		label.text = str(face_value)
+		label.text = str(face.value)
 		
 		# Add a black outline to the grid cell labels for readability
 		label.add_theme_color_override("font_outline_color", Color.BLACK)
@@ -70,8 +86,15 @@ func update_display():
 		default_style.border_color = Color.BLACK
 		cell.add_theme_stylebox_override("panel", default_style)
 		
+		# If the face has an effect, give it a special highlight
+		if not face.effects.is_empty():
+			var effect: DieFaceEffect = face.effects[0]
+			var effect_style = default_style.duplicate() as StyleBoxFlat
+			effect_style.bg_color = effect.cell_color
+			cell.add_theme_stylebox_override("panel", effect_style)
+
 		# Highlight the rolled face
-		if i == die.result_face:
+		if face == die.result_face:
 			# Create a unique stylebox to highlight the rolled face
 			var style = StyleBoxFlat.new()
 			style.bg_color = Color(0.9, 0.7, 0.2, 0.5) # Translucent gold

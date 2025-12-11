@@ -324,8 +324,23 @@ func _on_character_clicked(character: Character) -> void:
 		await enemy_target.take_damage(total_roll, false)
 		print("Dealt %d damage to %s" % [total_roll, enemy_target.name])
 
+		# After the main action, process any effects from the dice faces
+		# We iterate over `dice_to_discard` which contains the actual Die objects,
+		# because `used_dice_displays` contains references to nodes that were freed
+		# inside `_animate_dice_to_target`.
+		for die in dice_to_discard:
+			if die.result_face and not die.result_face.effects.is_empty():
+				for effect in die.result_face.effects:
+					_process_die_face_effect(effect, die.result_value)
+
 	player.discard(dice_to_discard)
 	is_resolving_action = false
+
+func _process_die_face_effect(effect: DieFaceEffect, value: int):
+	match effect.type:
+		DieFaceEffect.EffectType.SHIELD_ON_ATTACK:
+			player.add_block(value)
+			print("Die face effect: Gained %d block." % value)
 
 func _animate_dice_to_target(dice_displays: Array[DieDisplay], target: Character) -> void:
 	var tweens: Array[Tween] = []
@@ -363,6 +378,9 @@ func _animate_dice_to_target(dice_displays: Array[DieDisplay], target: Character
 
 		# Add the duplicated display to the anchor and center it.
 		# Manually set scale and pivot to ensure it's a perfect match to the original.
+		# Reset anchors to prevent the "size is overridden" warning. When a Control node
+		# with fill anchors is duplicated, it keeps those properties.
+		anim_disp.set_anchors_preset(Control.PRESET_TOP_LEFT)
 		anim_disp.size = start_size
 		anim_disp.pivot_offset = start_size / 2.0
 		anchor.add_child(anim_disp)
@@ -470,30 +488,42 @@ func _generate_reward_dice() -> Array[Die]:
 	var target_average = 4.5
 	var possible_sides = [4, 6, 8]
 	possible_sides.shuffle()
-
-	for i in range(3):
-		var new_die = Die.new()
-		var sides = possible_sides[i]
-		new_die.sides = sides
+	
+	# Create two standard reward dice
+	for i in range(2):
+		var sides = possible_sides.pop_front()
+		var new_die = Die.new(sides)
 		
 		var total_value = int(round(target_average * sides))
-		var faces: Array[int] = []
-		
-		# Initialize faces with a value of 1
-		for _j in range(sides):
-			faces.append(1)
+		for face in new_die.faces:
+			face.value = 1
 		
 		var remaining_value = total_value - sides
 		
-		# Distribute the remaining value randomly among the faces
 		for _j in range(remaining_value):
 			var random_index = randi() % sides
-			faces[random_index] += 1
+			new_die.faces[random_index].value += 1
 		
-		new_die.face_values = faces
-		new_die.face_values.sort()
+		new_die.faces.sort_custom(func(a, b): return a.value < b.value)
 		dice_options.append(new_die)
-		print(new_die.face_values)
+
+	# Create the special upgraded D6
+	var upgraded_d6 = Die.new(6)
+	# Give it standard 1-6 faces
+	for i in range(6):
+		upgraded_d6.faces[i].value = i + 1
+	
+	# Pick a random face to upgrade (that isn't 1, to make it more interesting)
+	var face_to_upgrade_index = randi_range(1, 5) # index for faces 2 through 6
+	var face_to_upgrade: Die.DieFace = upgraded_d6.faces[face_to_upgrade_index]
+	
+	# Create and add the effect
+	var new_effect = DieFaceEffect.new()
+	new_effect.type = DieFaceEffect.EffectType.SHIELD_ON_ATTACK
+	face_to_upgrade.effects.append(new_effect)
+	
+	dice_options.append(upgraded_d6)
+	dice_options.shuffle()
 
 	return dice_options
 

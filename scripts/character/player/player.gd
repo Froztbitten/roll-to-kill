@@ -25,7 +25,6 @@ func _ready():
 	
 	for side_count in starting_deck_sides:
 		var new_die = Die.new(side_count)
-		new_die.sides = side_count
 		add_to_game_bag([new_die])
 	print("added default dice bag of size: ", _game_dice_bag.size())
 

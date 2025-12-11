@@ -1,10 +1,18 @@
-[gd_scene load_steps=5 format=3 uid="uid://b6g58237i1n0u"]
+[gd_scene load_steps=7 format=3 uid="uid://b6g58237i1n0u"]
 
 [ext_resource type="Script" uid="uid://cso1onax2k5xu" path="res://scripts/die_display.gd" id="1_abcde"]
+[ext_resource type="Shader" uid="uid://co08op5lj5rqk" path="res://assets/ai/shaders/die_display.gdshader" id="2_2u4x7"]
 [ext_resource type="Texture2D" uid="uid://bbmpuskbrpu5p" path="res://assets/ai/dice/d20.svg" id="2_w6fhx"]
 [ext_resource type="PackedScene" uid="uid://c6w8q7v5x4y3b" path="res://scenes/dice/die_grid_cell.tscn" id="3_nmovm"]
 
-[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_2620h"]
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_2u4x7"]
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_p0rwb"]
+shader = ExtResource("2_2u4x7")
+shader_parameter/glow_color = Color(0.99607843, 0.79607844, 0, 1)
+shader_parameter/glow_intensity = 4.00000019
+shader_parameter/glow_thickness = 8.00000038
+shader_parameter/glow_inside = false
 
 [node name="DieDisplay" type="Control"]
 custom_minimum_size = Vector2(50, 50)
@@ -12,6 +20,7 @@ layout_mode = 3
 anchors_preset = 0
 offset_right = 80.0
 offset_bottom = 80.0
+pivot_offset = Vector2(40, 40)
 mouse_default_cursor_shape = 2
 script = ExtResource("1_abcde")
 
@@ -22,13 +31,15 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
+pivot_offset = Vector2(40, 40)
 mouse_filter = 1
-theme_override_styles/panel = SubResource("StyleBoxEmpty_2620h")
+theme_override_styles/panel = SubResource("StyleBoxEmpty_2u4x7")
 
 [node name="Icon" type="TextureRect" parent="MainDisplay"]
+material = SubResource("ShaderMaterial_p0rwb")
 layout_mode = 2
 texture = ExtResource("2_w6fhx")
-expand_mode = 5
+expand_mode = 1
 stretch_mode = 5
 
 [node name="RollLabel" type="Label" parent="MainDisplay"]

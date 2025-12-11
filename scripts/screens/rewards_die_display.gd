@@ -13,6 +13,7 @@ var die: Die
 var original_grid_text: String # Used for the Alt-hover average display
 var is_selected = false
 var average_roll = 0
+var upgrades_list: RichTextLabel
 
 func _ready():
 	# 1. Create a new stylebox
@@ -22,6 +23,18 @@ func _ready():
 	# Optional: Apply it to hover/pressed so it doesn't flicker gray
 	add_theme_stylebox_override("hover", new_style)
 	add_theme_stylebox_override("pressed", new_style)
+
+	# Create a label to display the list of upgrades on the die.
+	upgrades_list = RichTextLabel.new()
+	upgrades_list.name = "UpgradesList"
+	upgrades_list.bbcode_enabled = true
+	upgrades_list.fit_content = true
+	upgrades_list.mouse_filter = MOUSE_FILTER_IGNORE # Let clicks pass through to the button.
+	upgrades_list.set_anchors_preset(Control.PRESET_TOP_WIDE)
+	upgrades_list.position.y = 45 # Position it below the face grid.
+	upgrades_list.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	upgrades_list.add_theme_font_size_override("font_size", 14)
+	add_child(upgrades_list)
 
 func _process(_delta):
 	# On every frame, check if the mouse is over this control and if ALT is pressed.
@@ -80,17 +93,28 @@ func set_die(die_data: Die):
 		face_grid.add_theme_constant_override("h_separation", -1)
 		face_grid.add_theme_constant_override("v_separation", -1)
 		
-		var faces: Array
-		if die_object and not die_object.face_values.is_empty():
-			faces = die_object.face_values.duplicate() # Duplicate to avoid modifying the resource
-			faces.sort()
-		else:
-			faces = range(1, die.sides + 1)
-		
-		for face in faces:
+		# The die resource now has an array of DieFace objects
+		for face_data in die_object.faces:
 			var cell = DieGridCell.instantiate()
-			cell.get_node("Label").text = str(face)
+			cell.get_node("Label").text = str(face_data.value)
 			face_grid.add_child(cell)
+			
+			# If the face has an effect, highlight it
+			if not face_data.effects.is_empty():
+				var effect: DieFaceEffect = face_data.effects[0]
+				var style = cell.get_theme_stylebox("panel").duplicate() as StyleBoxFlat
+				style.bg_color = effect.cell_color
+				cell.add_theme_stylebox_override("panel", style)
+		
+		var upgrades_text = ""
+		for face_data in die_object.faces:
+			if not face_data.effects.is_empty():
+				for effect in face_data.effects:
+					upgrades_text += "[b]%d[/b] - %s\n" % [face_data.value, effect.explicit_name]
+		
+		upgrades_list.text = upgrades_text.strip_edges()
+		upgrades_list.visible = not upgrades_text.is_empty()
+
 		original_grid_text = "" # Not needed for multi-cell grid
 		
 	die_label.text = "d" + str(die.sides)
