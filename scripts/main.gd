@@ -9,6 +9,7 @@ extends Node2D
 @onready var total_incoming_damage_label: Label = $UI/TotalIncomingDamageLabel
 @onready var gold_label: Label = $UI/GameInfo/GoldContainer/GoldLabel
 
+@onready var dice_bag_icon: TextureRect = $UI/RoundInfo/DiceBag/DiceBagIcon
 @onready var dice_bag_label: Label = $UI/RoundInfo/DiceBag/DiceBagLabel
 @onready var dice_discard_label: Label = $UI/RoundInfo/DiceDiscard/DiceDiscardLabel
 
@@ -68,69 +69,66 @@ func _add_player_ability(new_ability: AbilityData):
 	ability_ui_instance.ability_activated.connect(_on_ability_activated)
 	ability_ui_instance.initialize(new_ability)
 
-func player_turn():
+func player_turn() -> void:
 	# Failsafe: Reset the action lock at the start of the player's turn.
 	# This prevents the player from being locked out if the flag gets stuck
 	# during a previous action, especially when transitioning between rounds.
 	is_resolving_action = false
 
-	# Reset abilities from the previous turn at the start of the new turn.
+	# Reset abilities and player block from the previous turn.
 	_tick_ability_cooldowns()
-
-	# Reset block at the start of the turn
 	player.block = 0
 	for die_display in selected_dice_display:
 		die_display.deselect()
 	selected_dice_display.clear()
 	
-	var rolled_dice: Array[Die] = []
+	dice_pool_ui.clear_pool()
 	var total_dice_value = 0
 	
 	# Add any dice held from the previous turn to the hand first.
 	var held_dice = player.get_and_clear_held_dice()
-	rolled_dice.append_array(held_dice)
+	dice_pool_ui.add_dice_instantly(held_dice)
 	for die in held_dice:
 		total_dice_value += die.result_value
 	
-	var hand: Array[Die] = player.draw_hand()
-	for die: Die in hand:
-		var roll = die.roll()
-		total_dice_value += roll
-		rolled_dice.append(die)
+	# Draw and roll new dice
+	var new_dice: Array[Die] = player.draw_hand()
+	for die: Die in new_dice:
+		total_dice_value += die.roll()
 	
+	# Animate the new dice into the pool
+	await dice_pool_ui.animate_add_dice(new_dice, dice_bag_icon.get_global_rect().get_center())
+
 	total_dice_value_label.text = "Total: " + str(total_dice_value)
 	current_incoming_damage = 0
 	var active_enemies = get_active_enemies()
 	# Have all living enemies declare their intents for the turn
 	for enemy: Enemy in active_enemies:
-		if enemy.hp > 0:
-			# Reset enemy block at the start of the player's turn
-			enemy.block = 0
-			# Immediately update the health bar to show the shield has been removed.
-			enemy.update_health_display()
+		# Reset enemy block at the start of the player's turn
+		enemy.block = 0
+		# Immediately update the health bar to show the shield has been removed.
+		enemy.update_health_display()
 
-			enemy.declare_intent(active_enemies)
-			if (enemy.next_action.action_type == EnemyAction.ActionType.ATTACK):
-				current_incoming_damage += enemy.next_action_value
+		enemy.declare_intent(active_enemies)
+		if enemy.next_action and enemy.next_action.action_type == EnemyAction.ActionType.ATTACK:
+			current_incoming_damage += enemy.next_action_value
 	
 	# Proactively apply shields that are meant to be active for the player's turn
 	for enemy: Enemy in active_enemies:
 		if enemy.next_action:
 			var action_type = enemy.next_action.action_type
-			if action_type == EnemyAction.ActionType.SHIELD:
+			if action_type == EnemyAction.ActionType.SHIELD or action_type == EnemyAction.ActionType.SUPPORT_SHIELD:
 				enemy.add_block(enemy.next_action_value)
-			elif action_type == EnemyAction.ActionType.SUPPORT_SHIELD:
-				enemy.add_block(enemy.next_action_value)
-				var other_enemies = active_enemies.filter(func(e): return e != enemy)
-				if not other_enemies.is_empty():
-					var random_ally = other_enemies.pick_random()
-					random_ally.add_block(enemy.next_action_value)
-					print("%s shields %s for %d" % [enemy.name, random_ally.name, enemy.next_action_value])
+				if action_type == EnemyAction.ActionType.SUPPORT_SHIELD:
+					var other_enemies = active_enemies.filter(func(e): return e != enemy)
+					if not other_enemies.is_empty():
+						var random_ally = other_enemies.pick_random()
+						random_ally.add_block(enemy.next_action_value)
+						print("%s shields %s for %d" % [enemy.name, random_ally.name, enemy.next_action_value])
 
 	total_incoming_damage_label.text = str(current_incoming_damage)
 	player.update_health_display(current_incoming_damage)
 
-	dice_pool_ui.set_hand(rolled_dice)
 	end_turn_button.disabled = false
 
 func _on_end_turn_button_pressed():
@@ -139,7 +137,7 @@ func _on_end_turn_button_pressed():
 		player.discard(dice_pool_ui.get_current_dice())
 		print("Player block: " + str(player.block))
 		next_turn()
-		enemy_turn()
+		await enemy_turn()
 
 func _tick_ability_cooldowns():
 	for ability_ui: AbilityUI in abilities_ui.get_children():
@@ -233,7 +231,7 @@ func enemy_turn() -> void:
 
 				enemy.clear_intent()
 		next_turn()
-		player_turn()
+		await player_turn()
 
 func _spawn_boss_minions(count: int):
 	if enemy_spawner.minion_pool.is_empty():
@@ -449,7 +447,7 @@ func start_new_round() -> void:
 	await get_tree().process_frame
 
 	# Start the player's turn for the new round
-	player_turn()
+	await player_turn()
 
 func get_active_enemies() -> Array[Enemy]:
 	# Helper function to get living enemies from the container.

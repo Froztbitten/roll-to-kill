@@ -67,6 +67,8 @@ func _spawn_enemies(encounter: EncounterData, count: int) -> Array:
 	for enemy_data in enemies_to_spawn_data:
 		var enemy: Enemy = ENEMY_UI.instantiate()
 		enemy.enemy_data = enemy_data
+		# Hide the intent display immediately on spawn to prevent a 1-frame flicker of default data.
+		enemy.get_node("EnemyIntentDisplay").visible = false
 		enemy_container.add_child(enemy)
 		spawned_enemies.append(enemy)
 

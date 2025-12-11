@@ -14,6 +14,8 @@ var _turn_count := 0
 
 func _ready():
 	super._ready()
+	# Hide the intent display by default to prevent showing stale data on spawn.
+	intent_display.visible = false
 	statuses_changed.connect(_on_statuses_changed)
 	call_deferred("_center_intent_display")
 	if not enemy_data:
