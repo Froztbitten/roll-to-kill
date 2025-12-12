@@ -5,6 +5,7 @@ signal dice_bag_changed(new_amount)
 signal dice_discard_changed(new_amount)
 signal gold_changed(new_amount)
 signal abilities_changed(new_ability)
+signal dice_drawn(drawn_dice)
 
 @export var abilities: Array[AbilityData] = []
 
@@ -25,6 +26,14 @@ func _ready():
 	
 	for side_count in starting_deck_sides:
 		var new_die = Die.new(side_count)
+
+		# Testing: Apply a random effect to every face
+		for face in new_die.faces:
+			var effect = EffectLibrary.get_random_effect_for_die(side_count, 3)
+			if effect:
+				print("Adding effect %s to D%d face value %d" % [effect.name, side_count, face.value])
+				face.effects.append(effect)
+
 		add_to_game_bag([new_die])
 	print("added default dice bag of size: ", _game_dice_bag.size())
 
@@ -40,6 +49,21 @@ func draw_hand():
 			dice_bag_changed.emit(_round_dice_bag.size())
 			drawn_dice.append(drawn_die)
 	return drawn_dice
+
+func draw_dice(count: int):
+	var drawn_dice: Array[Die] = []
+	for i in range(count):
+		if _round_dice_bag.size() == 0:
+			shuffle_dice_discard_into_bag()
+		
+		if _round_dice_bag.size() > 0:
+			var random_index = randi() % _round_dice_bag.size()
+			var drawn_die = _round_dice_bag.pop_at(random_index)
+			dice_bag_changed.emit(_round_dice_bag.size())
+			drawn_dice.append(drawn_die)
+	
+	if not drawn_dice.is_empty():
+		dice_drawn.emit(drawn_dice)
 
 func discard(dice_to_discard: Array[Die]):
 	_dice_discard.append_array(dice_to_discard)

@@ -22,7 +22,6 @@ enum Turn {PLAYER, ENEMY}
 
 const ABILITY_UI_SCENE = preload("res://scenes/ui/ability.tscn")
 const DIE_DISPLAY_SCENE = preload("res://scenes/dice/die_display.tscn")
-var ADVANTAGE_STATUS
 var selected_dice_display: Array[DieDisplay] = []
 var current_incoming_damage: int = 0
 var is_resolving_action := false
@@ -37,14 +36,13 @@ var starting_abilities: Array[AbilityData] = [load("res://resources/abilities/he
 	load("res://resources/abilities/sweep.tres"), load("res://resources/abilities/hold.tres")]
 
 func _ready() -> void:
-	ADVANTAGE_STATUS = load("res://resources/status_effects/advantage.tres")
-
 	# Connect signals
 	player.died.connect(_on_player_died)
 	player.gold_changed.connect(_update_gold)
 	player.dice_bag_changed.connect(_update_dice_bag)
 	player.dice_discard_changed.connect(_update_dice_discard)
 	player.abilities_changed.connect(_add_player_ability)
+	player.dice_drawn.connect(_on_player_dice_drawn)
 
 	dice_pool_ui.die_clicked.connect(_on_die_clicked)
 	dice_pool_ui.die_drag_started.connect(_on_die_drag_started)
@@ -218,7 +216,7 @@ func enemy_turn() -> void:
 						# Apply advantage to all allies (including self) for 2 rounds.
 						# A duration of 2 means it lasts this enemy turn and the next.
 						for e in active_enemies:
-							e.apply_status(ADVANTAGE_STATUS, 2)
+							e.apply_status("advantage", 2)
 
 					EnemyAction.ActionType.DO_NOTHING:
 						pass # Do nothing, as intended.
@@ -331,16 +329,20 @@ func _on_character_clicked(character: Character) -> void:
 		for die in dice_to_discard:
 			if die.result_face and not die.result_face.effects.is_empty():
 				for effect in die.result_face.effects:
-					_process_die_face_effect(effect, die.result_value)
+					_process_die_face_effect(effect, die.result_value, enemy_target, die)
 
 	player.discard(dice_to_discard)
 	is_resolving_action = false
 
-func _process_die_face_effect(effect: DieFaceEffect, value: int):
-	match effect.type:
-		DieFaceEffect.EffectType.SHIELD_ON_ATTACK:
-			player.add_block(value)
-			print("Die face effect: Gained %d block." % value)
+func _process_die_face_effect(effect: DieFaceEffect, value: int, target: Character = null, die: Die = null):
+	var context = {
+		"all_enemies": get_active_enemies(),
+		"die": die
+	}
+	if effect.process_effect.is_valid():
+		# The logic for the effect is now self-contained within the effect resource,
+		# called from here with the necessary context.
+		await effect.process_effect.call(value, player, target, context)
 
 func _animate_dice_to_target(dice_displays: Array[DieDisplay], target: Character) -> void:
 	var tweens: Array[Tween] = []
@@ -507,22 +509,29 @@ func _generate_reward_dice() -> Array[Die]:
 		new_die.faces.sort_custom(func(a, b): return a.value < b.value)
 		dice_options.append(new_die)
 
-	# Create the special upgraded D6
-	var upgraded_d6 = Die.new(6)
-	# Give it standard 1-6 faces
-	for i in range(6):
-		upgraded_d6.faces[i].value = i + 1
-	
-	# Pick a random face to upgrade (that isn't 1, to make it more interesting)
-	var face_to_upgrade_index = randi_range(1, 5) # index for faces 2 through 6
-	var face_to_upgrade: Die.DieFace = upgraded_d6.faces[face_to_upgrade_index]
-	
-	# Create and add the effect
-	var new_effect = DieFaceEffect.new()
-	new_effect.type = DieFaceEffect.EffectType.SHIELD_ON_ATTACK
-	face_to_upgrade.effects.append(new_effect)
-	
-	dice_options.append(upgraded_d6)
+	# --- Create the special upgraded die ---
+	# Get a list of die sizes that have defined effects in our library
+	var upgradable_die_sizes = EffectLibrary.effects_by_die_size.keys()
+	if not upgradable_die_sizes.is_empty():
+		# Pick a random die size from the ones that have available upgrades
+		var random_upgradable_size = upgradable_die_sizes.pick_random()
+		var upgraded_die = Die.new(random_upgradable_size)
+
+		# Give it standard 1-to-N faces
+		for i in range(random_upgradable_size):
+			upgraded_die.faces[i].value = i + 1
+
+		# Pick a random face to upgrade (that isn't 1, to make it more interesting)
+		var face_to_upgrade_index = randi_range(1, random_upgradable_size - 1)
+		var face_to_upgrade: Die.DieFace = upgraded_die.faces[face_to_upgrade_index]
+
+		# Get a random effect suitable for this die size from the library
+		var new_effect = EffectLibrary.get_random_effect_for_die(random_upgradable_size)
+		if new_effect:
+			face_to_upgrade.effects.append(new_effect)
+		
+		dice_options.append(upgraded_die)
+
 	dice_options.shuffle()
 
 	return dice_options
@@ -564,3 +573,13 @@ func _update_dice_discard(count: int):
 func _on_die_returned_to_pool(die_display: DieDisplay):
 	# This is called when a die is removed from an ability slot via right-click.
 	dice_pool_ui.add_die_display(die_display)
+
+func _on_player_dice_drawn(new_dice: Array[Die]):
+	for die in new_dice:
+		die.roll()
+	await dice_pool_ui.animate_add_dice(new_dice, dice_bag_icon.get_global_rect().get_center())
+	
+	var current_total = 0
+	for die in dice_pool_ui.get_current_dice():
+		current_total += die.result_value
+	total_dice_value_label.text = "Total: " + str(current_total)

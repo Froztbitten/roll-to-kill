@@ -18,6 +18,8 @@ config/main_scene="res://scenes/main.tscn"
 [autoload]
 
 Utils="*res://scripts/utils.gd"
+EffectLibrary="*res://scripts/effect_library.gd"
+StatusLibrary="*res://scripts/status_library.gd"
 
 [rendering]
 

@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100" fill="none">
+  <path d="M15 45 C 15 20, 85 20, 85 45 L 80 70 C 80 85, 60 95, 50 95 C 40 95, 20 85, 20 70 L 15 45 Z"
+        fill="#607D8B" stroke="#263238" stroke-width="3"/>
+  
+  <path d="M20 48 C 20 30, 80 30, 80 48" fill="none" stroke="#90A4AE" stroke-width="3"/>
+
+  <g fill="#BF360C" stroke="#263238" stroke-width="2" stroke-linejoin="round">
+    <path d="M50 5 L 65 45 L 35 45 Z" />
+    <path d="M15 25 L 35 50 L 10 55 Z" />
+    <path d="M85 25 L 90 55 L 65 50 Z" />
+    <path d="M25 70 L 15 85 L 35 80 Z" />
+     <path d="M75 70 L 65 80 L 85 85 Z" />
+  </g>
+
+  <g fill="#FF5722">
+    <path d="M50 5 L 55 45 L 50 45 Z" /> <path d="M15 25 L 20 52 L 15 50 Z" /> <path d="M85 25 L 85 50 L 80 52 Z" /> </g>
+</svg>

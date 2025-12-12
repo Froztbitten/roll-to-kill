@@ -76,10 +76,26 @@ func add_block(amount: int):
 	else:
 		update_health_display()
 
-func apply_status(status_effect, duration: int):
-	statuses[status_effect] = duration
-	print("%s gained status '%s' for %d rounds." % [name, status_effect.status_name, duration])
-	statuses_changed.emit(statuses)
+func apply_duration_status(status_id: String, duration: int = 1):
+	var effect: StatusEffect = StatusLibrary.get_status(status_id)
+	if effect:
+		effect.duration = duration;
+		print("%s gained status '%s' for %d rounds." % [name, effect.status_name, duration])
+		statuses_changed.emit(statuses)
+
+func apply_charges_status(status_id: String, charges: int = 1):
+	var effect: StatusEffect = StatusLibrary.get_status(status_id)
+	if effect:
+		effect.charges = charges;
+		print("%s gained %d charges of '%s' status." % [name, charges, effect.status_name])
+		statuses_changed.emit(statuses)
+
+func remove_status(status_id: String):
+	var effect: StatusEffect = StatusLibrary.get_status(status_id)
+	if effect:
+		print("%s lost status '%s'." % [name, effect.status_name])
+		statuses.erase(effect)
+		statuses_changed.emit(statuses)
 
 func has_status(status_name: String) -> bool:
 	# Check if any of the active status effects match the given name.

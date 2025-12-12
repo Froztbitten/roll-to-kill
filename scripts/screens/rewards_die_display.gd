@@ -103,7 +103,7 @@ func set_die(die_data: Die):
 			if not face_data.effects.is_empty():
 				var effect: DieFaceEffect = face_data.effects[0]
 				var style = cell.get_theme_stylebox("panel").duplicate() as StyleBoxFlat
-				style.bg_color = effect.cell_color
+				style.bg_color = effect.highlight_color
 				cell.add_theme_stylebox_override("panel", style)
 		
 		var upgrades_text = ""

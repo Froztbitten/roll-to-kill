@@ -44,6 +44,16 @@ func roll(with_advantage: bool = false):
 	result_value = result_face.value
 	return result_value
 
+func flip_die():
+	if faces.size() < 2:
+		push_warning("Attempted to flip a die with less than 2 faces.")
+		return
+	
+	var current_index = faces.find(result_face)
+	var new_index = (current_index + 1) % faces.size()
+	result_face = faces[new_index]
+	result_value = result_face.value
+
 func get_face_values() -> Array[int]:
 	var values: Array[int] = []
 	for face in faces:

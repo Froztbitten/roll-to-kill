@@ -11,8 +11,9 @@ var die: Die:
 
 @onready var main_display: PanelContainer = $MainDisplay
 @onready var icon_texture: TextureRect = $MainDisplay/Icon
-@onready var roll_label: Label = $MainDisplay/RollLabel
+@onready var roll_label: Label = $MainDisplay/LabelContainer/RollLabel
 @onready var face_grid: PanelContainer = $FaceGrid
+@onready var effect_name_label: Label = $EffectNameLabel
 @onready var grid_container: GridContainer = $FaceGrid/Grid
 
 var dice_pool = null
@@ -37,15 +38,18 @@ func update_display():
 	# --- 1. Update the default display (Icon and RollLabel) ---
 	roll_label.text = str(die.result_value)
 	icon_texture.texture = load(die.icon_path)
+	effect_name_label.visible = false # Hide by default
+	effect_name_label.text = ""
 
 	# --- Shader Glow Effect Logic ---
 	# By default, turn off the glow by setting its intensity to 0.
 	icon_texture.material.set_shader_parameter("glow_intensity", 0.0)
 	# If the rolled face has an effect, turn on the glow and set its color.
 	if die.result_face and not die.result_face.effects.is_empty():
-		var effect: DieFaceEffect = die.result_face.effects[0] # Use the first effect's glow color
-		icon_texture.material.set_shader_parameter("glow_color", effect.glow_color)
+		var effect: DieFaceEffect = die.result_face.effects[0]
+		icon_texture.material.set_shader_parameter("glow_color", effect.highlight_color)
 		icon_texture.material.set_shader_parameter("glow_intensity", 4.0) # Use the shader's default intensity.
+		effect_name_label.text = effect.name
 
 	# --- 2. Populate the hidden hover grid ---
 	# Clear previous grid contents
@@ -90,7 +94,7 @@ func update_display():
 		if not face.effects.is_empty():
 			var effect: DieFaceEffect = face.effects[0]
 			var effect_style = default_style.duplicate() as StyleBoxFlat
-			effect_style.bg_color = effect.cell_color
+			effect_style.bg_color = effect.highlight_color
 			cell.add_theme_stylebox_override("panel", effect_style)
 
 		# Highlight the rolled face
@@ -129,9 +133,12 @@ func deselect(animated: bool = true):
 
 func _on_mouse_entered():
 	face_grid.visible = true
+	if not effect_name_label.text.is_empty():
+		effect_name_label.visible = true
 
 func _on_mouse_exited():
 	face_grid.visible = false
+	effect_name_label.visible = false
 
 func _gui_input(event: InputEvent):
 	if event is InputEventMouseButton:
@@ -143,8 +150,11 @@ func _gui_input(event: InputEvent):
 func _notification(what):
 	if what == NOTIFICATION_MOUSE_ENTER:
 		face_grid.visible = true
+		if not effect_name_label.text.is_empty():
+			effect_name_label.visible = true
 	elif what == NOTIFICATION_MOUSE_EXIT:
 		face_grid.visible = false
+		effect_name_label.visible = false
 	elif what == NOTIFICATION_DRAG_END:
 		# If the drag ended and this die display was not successfully dropped
 		# (i.e., it was not reparented), make it visible again.

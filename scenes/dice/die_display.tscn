@@ -19,7 +19,7 @@ custom_minimum_size = Vector2(50, 50)
 layout_mode = 3
 anchors_preset = 0
 offset_right = 80.0
-offset_bottom = 80.0
+offset_bottom = 100.0
 pivot_offset = Vector2(40, 40)
 mouse_default_cursor_shape = 2
 script = ExtResource("1_abcde")
@@ -42,7 +42,11 @@ texture = ExtResource("2_w6fhx")
 expand_mode = 1
 stretch_mode = 5
 
-[node name="RollLabel" type="Label" parent="MainDisplay"]
+[node name="LabelContainer" type="VBoxContainer" parent="MainDisplay"]
+layout_mode = 2
+alignment = 1
+
+[node name="RollLabel" type="Label" parent="MainDisplay/LabelContainer"]
 layout_mode = 2
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
 theme_override_constants/outline_size = 8
@@ -50,6 +54,26 @@ theme_override_font_sizes/font_size = 24
 text = "7"
 horizontal_alignment = 1
 vertical_alignment = 1
+
+[node name="EffectNameLabel" type="Label" parent="."]
+visible = false
+layout_mode = 1
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -40.0
+offset_top = -20.0
+offset_right = 40.0
+grow_horizontal = 2
+grow_vertical = 0
+theme_override_colors/font_color = Color(0.988235, 0.854902, 0.368627, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 4
+theme_override_font_sizes/font_size = 16
+text = "Effect Name"
+horizontal_alignment = 1
 
 [node name="FaceGrid" type="PanelContainer" parent="."]
 visible = false
@@ -74,4 +98,5 @@ size_flags_vertical = 8
 columns = 2
 
 [node name="DieGridCell" parent="FaceGrid/Grid" instance=ExtResource("3_nmovm")]
+visible = false
 layout_mode = 2
