@@ -22,7 +22,7 @@ func _ready():
 	_resting_rotation = rotation
 	update_health_display()
 
-func take_damage(damage: int, play_recoil: bool = true, attacker: Character = null):
+func take_damage(damage: int, play_recoil: bool = true, attacker: Character = null, is_attack_action: bool = false):
 	var old_block = block
 	var damage_to_take = damage
 	if block > 0:
@@ -31,13 +31,13 @@ func take_damage(damage: int, play_recoil: bool = true, attacker: Character = nu
 		block -= blocked_damage
 		print("%s blocked %d damage." % [name, blocked_damage])
 	
-	await _apply_damage(damage_to_take, "damage", old_block, play_recoil, attacker)
+	await _apply_damage(damage_to_take, "damage", old_block, play_recoil, attacker, is_attack_action)
 
-func take_piercing_damage(damage: int, play_recoil: bool = true, attacker: Character = null):
+func take_piercing_damage(damage: int, play_recoil: bool = true, attacker: Character = null, is_attack_action: bool = false):
 	# This damage type ignores block.
-	await _apply_damage(damage, "piercing damage", block, play_recoil, attacker)
+	await _apply_damage(damage, "piercing damage", block, play_recoil, attacker, is_attack_action)
 
-func _apply_damage(amount: int, type: String, old_block_value: int, play_recoil: bool = true, attacker: Character = null) -> void:
+func _apply_damage(amount: int, type: String, old_block_value: int, play_recoil: bool = true, attacker: Character = null, is_attack_action: bool = false) -> void:
 	if amount > 0 and play_recoil:
 		_recoil(amount)
 
@@ -67,12 +67,12 @@ func _apply_damage(amount: int, type: String, old_block_value: int, play_recoil:
 			var spike_charges = statuses[spikes_status]
 			if spike_charges > 0 and attacker != self:
 				print("%s's spikes damage %s for %d" % [name, attacker.name, spike_charges])
-				await attacker.take_damage(spike_charges, true, self)
+				await attacker.take_damage(spike_charges, true, self, false) # Spikes is reactive, not an attack action
 
 	# --- Riposte Logic ---
-	# If this character was attacked and has Riposte, trigger the effect.
-	# This happens after damage is taken.
-	if attacker and not attacker._is_dead and has_status("Riposte"):
+	# If this character was attacked and has Riposte, trigger the effect. This only
+	# triggers on direct attack actions, not on reactive or status damage.
+	if attacker and not attacker._is_dead and has_status("Riposte") and is_attack_action:
 		var riposte_status = StatusLibrary.get_status("riposte")
 		if statuses.has(riposte_status):
 			var riposte_charges = statuses[riposte_status]
@@ -155,7 +155,7 @@ func tick_down_statuses():
 
 		# Apply DoT effects at the end of the turn
 		if status.status_name == "Bleed" or status.status_name == "Burn":
-			await take_damage(statuses[status])
+			await take_damage(statuses[status], true, null, false) # DoT is not an attack action
 			if _is_dead:
 				_new_statuses_this_turn.clear()
 				return

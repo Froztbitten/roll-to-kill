@@ -166,7 +166,7 @@ func _on_ability_activated(ability_ui: AbilityUI):
 		var damage = ceili(die_value / 2.0)
 		
 		for enemy in get_active_enemies():
-			enemy.take_damage(damage, true, player)
+			enemy.take_damage(damage, true, player, true)
 		print("Resolved 'Sweep' ability for %d damage to all enemies." % damage)
 	elif ability_data.title == "Hold":
 		if slotted_dice_displays.is_empty(): return
@@ -191,10 +191,10 @@ func enemy_turn() -> void:
 			if enemy.hp > 0 and enemy.next_action:
 				match enemy.next_action.action_type:
 					EnemyAction.ActionType.ATTACK:
-						await player.take_damage(enemy.next_action_value, true, enemy)
+						await player.take_damage(enemy.next_action_value, true, enemy, true)
 
 					EnemyAction.ActionType.PIERCING_ATTACK:
-						await player.take_piercing_damage(enemy.next_action_value, true, enemy)
+						await player.take_piercing_damage(enemy.next_action_value, true, enemy, true)
 
 					EnemyAction.ActionType.SHIELD, EnemyAction.ActionType.SUPPORT_SHIELD:
 						pass # Shield is applied proactively at the start of the player's turn.
@@ -356,7 +356,7 @@ func _on_character_clicked(character: Character) -> void:
 					_process_die_face_effect(effect, die.result_value, player, die)
 	else: # It's an enemy
 		var enemy_target: Enemy = character
-		await enemy_target.take_damage(total_roll, false, player)
+		await enemy_target.take_damage(total_roll, false, player, true)
 		print("Dealt %d damage to %s" % [total_roll, enemy_target.name])
 
 		# After the main action, process any effects from the dice faces
