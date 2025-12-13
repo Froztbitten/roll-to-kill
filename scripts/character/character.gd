@@ -8,6 +8,7 @@ signal statuses_changed(statuses)
 @export var max_hp: int = 100
 @export var block: int = 0
 var statuses: Dictionary = {} # {StatusEffect: duration}
+var _new_statuses_this_turn: Array[StatusEffect] = []
 var _is_dead := false
 var _resting_position: Vector2
 var _resting_rotation: float
@@ -21,7 +22,7 @@ func _ready():
 	_resting_rotation = rotation
 	update_health_display()
 
-func take_damage(damage: int, play_recoil: bool = true):
+func take_damage(damage: int, play_recoil: bool = true, attacker: Character = null):
 	var old_block = block
 	var damage_to_take = damage
 	if block > 0:
@@ -30,13 +31,13 @@ func take_damage(damage: int, play_recoil: bool = true):
 		block -= blocked_damage
 		print("%s blocked %d damage." % [name, blocked_damage])
 	
-	await _apply_damage(damage_to_take, "damage", old_block, play_recoil)
+	await _apply_damage(damage_to_take, "damage", old_block, play_recoil, attacker)
 
-func take_piercing_damage(damage: int, play_recoil: bool = true):
+func take_piercing_damage(damage: int, play_recoil: bool = true, attacker: Character = null):
 	# This damage type ignores block.
-	await _apply_damage(damage, "piercing damage", block, play_recoil)
+	await _apply_damage(damage, "piercing damage", block, play_recoil, attacker)
 
-func _apply_damage(amount: int, type: String, old_block_value: int, play_recoil: bool = true) -> void:
+func _apply_damage(amount: int, type: String, old_block_value: int, play_recoil: bool = true, attacker: Character = null) -> void:
 	if amount > 0 and play_recoil:
 		_recoil(amount)
 
@@ -57,6 +58,26 @@ func _apply_damage(amount: int, type: String, old_block_value: int, play_recoil:
 		if should_die:
 			await die()
 	print("%s took %d %s, has %d HP left." % [name, amount, type, hp])
+
+	# --- Spikes Logic ---
+	# If this character was attacked and has Spikes, deal damage back to the attacker.
+	if attacker and not attacker._is_dead and has_status("Spikes"):
+		var spikes_status = StatusLibrary.get_status("spikes")
+		if statuses.has(spikes_status):
+			var spike_charges = statuses[spikes_status]
+			if spike_charges > 0 and attacker != self:
+				print("%s's spikes damage %s for %d" % [name, attacker.name, spike_charges])
+				await attacker.take_damage(spike_charges, true, self)
+
+	# --- Riposte Logic ---
+	# If this character was attacked and has Riposte, trigger the effect.
+	# This happens after damage is taken.
+	if attacker and not attacker._is_dead and has_status("Riposte"):
+		var riposte_status = StatusLibrary.get_status("riposte")
+		if statuses.has(riposte_status):
+			var riposte_charges = statuses[riposte_status]
+			if riposte_charges > 0:
+				await EffectLogic.trigger_riposte(riposte_charges, self, attacker)
 
 func heal(amount: int):
 	var old_hp = hp
@@ -79,15 +100,22 @@ func add_block(amount: int):
 func apply_duration_status(status_id: String, duration: int = 1):
 	var effect: StatusEffect = StatusLibrary.get_status(status_id)
 	if effect:
-		effect.duration = duration;
+		statuses[effect] = duration
+		_new_statuses_this_turn.append(effect)
 		print("%s gained status '%s' for %d rounds." % [name, effect.status_name, duration])
 		statuses_changed.emit(statuses)
 
 func apply_charges_status(status_id: String, charges: int = 1):
 	var effect: StatusEffect = StatusLibrary.get_status(status_id)
 	if effect:
-		effect.charges = charges;
-		print("%s gained %d charges of '%s' status." % [name, charges, effect.status_name])
+		if statuses.has(effect):
+			statuses[effect] += charges
+		else:
+			statuses[effect] = charges
+			
+		_new_statuses_this_turn.append(effect)
+		var total_charges = statuses[effect]
+		print("%s gained %d charges of '%s' status. Total: %d" % [name, charges, effect.status_name, total_charges])
 		statuses_changed.emit(statuses)
 
 func remove_status(status_id: String):
@@ -109,11 +137,41 @@ func tick_down_statuses():
 		return
 	
 	var keys_to_remove = []
-	for status in statuses:
+	var statuses_to_process = statuses.keys()
+	
+	for status in statuses_to_process:
+		# Skip processing for statuses that were just applied this turn.
+		if _new_statuses_this_turn.has(status):
+			continue
+
+		# --- Triggerable Effects ---
+		if status.status_name == "Echoing Impact":
+			await EffectLogic.trigger_echoing_impact(self)
+			if _is_dead:
+				_new_statuses_this_turn.clear()
+				return
+			keys_to_remove.append(status)
+			continue
+
+		# Apply DoT effects at the end of the turn
+		if status.status_name == "Bleed" or status.status_name == "Burn":
+			await take_damage(statuses[status])
+			if _is_dead:
+				_new_statuses_this_turn.clear()
+				return
+
+		# Skip ticking down for charge-based effects. Since Spikes is a permanent
+		# charge buff, we add an explicit check to ensure it never decays.
+		if status.charges != -1 or status.status_name == "Spikes":
+			continue
+		
 		statuses[status] -= 1
 		if statuses[status] <= 0:
 			keys_to_remove.append(status)
 			print("%s lost status '%s'." % [name, status.status_name])
+			
+	_new_statuses_this_turn.clear()
+	
 	for key in keys_to_remove:
 		statuses.erase(key)
 	if not keys_to_remove.is_empty():

@@ -3,6 +3,7 @@ class_name DicePool
 
 signal die_clicked(die_display)
 signal die_drag_started(die_display)
+signal die_value_changed
 signal layout_changed
 
 const DIE_DISPLAY_SCENE = preload("res://scenes/dice/die_display.tscn")
@@ -23,6 +24,7 @@ func _add_die_to_pool(die_data: Die, invisible: bool) -> DieDisplay:
 	add_child(die_display)
 	die_display.dice_pool = self
 	die_display.die_clicked.connect(func(display): emit_signal("die_clicked", display))
+	die_display.die_value_changed.connect(func(): emit_signal("die_value_changed"))
 	die_display.drag_started.connect(func(display): emit_signal("die_drag_started", display))
 	die_display.set_die(die_data)
 	if invisible:

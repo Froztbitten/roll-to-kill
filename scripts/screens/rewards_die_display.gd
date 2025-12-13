@@ -110,7 +110,7 @@ func set_die(die_data: Die):
 		for face_data in die_object.faces:
 			if not face_data.effects.is_empty():
 				for effect in face_data.effects:
-					upgrades_text += "[b]%d[/b] - %s\n" % [face_data.value, effect.explicit_name]
+					upgrades_text += "[b]%d[/b] - %s\n" % [face_data.value, effect.name]
 		
 		upgrades_list.text = upgrades_text.strip_edges()
 		upgrades_list.visible = not upgrades_text.is_empty()

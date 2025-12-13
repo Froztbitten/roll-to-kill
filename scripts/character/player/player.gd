@@ -14,12 +14,14 @@ var _round_dice_bag: Array[Die] = []
 var _dice_discard: Array[Die] = []
 var _held_dice: Array[Die] = []
 var gold: int = 0
+@onready var status_display: HBoxContainer = $StatusEffectDisplay
 
 var dice_pool_size = 4
 
 
 func _ready():
 	super._ready()
+	statuses_changed.connect(_on_statuses_changed)
 	
 	# Define the initial deck
 	var starting_deck_sides = [2, 4, 4, 6, 6, 6, 8, 8, 10]
@@ -118,3 +120,7 @@ func heal(amount: int):
 	else:
 		update_health_display()
 	print("%s healed for %d (raw) -> %d (actual), has %d HP left." % [name, amount, heal_amount, hp])
+
+func _on_statuses_changed(current_statuses: Dictionary):
+	if status_display:
+		status_display.update_display(current_statuses)

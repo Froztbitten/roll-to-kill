@@ -11,4 +11,5 @@ func update_display(statuses: Dictionary):
 	for status_effect in statuses:
 		var icon_instance = STATUS_ICON_SCENE.instantiate()
 		add_child(icon_instance)
-		icon_instance.set_status(status_effect)
+		var value = statuses[status_effect]
+		icon_instance.set_status(status_effect, value)

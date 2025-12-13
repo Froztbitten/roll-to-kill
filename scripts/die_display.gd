@@ -2,6 +2,7 @@ extends Control
 class_name DieDisplay
 
 signal die_clicked(die_display)
+signal die_value_changed
 signal drag_started(die_display)
 
 const DieGridCell = preload("res://scenes/dice/die_grid_cell.tscn")
@@ -146,6 +147,16 @@ func _gui_input(event: InputEvent):
 			# When clicked, emit a signal with a reference to itself
 			emit_signal("die_clicked", self)
 			get_viewport().set_input_as_handled()
+		elif event.button_index == MOUSE_BUTTON_RIGHT and event.is_pressed():
+			if die and die.result_face and not die.result_face.effects.is_empty():
+				for effect in die.result_face.effects:
+					if effect.process_effect == EffectLogic.wormhole:
+						var context = {"die": die}
+						EffectLogic.wormhole(0, null, null, context)
+						update_display()
+						emit_signal("die_value_changed")
+						get_viewport().set_input_as_handled()
+						return # Effect triggered, stop processing.
 
 func _notification(what):
 	if what == NOTIFICATION_MOUSE_ENTER:

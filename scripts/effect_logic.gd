@@ -5,16 +5,22 @@ class_name EffectLogic
 
 # D4 Effects
 static func aoe(value: int, _source: Character, _target: Character, context: Dictionary):
-	var targets = context.get("all_enemies", [])
-	for t in targets:
-		t.take_damage(value)
+	# Do not trigger AoE damage if the player is targeting themselves (e.g., for block).
+	if _target is Player:
+		return
+	var enemies: Array[Enemy] = context.get("all_enemies", [])
+	# The main target is already damaged by the initial attack.
+	# This effect should only damage the *other* enemies.
+	for enemy in enemies:
+		if enemy != _target:
+			enemy.take_damage(value)
 
 static func draw(_value: int, source: Character, _target: Character, _context: Dictionary):
 	if source.has_method("draw_dice"):
 		source.draw_dice(1)
 
 static func spikes(value: int, _source: Character, target: Character, _context: Dictionary):
-	target.apply_charges_status("spikes", value)
+	target.apply_charges_status("spikes", value) # This correctly applies the buff
 
 # D6 Effects
 static func ss(value: int, source: Character, _target: Character, _context: Dictionary):
@@ -37,26 +43,41 @@ static func pierce(value: int, _source: Character, target: Character, _context: 
 static func riposte(value: int, _source: Character, target: Character, _context: Dictionary):
 	target.apply_charges_status("riposte", value)
 
-static func trigger_riposte(value: int, defender: Character, attacker: Character):
+static func trigger_riposte(value: int, defender: Character, attacker: Character) -> void:
+	# The defender removes the status and deals damage back to the attacker.
+	print("%s's riposte triggers, dealing %d damage to %s" % [defender.name, value, attacker.name])
 	defender.remove_status("riposte")
-	attacker.take_damage(value)
+	await attacker.take_damage(value, true, defender)
 
 # D10 Effects
 static func echoing_impact(value: int, _source: Character, target: Character, _context: Dictionary):
+	# This is a debuff, so it should not apply to the player.
+	if target is Player:
+		return
 	target.apply_charges_status("echoing_impact", ceil(value / 2.0))
 
 static func trigger_echoing_impact(target: Character):
-	target.take_damage(target.statuses["echoing_impact"].charges)
-	target.remove_status("echoing_impact")
+	var status_effect = StatusLibrary.get_status("echoing_impact")
+	if target.statuses.has(status_effect):
+		var charges = target.statuses[status_effect]
+		await target.take_damage(charges)
+		# The removal is now handled by the caller (tick_down_statuses)
 
 static func splash_damage(value: int, _source: Character, target: Character, context: Dictionary):
-	var all_enemies: Array = context.get("all_enemies", [])
-	var idx = all_enemies.find(target)
+	# We expect an Array[Enemy], but to use find() with a Character type, we can't
+	# use find() directly as it requires the exact same type. Instead, we iterate
+	# manually to find the index.
+	var enemies: Array[Enemy] = context.get("all_enemies", [])
+	var idx = -1
+	for i in range(enemies.size()):
+		if enemies[i] == target:
+			idx = i
+			break
 	if idx != -1:
 		if idx > 0:
-			all_enemies[idx - 1].take_damage(ceil(value / 2.0))
-		if idx < all_enemies.size() - 1:
-			all_enemies[idx + 1].take_damage(ceil(value / 2.0))
+			enemies[idx - 1].take_damage(ceil(value / 2.0))
+		if idx < enemies.size() - 1:
+			enemies[idx + 1].take_damage(ceil(value / 2.0))
 
 static func wormhole(_value: int, _source: Character, _target: Character, context: Dictionary):
 	var die = context.get("die")
@@ -71,6 +92,12 @@ static func shieldbreak(_value: int, _source: Character, target: Character, _con
 	target.block = 0
 
 static func cleave(value: int, _source: Character, _target: Character, context: Dictionary):
-	var targets = context.get("all_enemies", [])
-	for t in targets:
-		t.take_damage(value)
+	# Do not trigger Cleave damage if the player is targeting themselves (e.g., for block).
+	if _target is Player:
+		return
+	var enemies: Array[Enemy] = context.get("all_enemies", [])
+	# The main target is already damaged by the initial attack.
+	# This effect should only damage the *other* enemies.
+	for enemy in enemies:
+		if enemy != _target:
+			enemy.take_damage(value)

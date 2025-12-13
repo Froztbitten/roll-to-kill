@@ -46,7 +46,6 @@ func _ready() -> void:
 
 	dice_pool_ui.die_clicked.connect(_on_die_clicked)
 	dice_pool_ui.die_drag_started.connect(_on_die_drag_started)
-	dice_pool_ui.die_value_changed.connect(_update_total_dice_value)
 	reward_screen.reward_chosen.connect(_on_reward_chosen)
 
 	# Initialize player's starting abilities
@@ -166,7 +165,7 @@ func _on_ability_activated(ability_ui: AbilityUI):
 		var damage = ceili(die_value / 2.0)
 		
 		for enemy in get_active_enemies():
-			enemy.take_damage(damage, true, player)
+			enemy.take_damage(damage)
 		print("Resolved 'Sweep' ability for %d damage to all enemies." % damage)
 	elif ability_data.title == "Hold":
 		if slotted_dice_displays.is_empty(): return
@@ -191,10 +190,10 @@ func enemy_turn() -> void:
 			if enemy.hp > 0 and enemy.next_action:
 				match enemy.next_action.action_type:
 					EnemyAction.ActionType.ATTACK:
-						await player.take_damage(enemy.next_action_value, true, enemy)
+						await player.take_damage(enemy.next_action_value)
 
 					EnemyAction.ActionType.PIERCING_ATTACK:
-						await player.take_piercing_damage(enemy.next_action_value, true, enemy)
+						await player.take_piercing_damage(enemy.next_action_value)
 
 					EnemyAction.ActionType.SHIELD, EnemyAction.ActionType.SUPPORT_SHIELD:
 						pass # Shield is applied proactively at the start of the player's turn.
@@ -299,7 +298,6 @@ func _on_character_clicked(character: Character) -> void:
 	
 	is_resolving_action = true
 
-	var is_targeting_player = character is Player
 	var total_roll = 0
 	var dice_to_discard: Array[Die] = []
 	
@@ -309,13 +307,11 @@ func _on_character_clicked(character: Character) -> void:
 	
 	for die_display in used_dice_displays:
 		var is_piercing = false
-		# Pierce effect should only be excluded from the main damage roll if targeting an enemy.
-		if not is_targeting_player:
-			if die_display.die.result_face:
-				for effect in die_display.die.result_face.effects:
-					if effect.process_effect == EffectLogic.pierce:
-						is_piercing = true
-						break
+		if die_display.die.result_face:
+			for effect in die_display.die.result_face.effects:
+				if effect.process_effect == EffectLogic.pierce:
+					is_piercing = true
+					break
 		
 		if not is_piercing:
 			total_roll += die_display.die.result_value
@@ -324,7 +320,7 @@ func _on_character_clicked(character: Character) -> void:
 	# Animate the dice, which will also remove them from the hand UI.
 	await _animate_dice_to_target(used_dice_displays, character)
 
-	if is_targeting_player:
+	if character is Player:
 		player.add_block(total_roll)
 		print("Player blocked for %d. Total block: %d" % [total_roll, player.block])
 		# Update player health preview immediately
@@ -339,24 +335,10 @@ func _on_character_clicked(character: Character) -> void:
 					var status_effect = StatusLibrary.get_status(status_id)
 					if status_effect and status_effect.is_debuff:
 						continue
-					# Pierce effect should not damage the player, it just acts as a normal block die.
-					# The value was already added to total_roll, so we just skip the effect processing.
-					if effect.process_effect == EffectLogic.pierce:
-						continue
-					# For self-targeted block+damage effects, the block value is already in total_roll.
-					# We must skip the effect to prevent adding block twice and taking damage,
-					# but manually trigger any other parts of the effect, like healing.
-					if effect.process_effect == EffectLogic.ss:
-						# Sword+Shield: Block is handled, no other effect to apply.
-						continue
-					if effect.process_effect == EffectLogic.ssh:
-						# Sword+Shield+Heal: Block is handled, just apply heal.
-						player.heal(die.result_value)
-						continue
 					_process_die_face_effect(effect, die.result_value, player, die)
 	else: # It's an enemy
 		var enemy_target: Enemy = character
-		await enemy_target.take_damage(total_roll, false, player)
+		await enemy_target.take_damage(total_roll, false)
 		print("Dealt %d damage to %s" % [total_roll, enemy_target.name])
 
 		# After the main action, process any effects from the dice faces
@@ -366,9 +348,6 @@ func _on_character_clicked(character: Character) -> void:
 		for die in dice_to_discard:
 			if die.result_face and not die.result_face.effects.is_empty():
 				for effect in die.result_face.effects:
-					# Spikes is a self-buff, it should not be applied to enemies.
-					if effect.name == "Spikes":
-						continue
 					_process_die_face_effect(effect, die.result_value, enemy_target, die)
 
 	player.discard(dice_to_discard)
@@ -631,9 +610,6 @@ func _on_player_dice_drawn(new_dice: Array[Die]):
 		die.roll()
 	await dice_pool_ui.animate_add_dice(new_dice, dice_bag_icon.get_global_rect().get_center())
 	
-	_update_total_dice_value()
-
-func _update_total_dice_value():
 	var current_total = 0
 	for die in dice_pool_ui.get_current_dice():
 		current_total += die.result_value
