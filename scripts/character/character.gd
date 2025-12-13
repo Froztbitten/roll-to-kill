@@ -13,6 +13,9 @@ var _is_dead := false
 var _resting_position: Vector2
 var _resting_rotation: float
 var _recoil_tween: Tween
+var _damage_sound: AudioStream
+var _audio_player: AudioStreamPlayer
+var _shield_sound: AudioStream
 
 @onready var health_bar = $HealthBar
 @onready var name_label: Label = $NameLabel
@@ -21,6 +24,12 @@ func _ready():
 	_resting_position = position
 	_resting_rotation = rotation
 	update_health_display()
+	
+	# Load the sound and create an audio player for damage effects.
+	_damage_sound = load("res://assets/ai/sounds/Hit_hurt 7.wav")
+	_shield_sound = load("res://assets/ai/sounds/shield.wav")
+	_audio_player = AudioStreamPlayer.new()
+	add_child(_audio_player)
 
 func take_damage(damage: int, play_recoil: bool = true, attacker: Character = null, is_attack_action: bool = false):
 	var old_block = block
@@ -38,8 +47,13 @@ func take_piercing_damage(damage: int, play_recoil: bool = true, attacker: Chara
 	await _apply_damage(damage, "piercing damage", block, play_recoil, attacker, is_attack_action)
 
 func _apply_damage(amount: int, type: String, old_block_value: int, play_recoil: bool = true, attacker: Character = null, is_attack_action: bool = false) -> void:
-	if amount > 0 and play_recoil:
-		_recoil(amount)
+	if amount > 0:
+		# Play the damage sound if one is loaded.
+		if _audio_player and _damage_sound:
+			_audio_player.stream = _damage_sound
+			_audio_player.play()
+		if play_recoil:
+			_recoil(amount)
 
 	var old_hp = hp
 	hp -= amount
@@ -90,6 +104,12 @@ func heal(amount: int):
 	print("%s healed for %d, has %d HP left." % [name, amount, hp])
 
 func add_block(amount: int):
+	if amount > 0 and self is Player:
+		# Play the shield sound if one is loaded.
+		if _audio_player and _shield_sound:
+			_audio_player.stream = _shield_sound
+			_audio_player.play()
+
 	var old_block = block
 	block += amount
 	if health_bar.has_method("update_with_animation"):

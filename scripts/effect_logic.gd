@@ -19,8 +19,8 @@ static func draw(_value: int, source: Character, _target: Character, _context: D
 	if source.has_method("draw_dice"):
 		source.draw_dice(1)
 
-static func spikes(value: int, _source: Character, target: Character, _context: Dictionary):
-	target.apply_charges_status("spikes", value) # This correctly applies the buff
+static func spikes(_value: int, _source: Character, target: Character, _context: Dictionary):
+	target.apply_charges_status("spikes", 1) # This correctly applies the buff
 
 # D6 Effects
 static func ss(value: int, source: Character, _target: Character, _context: Dictionary):
