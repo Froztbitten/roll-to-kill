@@ -14,6 +14,7 @@ var _round_dice_bag: Array[Die] = []
 var _dice_discard: Array[Die] = []
 var _held_dice: Array[Die] = []
 var gold: int = 0
+var _shield_sound: AudioStream
 @onready var status_display: HBoxContainer = $StatusEffectDisplay
 
 var dice_pool_size = 4
@@ -21,6 +22,7 @@ var dice_pool_size = 4
 
 func _ready():
 	super._ready()
+	_shield_sound = load("res://assets/ai/sounds/shield.wav")
 	statuses_changed.connect(_on_statuses_changed)
 	
 	# Define the initial deck
@@ -91,6 +93,15 @@ func add_to_game_bag(dice_to_add: Array[Die]):
 func add_to_round_bag(dice_to_add: Array[Die]):
 	_round_dice_bag.append_array(dice_to_add)
 	dice_bag_changed.emit(_round_dice_bag.size())
+
+func add_block(amount: int):
+	if amount > 0:
+		# Play the shield sound if one is loaded.
+		if audio_player and _shield_sound:
+			audio_player.stream = _shield_sound
+			audio_player.play()
+	
+	super.add_block(amount)
 
 func add_gold(new_gold: int):
 	print("gold changed: ", new_gold)

@@ -41,6 +41,9 @@ static func pierce(value: int, _source: Character, target: Character, _context: 
 	target.take_piercing_damage(value)
 
 static func riposte(value: int, _source: Character, target: Character, _context: Dictionary):
+	# Riposte is a self-buff for the player. It should not be applied to enemies.
+	if not target is Player:
+		return
 	target.apply_charges_status("riposte", value)
 
 static func trigger_riposte(value: int, defender: Character, attacker: Character) -> void:

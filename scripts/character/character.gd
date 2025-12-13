@@ -14,8 +14,8 @@ var _resting_position: Vector2
 var _resting_rotation: float
 var _recoil_tween: Tween
 var _damage_sound: AudioStream
-var _audio_player: AudioStreamPlayer
-var _shield_sound: AudioStream
+var audio_player: AudioStreamPlayer
+var _death_sound: AudioStream
 
 @onready var health_bar = $HealthBar
 @onready var name_label: Label = $NameLabel
@@ -27,9 +27,11 @@ func _ready():
 	
 	# Load the sound and create an audio player for damage effects.
 	_damage_sound = load("res://assets/ai/sounds/Hit_hurt 7.wav")
-	_shield_sound = load("res://assets/ai/sounds/shield.wav")
-	_audio_player = AudioStreamPlayer.new()
-	add_child(_audio_player)
+	_death_sound = load("res://assets/ai/sounds/death2.wav")
+	audio_player = AudioStreamPlayer.new()
+	# This node should continue processing when the game is paused for UI screens.
+	audio_player.process_mode = Node.PROCESS_MODE_ALWAYS
+	add_child(audio_player)
 
 func take_damage(damage: int, play_recoil: bool = true, attacker: Character = null, is_attack_action: bool = false):
 	var old_block = block
@@ -49,9 +51,9 @@ func take_piercing_damage(damage: int, play_recoil: bool = true, attacker: Chara
 func _apply_damage(amount: int, type: String, old_block_value: int, play_recoil: bool = true, attacker: Character = null, is_attack_action: bool = false) -> void:
 	if amount > 0:
 		# Play the damage sound if one is loaded.
-		if _audio_player and _damage_sound:
-			_audio_player.stream = _damage_sound
-			_audio_player.play()
+		if audio_player and _damage_sound:
+			audio_player.stream = _damage_sound
+			audio_player.play()
 		if play_recoil:
 			_recoil(amount)
 
@@ -104,12 +106,6 @@ func heal(amount: int):
 	print("%s healed for %d, has %d HP left." % [name, amount, hp])
 
 func add_block(amount: int):
-	if amount > 0 and self is Player:
-		# Play the shield sound if one is loaded.
-		if _audio_player and _shield_sound:
-			_audio_player.stream = _shield_sound
-			_audio_player.play()
-
 	var old_block = block
 	block += amount
 	if health_bar.has_method("update_with_animation"):
@@ -181,8 +177,9 @@ func tick_down_statuses():
 				return
 
 		# Skip ticking down for charge-based effects. Since Spikes is a permanent
-		# charge buff, we add an explicit check to ensure it never decays.
-		if status.charges != -1 or status.status_name == "Spikes":
+		# charge buff, we add an explicit check to ensure it never decays. Debuffs
+		# like Bleed and Burn are also charge-based and should not decay over time.
+		if status.charges != -1 or status.status_name == "Spikes" or status.status_name == "Bleed" or status.status_name == "Burn":
 			continue
 		
 		statuses[status] -= 1
@@ -241,10 +238,17 @@ func die() -> void:
 	if _is_dead: return
 	_is_dead = true
 	
+	# Play death sound for enemies
+	if self is Enemy and audio_player and _death_sound:
+		audio_player.stream = _death_sound
+		audio_player.play()
+	
 	hp = 0
 	emit_signal("died")
 
-	var tween = create_tween().set_parallel()
+	# This tween should continue processing when the game is paused for UI screens,
+	# so the death animation can complete in the background.
+	var tween = create_tween().set_parallel().set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
 	tween.tween_property(self, "modulate:a", 0.0, 0.4)
 	tween.tween_property(self, "scale", scale * 0.5, 0.4).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_IN)
 	await tween.finished

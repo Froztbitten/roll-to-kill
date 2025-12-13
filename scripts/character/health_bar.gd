@@ -52,7 +52,9 @@ func update_with_animation(old_hp: int, new_hp: int, old_block: int, new_block: 
 	shield_bar.value = old_hp + old_block
 
 	# Create a new tween to animate the bars catching up.
-	current_tween = create_tween()
+	# This tween should continue processing when the game is paused for UI screens,
+	# so the health bar animation can complete in the background.
+	current_tween = create_tween().set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
 	current_tween.tween_property(damage_preview_bar, "value", new_hp, 0.6)\
 		.set_trans(Tween.TRANS_CUBIC)\
 		.set_ease(Tween.EASE_OUT)\
