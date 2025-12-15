@@ -115,15 +115,11 @@ func player_turn() -> void:
 	# Proactively apply shields that are meant to be active for the player's turn
 	for enemy: Enemy in active_enemies:
 		if enemy.next_action:
-			var action_type = enemy.next_action.action_type
-			if action_type == EnemyAction.ActionType.SHIELD or action_type == EnemyAction.ActionType.SUPPORT_SHIELD:
+			# Shield Generator has special logic and applies its shield on its own turn.
+			if enemy.enemy_data.enemy_name == "Shield Generator":
+				continue # Shield Generator shields on its own turn.
+			if enemy.next_action.action_type == EnemyAction.ActionType.SHIELD:
 				enemy.add_block(enemy.next_action_value)
-				if action_type == EnemyAction.ActionType.SUPPORT_SHIELD:
-					var other_enemies = active_enemies.filter(func(e): return e != enemy)
-					if not other_enemies.is_empty():
-						var random_ally = other_enemies.pick_random()
-						random_ally.add_block(enemy.next_action_value)
-						print("%s shields %s for %d" % [enemy.name, random_ally.name, enemy.next_action_value])
 
 	total_incoming_damage_label.text = str(current_incoming_damage)
 	player.update_health_display(current_incoming_damage)
@@ -192,12 +188,33 @@ func enemy_turn() -> void:
 				match enemy.next_action.action_type:
 					EnemyAction.ActionType.ATTACK:
 						await player.take_damage(enemy.next_action_value, true, enemy, true)
+						if enemy.next_action.action_name == "Shrink Ray":
+							player.apply_duration_status("shrunk", 1)
+							print("Player has been shrunk!")
 
 					EnemyAction.ActionType.PIERCING_ATTACK:
 						await player.take_piercing_damage(enemy.next_action_value, true, enemy, true)
 
-					EnemyAction.ActionType.SHIELD, EnemyAction.ActionType.SUPPORT_SHIELD:
-						pass # Shield is applied proactively at the start of the player's turn.
+					EnemyAction.ActionType.SHIELD:
+						pass # Proactive shield.
+					EnemyAction.ActionType.SUPPORT_SHIELD:
+						# Support shields are resolved on the enemy's turn.
+						if enemy.enemy_data.enemy_name == "Shield Generator":
+							# Special case: Shield Generator shields all tinkerers.
+							var shield_amount = enemy.next_action_value
+							var tinkerers = active_enemies.filter(func(e): return e.enemy_data.enemy_name == "Gnomish Tinkerer")
+							for tinkerer in tinkerers:
+								if is_instance_valid(tinkerer):
+									tinkerer.add_block(shield_amount)
+									print("%s shields %s for %d" % [enemy.name, tinkerer.name, shield_amount])
+						else:
+							# Default behavior: Shield self and one random ally.
+							enemy.add_block(enemy.next_action_value)
+							var other_enemies = active_enemies.filter(func(e): return e != enemy)
+							if not other_enemies.is_empty():
+								var random_ally = other_enemies.pick_random()
+								random_ally.add_block(enemy.next_action_value)
+								print("%s shields self and %s for %d" % [enemy.name, random_ally.name, enemy.next_action_value])
 					EnemyAction.ActionType.HEAL_ALLY:
 						# Prioritize healing injured allies
 						var injured_allies = active_enemies.filter(func(e): return e != enemy and e.hp < e.max_hp)
@@ -208,7 +225,10 @@ func enemy_turn() -> void:
 						enemy.update_health_display()
 
 					EnemyAction.ActionType.SPAWN_MINIONS:
-						_spawn_boss_minions(3)
+						if enemy.enemy_data.enemy_name == "Evil Dice Tower":
+							_spawn_boss_minions(3)
+						elif enemy.enemy_data.enemy_name == "Gnomish Tinkerer":
+							_spawn_gnomish_invention()
 
 					EnemyAction.ActionType.BUFF_ADVANTAGE:
 						# Apply advantage to all allies (including self) for 2 rounds.
@@ -234,6 +254,12 @@ func enemy_turn() -> void:
 		await player_turn()
 
 func _spawn_boss_minions(count: int):
+	var current_enemy_count = get_active_enemies().size()
+	var max_to_spawn = 6 - current_enemy_count
+	if max_to_spawn <= 0:
+		print("Cannot spawn more minions, enemy limit of 6 reached.")
+		return
+
 	if enemy_spawner.minion_pool.is_empty():
 		push_warning("Minion pool is empty!")
 		return
@@ -242,16 +268,38 @@ func _spawn_boss_minions(count: int):
 	available_minions.shuffle()
 
 	var minions_to_spawn = []
-	for i in range(min(count, available_minions.size())):
+	var num_to_spawn = min(count, max_to_spawn)
+	for i in range(min(num_to_spawn, available_minions.size())):
 		minions_to_spawn.append(available_minions[i])
 
 	for minion_data in minions_to_spawn:
 		var new_enemy: Enemy = enemy_spawner.ENEMY_UI.instantiate()
 		new_enemy.enemy_data = minion_data
 		enemy_container.add_child(new_enemy)
-		new_enemy.died.connect(_on_enemy_died)
+		new_enemy.died.connect(_on_enemy_died.bind())
+		new_enemy.exploded.connect(_on_enemy_exploded)
 	
 	enemy_container.call_deferred("arrange_enemies")
+
+func _spawn_gnomish_invention():
+	if get_active_enemies().size() >= 6:
+		print("Cannot spawn invention, enemy limit of 6 reached.")
+		return
+
+	if enemy_spawner.invention_pool.is_empty():
+		push_warning("Gnomish invention pool is empty! Cannot spawn.")
+		return
+
+	var invention_data: EnemyData = enemy_spawner.invention_pool.pick_random()
+	var new_enemy: Enemy = enemy_spawner.ENEMY_UI.instantiate()
+	new_enemy.enemy_data = invention_data
+	enemy_container.add_child(new_enemy)
+	# Connect the death signal so the game knows when it's defeated.
+	new_enemy.died.connect(_on_enemy_died.bind())
+	new_enemy.exploded.connect(_on_enemy_exploded)
+	# Defer arrangement to prevent physics race conditions.
+	enemy_container.call_deferred("arrange_enemies")
+	print("Eureka! A %s has been summoned!" % invention_data.enemy_name)
 
 func _on_die_clicked(die_display):
 	# If the clicked die is already selected, deselect it. Otherwise, select it.
@@ -510,6 +558,7 @@ func start_new_round() -> void:
 	for enemy in spawned_enemies:
 		# Connect to each new enemy's death signal
 		enemy.died.connect(_on_enemy_died.bind())
+		enemy.exploded.connect(_on_enemy_exploded)
 	
 	# Wait for one frame. This is CRITICAL. It allows the engine to:
 	# 1. Process the `queue_free` from `clear_everything()`.
@@ -530,6 +579,10 @@ func get_active_enemies() -> Array[Enemy]:
 		if child is Enemy and not child._is_dead:
 			living_enemies.append(child)
 	return living_enemies
+
+func _on_enemy_exploded(damage: int, source: Enemy):
+	# This is a generic handler for any enemy that might explode.
+	await player.take_damage(damage, true, source, false)
 
 func _show_reward_screen():
 	var reward_dice = _generate_reward_dice()

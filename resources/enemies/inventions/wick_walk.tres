@@ -1,0 +1,24 @@
+[gd_resource type="Resource" script_class="EnemyData" load_steps=6 format=3 uid="uid://bjyh6kqa1q7ru"]
+
+[ext_resource type="Script" uid="uid://djeev1jhalfah" path="res://scripts/character/enemy/enemy_action.gd" id="1_action"]
+[ext_resource type="Script" path="res://scripts/dice/die.gd" id="2_die"]
+[ext_resource type="Script" uid="uid://dv6r7tro15lnf" path="res://scripts/character/enemy/enemy_data.gd" id="3_data"]
+[ext_resource type="Texture2D" uid="uid://coeewhwbotx83" path="res://assets/ai/characters/wick_walk.jpg" id="4_sprite"]
+
+[sub_resource type="Resource" id="d4_die"]
+script = ExtResource("2_die")
+sides = 4
+
+[sub_resource type="Resource" id="action_damned"]
+script = ExtResource("1_action")
+action_name = "...Damned if You Don't"
+self_destructs = true
+dice_to_roll = Array[ExtResource("2_die")]([SubResource("d4_die")])
+
+[resource]
+script = ExtResource("3_data")
+enemy_name = "Wick-wock"
+sprite_texture = ExtResource("4_sprite")
+minimum_hp = 0
+hp_dice = Array[ExtResource("2_die")]([SubResource("d4_die")])
+action_pool = Array[ExtResource("1_action")]([SubResource("action_damned")])

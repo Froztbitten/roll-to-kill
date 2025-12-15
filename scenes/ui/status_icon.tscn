@@ -1,6 +1,22 @@
-[gd_scene load_steps=2 format=3 uid="uid://d1e2f3g4h5i6"]
+[gd_scene load_steps=3 format=3 uid="uid://d1e2f3g4h5i6"]
 
 [ext_resource type="Script" path="res://scripts/ui/status_icon.gd" id="1_jklmn"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_1"]
+bg_color = Color(0, 0, 0, 0.74902)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.8, 0.8, 0.8, 1)
+corner_radius_top_left = 5
+corner_radius_top_right = 5
+corner_radius_bottom_right = 5
+corner_radius_bottom_left = 5
+content_margin_left = 5.0
+content_margin_top = 5.0
+content_margin_right = 5.0
+content_margin_bottom = 5.0
 
 [node name="StatusIcon" type="TextureRect"]
 custom_minimum_size = Vector2(24, 24)
@@ -25,3 +41,26 @@ theme_override_font_sizes/font_size = 12
 text = "1"
 horizontal_alignment = 2
 vertical_alignment = 2
+
+[node name="HoverTimer" type="Timer" parent="."]
+wait_time = 0.3
+one_shot = true
+
+[node name="Tooltip" type="PanelContainer" parent="."]
+visible = false
+z_index = 10
+layout_mode = 0
+theme_override_styles/panel = SubResource("StyleBoxFlat_1")
+
+[node name="DescriptionLabel" type="RichTextLabel" parent="Tooltip"]
+custom_minimum_size = Vector2(200, 0)
+layout_mode = 2
+bbcode_enabled = true
+text = "Status Name
+This is a sample effect description."
+fit_content = true
+autowrap_mode = 3
+
+[connection signal="mouse_entered" from="." to="." method="_on_mouse_entered"]
+[connection signal="mouse_exited" from="." to="." method="_on_mouse_exited"]
+[connection signal="timeout" from="HoverTimer" to="." method="_on_hover_timer_timeout"]

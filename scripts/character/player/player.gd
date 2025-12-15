@@ -15,7 +15,7 @@ var _dice_discard: Array[Die] = []
 var _held_dice: Array[Die] = []
 var gold: int = 0
 var _shield_sound: AudioStream
-@onready var status_display: HBoxContainer = $StatusEffectDisplay
+@onready var status_display: HBoxContainer = $StatusCanvas/StatusEffectDisplay
 
 var dice_pool_size = 4
 
@@ -41,8 +41,15 @@ func _ready():
 		add_to_game_bag([new_die])
 	print("added default dice bag of size: ", _game_dice_bag.size())
 
+func _process(delta):
+	# Manually position the status display relative to the player's global position,
+	# since it's on a separate CanvasLayer.
+	if is_instance_valid(status_display):
+		status_display.global_position = global_position + Vector2(-50, -50)
+
 func draw_hand():
 	var drawn_dice: Array[Die] = []
+	var is_shrunk = has_status("Shrunk")
 	for i in range(dice_pool_size):
 		if _round_dice_bag.size() == 0:
 			shuffle_dice_discard_into_bag()
@@ -51,11 +58,16 @@ func draw_hand():
 			var random_index = randi() % _round_dice_bag.size()
 			var drawn_die = _round_dice_bag.pop_at(random_index)
 			dice_bag_changed.emit(_round_dice_bag.size())
-			drawn_dice.append(drawn_die)
+			
+			if is_shrunk and drawn_die.sides > 2:
+				drawn_dice.append(_shrink_die(drawn_die))
+			else:
+				drawn_dice.append(drawn_die)
 	return drawn_dice
 
 func draw_dice(count: int):
 	var drawn_dice: Array[Die] = []
+	var is_shrunk = has_status("Shrunk")
 	for i in range(count):
 		if _round_dice_bag.size() == 0:
 			shuffle_dice_discard_into_bag()
@@ -64,13 +76,25 @@ func draw_dice(count: int):
 			var random_index = randi() % _round_dice_bag.size()
 			var drawn_die = _round_dice_bag.pop_at(random_index)
 			dice_bag_changed.emit(_round_dice_bag.size())
-			drawn_dice.append(drawn_die)
+			
+			if is_shrunk and drawn_die.sides > 2:
+				drawn_dice.append(_shrink_die(drawn_die))
+			else:
+				drawn_dice.append(drawn_die)
 	
 	if not drawn_dice.is_empty():
 		dice_drawn.emit(drawn_dice)
 
 func discard(dice_to_discard: Array[Die]):
-	_dice_discard.append_array(dice_to_discard)
+	var dice_to_actually_discard: Array[Die] = []
+	for die in dice_to_discard:
+		# If the die is a temporary shrunken version, discard its original instead.
+		# The shrunken die object will be automatically freed as it's no longer referenced.
+		if die.has_meta("original_die"):
+			dice_to_actually_discard.append(die.get_meta("original_die"))
+		else:
+			dice_to_actually_discard.append(die)
+	_dice_discard.append_array(dice_to_actually_discard)
 	dice_discard_changed.emit(_dice_discard.size())
 
 func shuffle_dice_discard_into_bag():
@@ -119,6 +143,30 @@ func get_and_clear_held_dice() -> Array[Die]:
 	var dice_to_return = _held_dice.duplicate()
 	_held_dice.clear()
 	return dice_to_return
+
+func _shrink_die(original_die: Die) -> Die:
+	var original_sides = original_die.sides
+	# Dice can't be smaller than 2 sides.
+	var new_sides = max(2, original_sides - 2)
+
+	# This check is now redundant because of the call site, but it's safe.
+	if new_sides == original_sides:
+		return original_die
+
+	var shrunken_die = Die.new(new_sides)
+	# Tag the new die with metadata so we can identify it later and revert it.
+	shrunken_die.set_meta("is_shrunken", true)
+	shrunken_die.set_meta("original_die", original_die)
+	
+	# Copy over the faces that still exist on the smaller die.
+	for i in range(new_sides):
+		# The original die's faces are indexed 0 to N-1, corresponding to values 1 to N.
+		# So we can just copy them directly.
+		if i < original_die.faces.size():
+			shrunken_die.faces[i] = original_die.faces[i].duplicate(true) # deep copy
+
+	print("Shrunk a D%d to a D%d" % [original_sides, new_sides])
+	return shrunken_die
 
 func heal(amount: int):
 	# Player's heal ability is less effective, healing for half the value.

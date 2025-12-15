@@ -1,4 +1,4 @@
-[gd_scene load_steps=7 format=3 uid="uid://b6g58237i1n0u"]
+[gd_scene load_steps=8 format=3 uid="uid://b6g58237i1n0u"]
 
 [ext_resource type="Script" uid="uid://cso1onax2k5xu" path="res://scripts/die_display.gd" id="1_abcde"]
 [ext_resource type="Shader" uid="uid://co08op5lj5rqk" path="res://assets/ai/shaders/die_display.gdshader" id="2_2u4x7"]
@@ -13,6 +13,21 @@ shader_parameter/glow_color = Color(0.99607843, 0.79607844, 0, 1)
 shader_parameter/glow_intensity = 4.00000019
 shader_parameter/glow_thickness = 8.00000038
 shader_parameter/glow_inside = false
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_1"]
+content_margin_left = 5.0
+content_margin_top = 5.0
+content_margin_right = 5.0
+content_margin_bottom = 5.0
+bg_color = Color(0, 0, 0, 0.74902)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+corner_radius_top_left = 5
+corner_radius_top_right = 5
+corner_radius_bottom_right = 5
+corner_radius_bottom_left = 5
 
 [node name="DieDisplay" type="Control"]
 custom_minimum_size = Vector2(50, 50)
@@ -100,3 +115,20 @@ columns = 2
 [node name="DieGridCell" parent="FaceGrid/Grid" instance=ExtResource("3_nmovm")]
 visible = false
 layout_mode = 2
+
+[node name="EffectTooltip" type="PanelContainer" parent="."]
+visible = false
+z_index = 10
+layout_mode = 0
+theme_override_styles/panel = SubResource("StyleBoxFlat_1")
+
+[node name="DescriptionLabel" type="RichTextLabel" parent="EffectTooltip"]
+custom_minimum_size = Vector2(300, 0)
+layout_mode = 2
+bbcode_enabled = true
+text = "This is a sample effect description that can wrap to multiple lines."
+fit_content = true
+
+[node name="HoverTimer" type="Timer" parent="."]
+wait_time = 0.5
+one_shot = true

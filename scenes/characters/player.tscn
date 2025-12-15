@@ -31,11 +31,11 @@ offset_top = -80.0
 offset_right = 50.0
 offset_bottom = -53.0
 
-[node name="StatusEffectDisplay" parent="." instance=ExtResource("4_status")]
-offset_left = -50.0
-offset_top = -50.0
-offset_right = 50.0
-offset_bottom = -26.0
+[node name="StatusCanvas" type="CanvasLayer" parent="."]
+layer = 2
+
+[node name="StatusEffectDisplay" parent="StatusCanvas" instance=ExtResource("4_status")]
+anchors_preset = 0
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="."]
 position = Vector2(1, -11)

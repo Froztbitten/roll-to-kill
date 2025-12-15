@@ -120,6 +120,8 @@ func apply_duration_status(status_id: String, duration: int = 1):
 		_new_statuses_this_turn.append(effect)
 		print("%s gained status '%s' for %d rounds." % [name, effect.status_name, duration])
 		statuses_changed.emit(statuses)
+	else:
+		push_warning("Attempted to apply unknown status with id: '%s'" % status_id)
 
 func apply_charges_status(status_id: String, charges: int = 1):
 	var effect: StatusEffect = StatusLibrary.get_status(status_id)
@@ -133,6 +135,8 @@ func apply_charges_status(status_id: String, charges: int = 1):
 		var total_charges = statuses[effect]
 		print("%s gained %d charges of '%s' status. Total: %d" % [name, charges, effect.status_name, total_charges])
 		statuses_changed.emit(statuses)
+	else:
+		push_warning("Attempted to apply unknown status with id: '%s'" % status_id)
 
 func remove_status(status_id: String):
 	var effect: StatusEffect = StatusLibrary.get_status(status_id)

@@ -13,14 +13,14 @@ static func aoe(value: int, _source: Character, _target: Character, context: Dic
 	# This effect should only damage the *other* enemies.
 	for enemy in enemies:
 		if enemy != _target:
-			enemy.take_damage(value)
+			await enemy.take_damage(value, true, _source, true)
 
 static func draw(_value: int, source: Character, _target: Character, _context: Dictionary):
 	if source.has_method("draw_dice"):
 		source.draw_dice(1)
 
-static func spikes(_value: int, _source: Character, target: Character, _context: Dictionary):
-	target.apply_charges_status("spikes", 1) # This correctly applies the buff
+static func spikes(value: int, _source: Character, target: Character, _context: Dictionary):
+	target.apply_charges_status("spikes", value)
 
 # D6 Effects
 static func ss(value: int, source: Character, _target: Character, _context: Dictionary):
@@ -38,7 +38,7 @@ static func bleed(value: int, _source: Character, target: Character, _context: D
 	target.apply_duration_status("bleed", value)
 
 static func pierce(value: int, _source: Character, target: Character, _context: Dictionary):
-	target.take_piercing_damage(value)
+	await target.take_piercing_damage(value, true, _source, true)
 
 static func riposte(value: int, _source: Character, target: Character, _context: Dictionary):
 	# Riposte is a self-buff for the player. It should not be applied to enemies.
@@ -50,7 +50,7 @@ static func trigger_riposte(value: int, defender: Character, attacker: Character
 	# The defender removes the status and deals damage back to the attacker.
 	print("%s's riposte triggers, dealing %d damage to %s" % [defender.name, value, attacker.name])
 	defender.remove_status("riposte")
-	await attacker.take_damage(value, true, defender)
+	await attacker.take_damage(value, true, defender, false)
 
 # D10 Effects
 static func echoing_impact(value: int, _source: Character, target: Character, _context: Dictionary):
@@ -63,7 +63,7 @@ static func trigger_echoing_impact(target: Character):
 	var status_effect = StatusLibrary.get_status("echoing_impact")
 	if target.statuses.has(status_effect):
 		var charges = target.statuses[status_effect]
-		await target.take_damage(charges)
+		await target.take_damage(charges, true, null, false)
 		# The removal is now handled by the caller (tick_down_statuses)
 
 static func splash_damage(value: int, _source: Character, target: Character, context: Dictionary):
@@ -76,11 +76,12 @@ static func splash_damage(value: int, _source: Character, target: Character, con
 		if enemies[i] == target:
 			idx = i
 			break
+	var splash_val = ceili(value / 2.0)
 	if idx != -1:
 		if idx > 0:
-			enemies[idx - 1].take_damage(ceil(value / 2.0))
+			await enemies[idx - 1].take_damage(splash_val, true, _source, true)
 		if idx < enemies.size() - 1:
-			enemies[idx + 1].take_damage(ceil(value / 2.0))
+			await enemies[idx + 1].take_damage(splash_val, true, _source, true)
 
 static func wormhole(_value: int, _source: Character, _target: Character, context: Dictionary):
 	var die = context.get("die")
@@ -93,6 +94,7 @@ static func daze(value: int, _source: Character, target: Character, _context: Di
 
 static func shieldbreak(_value: int, _source: Character, target: Character, _context: Dictionary):
 	target.block = 0
+	target.update_health_display()
 
 static func cleave(value: int, _source: Character, _target: Character, context: Dictionary):
 	# Do not trigger Cleave damage if the player is targeting themselves (e.g., for block).
@@ -103,4 +105,4 @@ static func cleave(value: int, _source: Character, _target: Character, context: 
 	# This effect should only damage the *other* enemies.
 	for enemy in enemies:
 		if enemy != _target:
-			enemy.take_damage(value)
+			await enemy.take_damage(value, true, _source, true)

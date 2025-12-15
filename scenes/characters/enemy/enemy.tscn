@@ -48,7 +48,8 @@ offset_right = -60.0
 grow_horizontal = 2
 
 [node name="StatusEffectDisplay" parent="." instance=ExtResource("5_status")]
-offset_left = -19.0
-offset_top = -5.0
-offset_right = 81.0
-offset_bottom = 19.0
+[node name="StatusCanvas" type="CanvasLayer" parent="."]
+layer = 2
+
+[node name="StatusEffectDisplay" parent="StatusCanvas" instance=ExtResource("5_status")]
+anchors_preset = 0

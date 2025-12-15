@@ -16,6 +16,9 @@ var die: Die:
 @onready var face_grid: PanelContainer = $FaceGrid
 @onready var effect_name_label: Label = $EffectNameLabel
 @onready var grid_container: GridContainer = $FaceGrid/Grid
+@onready var effect_tooltip: PanelContainer = $EffectTooltip
+@onready var tooltip_label: RichTextLabel = $EffectTooltip/DescriptionLabel
+@onready var hover_timer: Timer = $HoverTimer
 
 var dice_pool = null
 
@@ -26,6 +29,10 @@ func _ready():
 	# parameters don't affect any others.
 	if icon_texture.material:
 		icon_texture.material = icon_texture.material.duplicate()
+	# Make the tooltip render on top of other UI elements and ensure it's hidden at start.
+	effect_tooltip.set_as_top_level(true)
+	effect_tooltip.visible = false
+	hover_timer.timeout.connect(_on_hover_timer_timeout)
 
 func set_die(value: Die):
 	die = value
@@ -132,14 +139,34 @@ func deselect(animated: bool = true):
 	else:
 		main_display.scale = Vector2(1.0, 1.0)
 
+func _on_hover_timer_timeout():
+	# This function is called after the hover delay.
+	# Check if the rolled face has an effect and a description.
+	if die and die.result_face and not die.result_face.effects.is_empty():
+		var effect: DieFaceEffect = die.result_face.effects[0]
+		if not effect.description.is_empty():
+			var description_text = effect.description
+			# Replace placeholders with actual calculated values.
+			description_text = description_text.replace("{value}", str(die.result_value))
+			description_text = description_text.replace("{value / 2}", str(ceili(die.result_value / 2.0)))
+			
+			tooltip_label.text = description_text
+			
+			# Position the tooltip to the right of the die display.
+			effect_tooltip.global_position = global_position + Vector2(size.x + 5, 0)
+			effect_tooltip.visible = true
+
 func _on_mouse_entered():
 	face_grid.visible = true
 	if not effect_name_label.text.is_empty():
 		effect_name_label.visible = true
+	hover_timer.start()
 
 func _on_mouse_exited():
 	face_grid.visible = false
 	effect_name_label.visible = false
+	hover_timer.stop()
+	effect_tooltip.visible = false
 
 func _gui_input(event: InputEvent):
 	if event is InputEventMouseButton:
@@ -163,9 +190,12 @@ func _notification(what):
 		face_grid.visible = true
 		if not effect_name_label.text.is_empty():
 			effect_name_label.visible = true
+		hover_timer.start()
 	elif what == NOTIFICATION_MOUSE_EXIT:
 		face_grid.visible = false
 		effect_name_label.visible = false
+		hover_timer.stop()
+		effect_tooltip.visible = false
 	elif what == NOTIFICATION_DRAG_END:
 		# If the drag ended and this die display was not successfully dropped
 		# (i.e., it was not reparented), make it visible again.

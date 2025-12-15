@@ -4,6 +4,7 @@ extends Node
 
 @export var encounter_pool: Array[EncounterData]
 @export var minion_pool: Array[EnemyData]
+@export var invention_pool: Array[EnemyData]
 
 const ENEMY_UI = preload("res://scenes/characters/enemy/enemy.tscn")
 
@@ -12,17 +13,28 @@ func _ready():
 	# Auto-populate the minion pool if it's empty, for convenience.
 	if minion_pool.is_empty():
 		var minion_paths = [
-			"res://resources/enemies/d4.tres",
-			"res://resources/enemies/d6.tres",
-			"res://resources/enemies/d8.tres",
-			"res://resources/enemies/d10.tres",
-			"res://resources/enemies/d12.tres",
-			"res://resources/enemies/d20.tres"
+			"res://resources/enemies/dice/d4.tres",
+			"res://resources/enemies/dice/d6.tres",
+			"res://resources/enemies/dice/d8.tres",
+			"res://resources/enemies/dice/d10.tres",
+			"res://resources/enemies/dice/d12.tres",
+			"res://resources/enemies/dice/d20.tres"
 		]
 		for path in minion_paths:
 			var res = load(path)
 			if res:
 				minion_pool.append(res)
+	# Auto-populate the invention pool if it's empty, for convenience.
+	if invention_pool.is_empty():
+		var invention_paths = [
+			"res://resources/enemies/inventions/koko_the_pelican.tres",
+			"res://resources/enemies/inventions/wick_wock.tres",
+			"res://resources/enemies/inventions/shield_generator.tres"
+		]
+		for path in invention_paths:
+			var res = load(path)
+			if res:
+				invention_pool.append(res)
 
 func spawn_random_encounter(encounter_type: EncounterData.EncounterType):	
 	var chosen_encounter: EncounterData = encounter_pool.filter(
@@ -56,6 +68,17 @@ func _spawn_enemies(encounter: EncounterData, count: int) -> Array:
 		enemies_to_spawn_data.append(warchief_data)
 		for i in range(count - 1):
 			enemies_to_spawn_data.append(bodyguard_data)
+	elif encounter.resource_path.get_file() == "gnomes.tres":
+		# Special logic for Gnomes encounter: 2-3 tinkerers. If 2, add a random invention.
+		var tinkerer_data = encounter.enemy_types[0]
+		for i in range(count):
+			enemies_to_spawn_data.append(tinkerer_data)
+		
+		if count == 2 and not invention_pool.is_empty():
+			var random_invention = invention_pool.pick_random()
+			enemies_to_spawn_data.append(random_invention)
+		elif count == 2:
+			push_warning("Invention pool is empty, cannot add to Gnomes encounter.")
 	else:
 		# Default logic: pick randomly from the encounter's pool
 		for i in range(count):

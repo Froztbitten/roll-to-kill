@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="StatusEffect" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/status_effect.gd" id="1_abcde"]
+[ext_resource type="Texture2D" path="res://assets/ai/ui/shield.svg" id="2_fghij"]
+
+[resource]
+script = ExtResource("1_abcde")
+status_name = "Shrunk"
+description = "All dice drawn this turn are 2 sides smaller (min 2)."
+icon = ExtResource("2_fghij")
+is_debuff = true

@@ -3,6 +3,8 @@ class_name Enemy
 
 @export var enemy_data: EnemyData
 
+signal exploded(damage, source)
+
 var next_action: EnemyAction
 var next_action_value: int = 0
 var _is_charging := false
@@ -10,7 +12,7 @@ var _turn_count := 0
 
 @onready var intent_display: Control = $EnemyIntentDisplay
 @onready var sprite: TextureRect = $Sprite2D
-@onready var status_display: HBoxContainer = $StatusEffectDisplay
+@onready var status_display: HBoxContainer = $StatusCanvas/StatusEffectDisplay
 
 func _ready():
 	super._ready()
@@ -26,6 +28,12 @@ func _ready():
 		return
 
 	setup()
+
+func _process(delta):
+	# Manually position the status display relative to the enemy's global position,
+	# since it's on a separate CanvasLayer.
+	if is_instance_valid(status_display):
+		status_display.global_position = global_position + Vector2(-19, -5)
 
 func setup():
 	"""Initializes the enemy's stats and appearance from its EnemyData resource."""
@@ -173,3 +181,14 @@ func _center_intent_display():
 	var sprite_center_y = sprite.position.y + (sprite.size.y / 2)
 	intent_display.position.x = -150 # Position it to the left of the enemy sprite.
 	intent_display.position.y = sprite_center_y - (intent_display.size.y / 2)
+
+func die() -> void:
+	# Override the Character's die() function to add special on-death effects.
+	if not _is_dead and enemy_data and enemy_data.enemy_name == "Wick-wock":
+		var explosion_die = Die.new(8)
+		var damage = explosion_die.roll()
+		print("Wick-wock explodes, dealing %d damage to the player!" % damage)
+		emit_signal("exploded", damage, self)
+
+	# Call the original die function to handle the rest of the death process.
+	super.die()
