@@ -138,6 +138,24 @@ func apply_charges_status(status_id: String, charges: int = 1):
 	else:
 		push_warning("Attempted to apply unknown status with id: '%s'" % status_id)
 
+func apply_effect(effect: StatusEffect, value: int):
+	if statuses.has(effect):
+		if effect.charges != -1:
+			statuses[effect] += value
+			print("%s gained %d charges of '%s'. Total: %d" % [name, value, effect.status_name, statuses[effect]])
+		else:
+			statuses[effect] = value
+			print("%s gained status '%s' for %d rounds." % [name, effect.status_name, value])
+	else:
+		statuses[effect] = value
+		if effect.charges != -1:
+			print("%s gained %d charges of '%s'." % [name, value, effect.status_name])
+		else:
+			print("%s gained status '%s' for %d rounds." % [name, effect.status_name, value])
+
+	_new_statuses_this_turn.append(effect)
+	statuses_changed.emit(statuses)
+
 func remove_status(status_id: String):
 	var effect: StatusEffect = StatusLibrary.get_status(status_id)
 	if effect:
@@ -241,6 +259,10 @@ func _recoil(damage_amount: int) -> void:
 func die() -> void:
 	if _is_dead: return
 	_is_dead = true
+	
+	# Clear statuses so icons disappear immediately upon death.
+	statuses.clear()
+	statuses_changed.emit(statuses)
 	
 	# Play death sound for enemies
 	if self is Enemy and audio_player and _death_sound:

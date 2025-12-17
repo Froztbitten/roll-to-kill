@@ -59,10 +59,7 @@ func draw_hand():
 			var drawn_die = _round_dice_bag.pop_at(random_index)
 			dice_bag_changed.emit(_round_dice_bag.size())
 			
-			if is_shrunk and drawn_die.sides > 2:
-				drawn_dice.append(_shrink_die(drawn_die))
-			else:
-				drawn_dice.append(drawn_die)
+			drawn_dice.append(shrink_die(drawn_die) if is_shrunk else drawn_die)
 	return drawn_dice
 
 func draw_dice(count: int):
@@ -77,23 +74,20 @@ func draw_dice(count: int):
 			var drawn_die = _round_dice_bag.pop_at(random_index)
 			dice_bag_changed.emit(_round_dice_bag.size())
 			
-			if is_shrunk and drawn_die.sides > 2:
-				drawn_dice.append(_shrink_die(drawn_die))
-			else:
-				drawn_dice.append(drawn_die)
+			drawn_dice.append(shrink_die(drawn_die) if is_shrunk else drawn_die)
 	
 	if not drawn_dice.is_empty():
 		dice_drawn.emit(drawn_dice)
 
 func discard(dice_to_discard: Array[Die]):
 	var dice_to_actually_discard: Array[Die] = []
-	for die in dice_to_discard:
+	for d in dice_to_discard:
 		# If the die is a temporary shrunken version, discard its original instead.
 		# The shrunken die object will be automatically freed as it's no longer referenced.
-		if die.has_meta("original_die"):
-			dice_to_actually_discard.append(die.get_meta("original_die"))
-		else:
-			dice_to_actually_discard.append(die)
+		var die_to_add = d
+		while die_to_add.has_meta("original_die"):
+			die_to_add = die_to_add.get_meta("original_die")
+		dice_to_actually_discard.append(die_to_add)
 	_dice_discard.append_array(dice_to_actually_discard)
 	dice_discard_changed.emit(_dice_discard.size())
 
@@ -140,16 +134,32 @@ func hold_die(die_to_hold: Die):
 	_held_dice.append(die_to_hold)
 
 func get_and_clear_held_dice() -> Array[Die]:
-	var dice_to_return = _held_dice.duplicate()
+	var dice_to_return: Array[Die] = []
+	var is_shrunk = has_status("Shrunk")
+	
+	for held_die in _held_dice:
+		if is_shrunk:
+			# If we are shrunken, ensure the die is shrunken.
+			dice_to_return.append(shrink_die(held_die))
+		else:
+			# If we are NOT shrunken, ensure the die is normal.
+			if held_die.has_meta("is_shrunken") and held_die.has_meta("original_die"):
+				dice_to_return.append(held_die.get_meta("original_die"))
+			else:
+				dice_to_return.append(held_die)
+	
 	_held_dice.clear()
 	return dice_to_return
 
-func _shrink_die(original_die: Die) -> Die:
-	var original_sides = original_die.sides
-	# Dice can't be smaller than 2 sides.
-	var new_sides = max(2, original_sides - 2)
+func shrink_die(original_die: Die) -> Die:
+	if original_die.has_meta("is_shrunken"):
+		return original_die
 
-	# This check is now redundant because of the call site, but it's safe.
+	if original_die.sides <= 2:
+		return original_die
+
+	var original_sides = original_die.sides
+	var new_sides = max(2, original_sides - 2)
 	if new_sides == original_sides:
 		return original_die
 
@@ -161,9 +171,14 @@ func _shrink_die(original_die: Die) -> Die:
 	# Copy over the faces that still exist on the smaller die.
 	for i in range(new_sides):
 		# The original die's faces are indexed 0 to N-1, corresponding to values 1 to N.
-		# So we can just copy them directly.
+		# We manually copy properties to ensure effects are preserved correctly.
 		if i < original_die.faces.size():
-			shrunken_die.faces[i] = original_die.faces[i].duplicate(true) # deep copy
+			var original_face = original_die.faces[i]
+			var new_face = shrunken_die.faces[i]
+			
+			new_face.value = original_face.value
+			# Shallow copy the effects array to share the effect resources.
+			new_face.effects = original_face.effects.duplicate()
 
 	print("Shrunk a D%d to a D%d" % [original_sides, new_sides])
 	return shrunken_die

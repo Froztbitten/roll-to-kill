@@ -43,6 +43,7 @@ func _ready() -> void:
 	player.dice_discard_changed.connect(_update_dice_discard)
 	player.abilities_changed.connect(_add_player_ability)
 	player.dice_drawn.connect(_on_player_dice_drawn)
+	player.statuses_changed.connect(_on_player_statuses_changed)
 
 	dice_pool_ui.die_clicked.connect(_on_die_clicked)
 	dice_pool_ui.die_drag_started.connect(_on_die_drag_started)
@@ -115,11 +116,24 @@ func player_turn() -> void:
 	# Proactively apply shields that are meant to be active for the player's turn
 	for enemy: Enemy in active_enemies:
 		if enemy.next_action:
-			# Shield Generator has special logic and applies its shield on its own turn.
-			if enemy.enemy_data.enemy_name == "Shield Generator":
-				continue # Shield Generator shields on its own turn.
 			if enemy.next_action.action_type == EnemyAction.ActionType.SHIELD:
 				enemy.add_block(enemy.next_action_value)
+			elif enemy.next_action.action_type == EnemyAction.ActionType.SUPPORT_SHIELD:
+				if enemy.enemy_data.enemy_name == "Shield Generator":
+					# Special case: Shield Generator shields all tinkerers.
+					var shield_amount = enemy.next_action_value
+					var tinkerers = active_enemies.filter(func(e): return e.enemy_data.enemy_name == "Gnomish Tinkerer")
+					for tinkerer in tinkerers:
+						tinkerer.add_block(shield_amount)
+						print("%s shields %s for %d" % [enemy.name, tinkerer.name, shield_amount])
+				else:
+					# Default behavior: Shield self and one random ally.
+					enemy.add_block(enemy.next_action_value)
+					var other_enemies = active_enemies.filter(func(e): return e != enemy)
+					if not other_enemies.is_empty():
+						var random_ally = other_enemies.pick_random()
+						random_ally.add_block(enemy.next_action_value)
+						print("%s shields self and %s for %d" % [enemy.name, random_ally.name, enemy.next_action_value])
 
 	total_incoming_damage_label.text = str(current_incoming_damage)
 	player.update_health_display(current_incoming_damage)
@@ -198,23 +212,7 @@ func enemy_turn() -> void:
 					EnemyAction.ActionType.SHIELD:
 						pass # Proactive shield.
 					EnemyAction.ActionType.SUPPORT_SHIELD:
-						# Support shields are resolved on the enemy's turn.
-						if enemy.enemy_data.enemy_name == "Shield Generator":
-							# Special case: Shield Generator shields all tinkerers.
-							var shield_amount = enemy.next_action_value
-							var tinkerers = active_enemies.filter(func(e): return e.enemy_data.enemy_name == "Gnomish Tinkerer")
-							for tinkerer in tinkerers:
-								if is_instance_valid(tinkerer):
-									tinkerer.add_block(shield_amount)
-									print("%s shields %s for %d" % [enemy.name, tinkerer.name, shield_amount])
-						else:
-							# Default behavior: Shield self and one random ally.
-							enemy.add_block(enemy.next_action_value)
-							var other_enemies = active_enemies.filter(func(e): return e != enemy)
-							if not other_enemies.is_empty():
-								var random_ally = other_enemies.pick_random()
-								random_ally.add_block(enemy.next_action_value)
-								print("%s shields self and %s for %d" % [enemy.name, random_ally.name, enemy.next_action_value])
+						pass # Proactive shield.
 					EnemyAction.ActionType.HEAL_ALLY:
 						# Prioritize healing injured allies
 						var injured_allies = active_enemies.filter(func(e): return e != enemy and e.hp < e.max_hp)
@@ -230,7 +228,7 @@ func enemy_turn() -> void:
 						elif enemy.enemy_data.enemy_name == "Gnomish Tinkerer":
 							_spawn_gnomish_invention()
 
-					EnemyAction.ActionType.BUFF_ADVANTAGE:
+					EnemyAction.ActionType.BUFF:
 						# Apply advantage to all allies (including self) for 2 rounds.
 						# A duration of 2 means it lasts this enemy turn and the next.
 						for e in active_enemies:
@@ -239,11 +237,25 @@ func enemy_turn() -> void:
 					EnemyAction.ActionType.DO_NOTHING:
 						pass # Do nothing, as intended.
 
+					EnemyAction.ActionType.DEBUFF:
+						if enemy.next_action.status_id != "":
+							var effect = StatusLibrary.get_status(enemy.next_action.status_id)
+							if effect:
+								var value = 1
+								if effect.charges != -1:
+									if enemy.next_action.charges > -1:
+										value = enemy.next_action.charges
+								else:
+									if enemy.next_action.duration > -1:
+										value = enemy.next_action.duration
+								
+								player.apply_effect(effect, value)
+
 					EnemyAction.ActionType.FLEE:
-						await enemy.die()
+						enemy.die()
 
 				if enemy.next_action.self_destructs:
-					await enemy.die()
+					enemy.die()
 
 				enemy.clear_intent()
 			
@@ -685,6 +697,63 @@ func _on_player_dice_drawn(new_dice: Array[Die]):
 	await dice_pool_ui.animate_add_dice(new_dice, dice_bag_icon.get_global_rect().get_center())
 	
 	_update_total_dice_value()
+
+func _on_player_statuses_changed(statuses: Dictionary):
+	# Check if the player is currently shrunk
+	var is_shrunk = false
+	for effect in statuses:
+		if effect.status_name == "Shrunk":
+			is_shrunk = true
+			break
+	
+	# If the player is NOT shrunk, revert any shrunken dice currently in the UI.
+	if not is_shrunk:
+		# 1. Revert dice in the main pool
+		for die_display in dice_pool_ui.dice_pool_display:
+			if is_instance_valid(die_display) and die_display.die and die_display.die.has_meta("is_shrunken"):
+				var original = die_display.die.get_meta("original_die")
+				original.roll()
+				die_display.die = original # Triggers visual update
+				print("Reverted shrunken die in pool.")
+
+		# 2. Revert dice currently slotted in abilities
+		for ability_ui in abilities_ui.get_children():
+			if ability_ui is AbilityUI:
+				for slot in ability_ui.dice_slots_container.get_children():
+					if slot is DieSlotUI and slot.current_die_display:
+						var die_display = slot.current_die_display
+						if is_instance_valid(die_display) and die_display.die and die_display.die.has_meta("is_shrunken"):
+							var original = die_display.die.get_meta("original_die")
+							original.roll()
+							die_display.die = original # Triggers visual update
+							print("Reverted shrunken die in ability slot.")
+	else:
+		# If the player IS shrunk, ensure all active dice are shrunk.
+		# 1. Shrink dice in the main pool
+		for die_display in dice_pool_ui.dice_pool_display:
+			if is_instance_valid(die_display) and die_display.die:
+				var old_die = die_display.die
+				var new_die = player.shrink_die(old_die)
+				if new_die != old_die:
+					new_die.roll()
+					die_display.die = new_die # Triggers visual update
+					print("Shrunk die in pool due to status.")
+
+		# 2. Shrink dice currently slotted in abilities
+		for ability_ui in abilities_ui.get_children():
+			if ability_ui is AbilityUI:
+				for slot in ability_ui.dice_slots_container.get_children():
+					if slot is DieSlotUI and slot.current_die_display:
+						var die_display = slot.current_die_display
+						if is_instance_valid(die_display) and die_display.die:
+							var old_die = die_display.die
+							var new_die = player.shrink_die(old_die)
+							if new_die != old_die:
+								new_die.roll()
+								die_display.die = new_die # Triggers visual update
+								print("Shrunk die in ability slot due to status.")
+		
+		_update_total_dice_value()
 
 func _update_total_dice_value():
 	var current_total = 0

@@ -9,32 +9,32 @@ func _ready():
 	_define_statuses()
 
 func _define_statuses():
-	statuses["advantage"] = StatusEffect.new(
-		"Advantage",
+	statuses["advantageous"] = StatusEffect.new(
+		"Advantageous",
 		false,
 		"Rolls each die twice and takes the higher result.",
 		load("res://assets/ai/status_icons/advantage.svg")
 	)
-	statuses["bleed"] = StatusEffect.new(
-		"Bleed",
+	statuses["bleeding"] = StatusEffect.new(
+		"Bleeding",
 		true,
 		"Take(s) X damage at the end of every turn or until healed.",
 		load("res://assets/ai/status_icons/bleed.svg")
 	)
-	statuses["spikes"] = StatusEffect.new(
-		"Spikes",
+	statuses["spiky"] = StatusEffect.new(
+		"Spiky",
 		false,
 		"Attacker takes X damage after resolving their action.",
 		load("res://assets/ai/status_icons/spikes.svg")
 	)
-	statuses["riposte"] = StatusEffect.new(
-		"Riposte",
+	statuses["ri-posted up"] = StatusEffect.new(
+		"Ri-posted up",
 		false,
 		"Parry the next attack, dealing X damage to the attacker instead.",
 		load("res://assets/ai/status_icons/riposte.svg")
 	)
-	statuses["daze"] = StatusEffect.new(
-		"Daze",
+	statuses["dazed"] = StatusEffect.new(
+		"Dazed",
 		true,
 		"",
 		load("res://assets/ai/status_icons/daze.svg")
@@ -44,6 +44,12 @@ func _define_statuses():
 		true,
 		"Take(s) X damage at the end of next turn.",
 		load("res://assets/ai/status_icons/echoing_impact.svg")
+	)
+	statuses["shrunk"] = StatusEffect.new(
+		"Shrunk",
+		true,
+		"Shrinks all dice 1 size smaller for X turns.",
+		load("res://assets/ai/status_icons/shrink.svg")
 	)
 
 func get_status(id: String) -> StatusEffect:

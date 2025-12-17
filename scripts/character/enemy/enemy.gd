@@ -78,7 +78,7 @@ func declare_intent(active_enemies: Array):
 			
 			if other_enemy_count < 2 or has_status("Advantage"):
 				# Remove Inspiration if less than 2 allies are present OR if advantage is already active on the boss.
-				possible_actions = possible_actions.filter(func(a): return a.action_type != EnemyAction.ActionType.BUFF_ADVANTAGE)
+				possible_actions = possible_actions.filter(func(a): return a.action_type != EnemyAction.ActionType.BUFF)
 
 			# If filtering leaves no actions, default to the shield move as a safe fallback.
 			if possible_actions.is_empty():
@@ -189,6 +189,12 @@ func die() -> void:
 		var damage = explosion_die.roll()
 		print("Wick-wock explodes, dealing %d damage to the player!" % damage)
 		emit_signal("exploded", damage, self)
+
+	# Explicitly hide the status display to ensure debuffs are visually removed immediately.
+	if status_display:
+		status_display.visible = false
+		if status_display.get_parent() is CanvasLayer:
+			status_display.get_parent().visible = false
 
 	# Call the original die function to handle the rest of the death process.
 	super.die()

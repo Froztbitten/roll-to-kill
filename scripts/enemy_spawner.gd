@@ -28,7 +28,7 @@ func _ready():
 	if invention_pool.is_empty():
 		var invention_paths = [
 			"res://resources/enemies/inventions/koko_the_pelican.tres",
-			"res://resources/enemies/inventions/wick_wock.tres",
+			"res://resources/enemies/inventions/wick_walk.tres",
 			"res://resources/enemies/inventions/shield_generator.tres"
 		]
 		for path in invention_paths:
