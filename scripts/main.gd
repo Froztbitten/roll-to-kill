@@ -24,6 +24,7 @@ enum Turn {PLAYER, ENEMY}
 
 const ABILITY_UI_SCENE = preload("res://scenes/ui/ability.tscn")
 const DIE_DISPLAY_SCENE = preload("res://scenes/dice/die_display.tscn")
+const ARROW_SCENE = preload("res://scenes/ui/arrow.tscn")
 var selected_dice_display: Array[DieDisplay] = []
 var current_incoming_damage: int = 0
 var is_resolving_action := false
@@ -35,10 +36,15 @@ const BOSS_ROUND = 10
 
 # Testing values
 var starting_abilities: Array[AbilityData] = [load("res://resources/abilities/heal.tres"), 
-	load("res://resources/abilities/sweep.tres"), load("res://resources/abilities/hold.tres")]
+	load("res://resources/abilities/sweep.tres"), load("res://resources/abilities/hold.tres"),
+	load("res://resources/abilities/roulette.tres"), load("res://resources/abilities/explosive_shot.tres")]
 
 var debug_encounter_ui: Control
 var pause_menu_ui: Control
+var debug_ability_ui: Control
+
+var active_targeting_ability: AbilityUI = null
+var targeting_arrow: Line2D = null
 
 func _ready() -> void:
 	# Set process modes to allow the MainGame script to handle input while the game is paused.
@@ -202,7 +208,8 @@ func _on_ability_activated(ability_ui: AbilityUI):
 		var damage = ceili(die_value / 2.0)
 		
 		for enemy in get_active_enemies():
-			enemy.take_damage(damage, true, player, true)
+			await enemy.take_damage(damage, true, player, true)
+			await _apply_all_die_effects(slotted_dice_displays[0].die, enemy, damage)
 		print("Resolved 'Sweep' ability for %d damage to all enemies." % damage)
 	elif ability_data.title == "Hold":
 		if slotted_dice_displays.is_empty(): return
@@ -210,6 +217,41 @@ func _on_ability_activated(ability_ui: AbilityUI):
 		var die_to_hold = slotted_dice_displays[0].die
 		player.hold_die(die_to_hold)
 		print("Resolved 'Hold' ability. Die with value %d will be kept." % die_to_hold.result_value)
+	elif ability_data.title == "Roulette":
+		if slotted_dice_displays.is_empty(): return
+		
+		var die_display = slotted_dice_displays[0]
+		var die_value = die_display.die.result_value
+		var damage = die_value * 2
+		
+		var enemies = get_active_enemies()
+		if not enemies.is_empty():
+			var target = enemies.pick_random()
+			
+			# Create a visual copy for the animation so the original stays in the slot
+			var temp_display = DIE_DISPLAY_SCENE.instantiate()
+			$UI.add_child(temp_display)
+			temp_display.set_die(die_display.die)
+			var rect = die_display.get_global_rect()
+			temp_display.global_position = rect.position
+			temp_display.size = rect.size
+			
+			# Animate the temp die flying to the random target
+			await _animate_dice_to_target([temp_display], target)
+			
+			await target.take_damage(damage, true, player, true)
+			print("Resolved 'Roulette' ability for %d damage to %s." % [damage, target.name])
+
+			# Apply die face effects to the target
+			await _apply_all_die_effects(die_display.die, target, damage)
+	elif ability_data.title == "Explosive Shot":
+		if slotted_dice_displays.is_empty(): return
+		
+		# Enter targeting mode
+		active_targeting_ability = ability_ui
+		targeting_arrow = ARROW_SCENE.instantiate()
+		$UI.add_child(targeting_arrow)
+		targeting_arrow.set_source(ability_ui.dice_slots_container.get_child(0))
 	
 	# After an ability resolves, refresh the player's health bar preview.
 	var net_damage = max(0, current_incoming_damage - player.block)
@@ -361,6 +403,11 @@ func _on_die_drag_started(die_display: DieDisplay):
 func _unhandled_input(event: InputEvent):
 	# This function catches input that was not handled by the UI.
 	if event.is_action_pressed("ui_cancel"):
+		if active_targeting_ability:
+			_cancel_targeting()
+			get_viewport().set_input_as_handled()
+			return
+
 		_toggle_pause_menu()
 		get_viewport().set_input_as_handled()
 		return
@@ -384,10 +431,21 @@ func _unhandled_input(event: InputEvent):
 				# Mark the event as handled so it doesn't trigger other things.
 				get_viewport().set_input_as_handled()
 				return
+	
+	# Right click to cancel targeting
+	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_RIGHT and event.is_pressed():
+		if active_targeting_ability:
+			_cancel_targeting()
+			get_viewport().set_input_as_handled()
+			return
 
 
 func _on_character_clicked(character: Character) -> void:
-	print("Character clicked: " + character.name)
+	if active_targeting_ability:
+		_resolve_targeted_ability(character)
+		return
+
+	# print("Character clicked: " + character.name)
 	print(is_resolving_action)
 	if selected_dice_display.is_empty() or is_resolving_action:
 		return
@@ -463,6 +521,86 @@ func _on_character_clicked(character: Character) -> void:
 
 	player.discard(dice_to_discard)
 	is_resolving_action = false
+
+func _resolve_targeted_ability(target: Character):
+	if not target is Enemy:
+		return # Only target enemies for now
+
+	var ability_data = active_targeting_ability.ability_data
+	var slotted_dice = active_targeting_ability.get_slotted_dice_displays()
+	var die_display = slotted_dice[0]
+	var damage = die_display.die.result_value
+	
+	if ability_data.title == "Explosive Shot":
+		var enemies = get_active_enemies()
+		var target_index = enemies.find(target)
+		
+		# Create a visual copy for the animation so the original stays in the slot
+		var temp_display = DIE_DISPLAY_SCENE.instantiate()
+		$UI.add_child(temp_display)
+		temp_display.set_die(die_display.die)
+		var rect = die_display.get_global_rect()
+		temp_display.global_position = rect.position
+		temp_display.size = rect.size
+		
+		await _animate_dice_to_target([temp_display], target)
+		
+		# Main damage
+		await target.take_damage(damage, true, player, true)
+		
+		# Splash damage
+		var splash_damage = ceili(damage / 2.0)
+		if target_index > 0:
+			var left_enemy = enemies[target_index - 1]
+			if not left_enemy._is_dead:
+				await left_enemy.take_damage(splash_damage, true, player, true)
+				await _apply_all_die_effects(die_display.die, left_enemy, splash_damage)
+		
+		if target_index < enemies.size() - 1:
+			var right_enemy = enemies[target_index + 1]
+			if not right_enemy._is_dead:
+				await right_enemy.take_damage(splash_damage, true, player, true)
+				await _apply_all_die_effects(die_display.die, right_enemy, splash_damage)
+				
+		print("Resolved 'Explosive Shot' on %s" % target.name)
+
+		# Apply die face effects to the main target
+		await _apply_all_die_effects(die_display.die, target, damage)
+
+	# Cleanup
+	if targeting_arrow:
+		targeting_arrow.queue_free()
+		targeting_arrow = null
+	active_targeting_ability = null
+	
+	# Refresh health preview
+	var net_damage = max(0, current_incoming_damage - player.block)
+	player.update_health_display(net_damage)
+
+func _cancel_targeting():
+	if targeting_arrow:
+		targeting_arrow.queue_free()
+		targeting_arrow = null
+	
+	if active_targeting_ability:
+		# Revert ability UI state since we are cancelling the activation
+		active_targeting_ability.is_consumed_this_turn = false
+		active_targeting_ability.modulate = Color.WHITE
+		active_targeting_ability.cooldown_label.visible = false
+		active_targeting_ability.add_theme_stylebox_override("panel", active_targeting_ability.original_stylebox)
+		for slot in active_targeting_ability.dice_slots_container.get_children():
+			if slot is DieSlotUI:
+				slot.mouse_filter = Control.MOUSE_FILTER_STOP
+		
+		active_targeting_ability = null
+
+func _apply_all_die_effects(die: Die, target: Character, value: int):
+	if die.result_face and not die.result_face.effects.is_empty():
+		for effect in die.result_face.effects:
+			# Spikes is a self-buff, it should not be applied to enemies.
+			if effect.name == "Spikes":
+				continue
+			await _process_die_face_effect(effect, value, target, die)
 
 func _process_die_face_effect(effect: DieFaceEffect, value: int, target: Character = null, die: Die = null):
 	var context = {
@@ -906,6 +1044,12 @@ func _create_pause_menu():
 		debug_btn.pressed.connect(_on_debug_change_encounter_pressed)
 		vbox.add_child(debug_btn)
 	
+		var debug_abilities_btn = Button.new()
+		debug_abilities_btn.text = "Debug: Manage Abilities"
+		debug_abilities_btn.custom_minimum_size = Vector2(200, 50)
+		debug_abilities_btn.pressed.connect(_show_debug_ability_selection)
+		vbox.add_child(debug_abilities_btn)
+	
 	var menu_btn = Button.new()
 	menu_btn.text = "Main Menu"
 	menu_btn.custom_minimum_size = Vector2(200, 50)
@@ -925,3 +1069,82 @@ func _on_main_menu_pressed():
 func _on_debug_change_encounter_pressed():
 	_toggle_pause_menu()
 	start_new_round()
+
+func _show_debug_ability_selection():
+	_toggle_pause_menu() # Hide pause menu
+	
+	if not debug_ability_ui:
+		_create_debug_ability_ui()
+	
+	var container = debug_ability_ui.get_node("ScrollContainer/VBoxContainer")
+	for child in container.get_children():
+		child.queue_free()
+		
+	var label = Label.new()
+	label.text = "DEBUG: Manage Abilities"
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	container.add_child(label)
+	
+	var all_abilities = Utils.load_all_resources("res://resources/abilities")
+	
+	for res in all_abilities:
+		if res is AbilityData:
+			var ability: AbilityData = res
+			var btn = CheckBox.new()
+			btn.text = ability.title
+			btn.button_pressed = player.abilities.has(ability)
+			btn.toggled.connect(_on_debug_ability_toggled.bind(ability))
+			container.add_child(btn)
+			
+	var close_btn = Button.new()
+	close_btn.text = "Close"
+	close_btn.pressed.connect(func(): 
+		debug_ability_ui.visible = false
+		_toggle_pause_menu() # Re-open pause menu
+	)
+	container.add_child(close_btn)
+	
+	debug_ability_ui.visible = true
+
+func _create_debug_ability_ui():
+	var canvas = get_node("UI")
+	var panel = Panel.new()
+	panel.name = "DebugAbilitySelector"
+	panel.set_anchors_preset(Control.PRESET_FULL_RECT)
+	var style = StyleBoxFlat.new()
+	style.bg_color = Color(0, 0, 0, 0.9)
+	panel.add_theme_stylebox_override("panel", style)
+	canvas.add_child(panel)
+	debug_ability_ui = panel
+	
+	var scroll = ScrollContainer.new()
+	scroll.name = "ScrollContainer"
+	scroll.set_anchors_preset(Control.PRESET_FULL_RECT)
+	scroll.offset_left = 50
+	scroll.offset_top = 50
+	scroll.offset_right = -50
+	scroll.offset_bottom = -50
+	panel.add_child(scroll)
+	
+	var vbox = VBoxContainer.new()
+	vbox.name = "VBoxContainer"
+	vbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	vbox.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	vbox.add_theme_constant_override("separation", 10)
+	scroll.add_child(vbox)
+
+func _on_debug_ability_toggled(toggled_on: bool, ability: AbilityData):
+	if toggled_on:
+		if not player.abilities.has(ability):
+			player.add_ability(ability)
+	else:
+		if player.abilities.has(ability):
+			player.remove_ability(ability)
+			_refresh_player_abilities_ui()
+
+func _refresh_player_abilities_ui():
+	for child in abilities_ui.get_children():
+		abilities_ui.remove_child(child)
+		child.queue_free()
+	for ability in player.abilities:
+		_add_player_ability(ability)

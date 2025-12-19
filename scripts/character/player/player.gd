@@ -135,6 +135,10 @@ func add_ability(new_ability: AbilityData):
 	abilities.append(new_ability)
 	abilities_changed.emit(new_ability)
 
+func remove_ability(ability: AbilityData):
+	if abilities.has(ability):
+		abilities.erase(ability)
+
 func hold_die(die_to_hold: Die):
 	_held_dice.append(die_to_hold)
 

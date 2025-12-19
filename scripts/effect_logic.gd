@@ -37,7 +37,7 @@ static func ssh(value: int, source: Character, _target: Character, _context: Dic
 static func bleed(value: int, source: Character, target: Character, _context: Dictionary):
 	if source is Player and target is Player:
 		return
-	target.apply_duration_status("bleeding", value)
+	target.apply_charges_status("bleeding", value)
 
 static func pierce(value: int, _source: Character, target: Character, _context: Dictionary):
 	await target.take_piercing_damage(value, true, _source, true)
@@ -94,7 +94,7 @@ static func wormhole(_value: int, _source: Character, _target: Character, contex
 static func daze(value: int, source: Character, target: Character, _context: Dictionary):
 	if source is Player and target is Player:
 		return
-	target.apply_duration_status("dazed", value)
+	target.apply_charges_status("dazed", value)
 
 static func shieldbreak(_value: int, source: Character, target: Character, _context: Dictionary):
 	if source is Player and target is Player:

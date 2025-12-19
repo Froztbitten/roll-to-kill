@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="AbilityData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/character/player/ability_data.gd" id="1_script"]
+
+[resource]
+script = ExtResource("1_script")
+title = "Roulette"
+description = "Deal [color=yellow]2x[/color] face value damage to a random enemy."
+dice_slots = 1
+discard_dice_on_reset = true
+cooldown_duration = 1
