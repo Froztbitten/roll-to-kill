@@ -20,7 +20,7 @@ static func draw(_value: int, source: Character, _target: Character, _context: D
 		source.draw_dice(1)
 
 static func spikes(value: int, _source: Character, target: Character, _context: Dictionary):
-	target.apply_charges_status("spikes", value)
+	target.apply_charges_status("spiky", value)
 
 # D6 Effects
 static func ss(value: int, source: Character, _target: Character, _context: Dictionary):
@@ -34,8 +34,10 @@ static func ssh(value: int, source: Character, _target: Character, _context: Dic
 	source.add_block(value)
 
 # D8 Effects
-static func bleed(value: int, _source: Character, target: Character, _context: Dictionary):
-	target.apply_duration_status("bleed", value)
+static func bleed(value: int, source: Character, target: Character, _context: Dictionary):
+	if source is Player and target is Player:
+		return
+	target.apply_duration_status("bleeding", value)
 
 static func pierce(value: int, _source: Character, target: Character, _context: Dictionary):
 	await target.take_piercing_damage(value, true, _source, true)
@@ -44,18 +46,18 @@ static func riposte(value: int, _source: Character, target: Character, _context:
 	# Riposte is a self-buff for the player. It should not be applied to enemies.
 	if not target is Player:
 		return
-	target.apply_charges_status("riposte", value)
+	target.apply_charges_status("ri-posted up", value)
 
 static func trigger_riposte(value: int, defender: Character, attacker: Character) -> void:
 	# The defender removes the status and deals damage back to the attacker.
 	print("%s's riposte triggers, dealing %d damage to %s" % [defender.name, value, attacker.name])
-	defender.remove_status("riposte")
+	defender.remove_status("ri-posted up")
 	await attacker.take_damage(value, true, defender, false)
 
 # D10 Effects
-static func echoing_impact(value: int, _source: Character, target: Character, _context: Dictionary):
-	# This is a debuff, so it should not apply to the player.
-	if target is Player:
+static func echoing_impact(value: int, source: Character, target: Character, _context: Dictionary):
+	# This is a debuff, so it should not apply to the player if they trigger it themselves.
+	if source is Player and target is Player:
 		return
 	target.apply_charges_status("echoing_impact", ceil(value / 2.0))
 
@@ -89,10 +91,14 @@ static func wormhole(_value: int, _source: Character, _target: Character, contex
 		die.flip_die()
 
 # D12 Effects
-static func daze(value: int, _source: Character, target: Character, _context: Dictionary):
-	target.apply_duration_status("daze", value)
+static func daze(value: int, source: Character, target: Character, _context: Dictionary):
+	if source is Player and target is Player:
+		return
+	target.apply_duration_status("dazed", value)
 
-static func shieldbreak(_value: int, _source: Character, target: Character, _context: Dictionary):
+static func shieldbreak(_value: int, source: Character, target: Character, _context: Dictionary):
+	if source is Player and target is Player:
+		return
 	target.block = 0
 	target.update_health_display()
 

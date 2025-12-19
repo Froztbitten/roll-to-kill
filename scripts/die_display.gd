@@ -107,15 +107,13 @@ func update_display():
 
 		# Highlight the rolled face
 		if face == die.result_face:
-			# Create a unique stylebox to highlight the rolled face
-			var style = StyleBoxFlat.new()
-			style.bg_color = Color(0.9, 0.7, 0.2, 0.5) # Translucent gold
-			style.border_width_left = 1
-			style.border_width_top = 1 
-			style.border_width_right = 1
-			style.border_width_bottom = 1
-			style.border_color = Color.BLACK
-			cell.add_theme_stylebox_override("panel", style) # Overwrite the default style
+			# Modify the existing stylebox to highlight the border instead of replacing the background.
+			var style = cell.get_theme_stylebox("panel")
+			style.border_color = Color.GOLD
+			style.border_width_left = 3
+			style.border_width_top = 3
+			style.border_width_right = 3
+			style.border_width_bottom = 3
 
 		grid_container.add_child(cell)
 

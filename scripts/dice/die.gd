@@ -50,7 +50,7 @@ func flip_die():
 		return
 	
 	var current_index = faces.find(result_face)
-	var new_index = 9 - current_index
+	var new_index = (faces.size() - 1) - current_index
 	result_face = faces[new_index]
 	result_value = result_face.value
 

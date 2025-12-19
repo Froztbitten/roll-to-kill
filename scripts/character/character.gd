@@ -34,6 +34,8 @@ func _ready():
 	add_child(audio_player)
 
 func take_damage(damage: int, play_recoil: bool = true, attacker: Character = null, is_attack_action: bool = false):
+	if damage <= 0:
+		return
 	var old_block = block
 	var damage_to_take = damage
 	if block > 0:
@@ -46,6 +48,8 @@ func take_damage(damage: int, play_recoil: bool = true, attacker: Character = nu
 
 func take_piercing_damage(damage: int, play_recoil: bool = true, attacker: Character = null, is_attack_action: bool = false):
 	# This damage type ignores block.
+	if damage <= 0:
+		return
 	await _apply_damage(damage, "piercing damage", block, play_recoil, attacker, is_attack_action)
 
 func _apply_damage(amount: int, type: String, old_block_value: int, play_recoil: bool = true, attacker: Character = null, is_attack_action: bool = false) -> void:
@@ -77,8 +81,8 @@ func _apply_damage(amount: int, type: String, old_block_value: int, play_recoil:
 
 	# --- Spikes Logic ---
 	# If this character was attacked and has Spikes, deal damage back to the attacker.
-	if attacker and not attacker._is_dead and has_status("Spikes"):
-		var spikes_status = StatusLibrary.get_status("spikes")
+	if attacker and not attacker._is_dead and has_status("Spiky") and is_attack_action:
+		var spikes_status = StatusLibrary.get_status("spiky")
 		if statuses.has(spikes_status):
 			var spike_charges = statuses[spikes_status]
 			if spike_charges > 0 and attacker != self:
@@ -88,8 +92,8 @@ func _apply_damage(amount: int, type: String, old_block_value: int, play_recoil:
 	# --- Riposte Logic ---
 	# If this character was attacked and has Riposte, trigger the effect. This only
 	# triggers on direct attack actions, not on reactive or status damage.
-	if attacker and not attacker._is_dead and has_status("Riposte") and is_attack_action:
-		var riposte_status = StatusLibrary.get_status("riposte")
+	if attacker and not attacker._is_dead and has_status("Ri-posted up") and is_attack_action:
+		var riposte_status = StatusLibrary.get_status("ri-posted up")
 		if statuses.has(riposte_status):
 			var riposte_charges = statuses[riposte_status]
 			if riposte_charges > 0:
@@ -176,6 +180,7 @@ func tick_down_statuses():
 	
 	var keys_to_remove = []
 	var statuses_to_process = statuses.keys()
+	var changed = false
 	
 	for status in statuses_to_process:
 		# Skip processing for statuses that were just applied this turn.
@@ -189,10 +194,11 @@ func tick_down_statuses():
 				_new_statuses_this_turn.clear()
 				return
 			keys_to_remove.append(status)
+			changed = true
 			continue
 
 		# Apply DoT effects at the end of the turn
-		if status.status_name == "Bleed" or status.status_name == "Burn":
+		if status.status_name == "Bleeding" or status.status_name == "Burning":
 			await take_damage(statuses[status], true, null, false) # DoT is not an attack action
 			if _is_dead:
 				_new_statuses_this_turn.clear()
@@ -201,10 +207,11 @@ func tick_down_statuses():
 		# Skip ticking down for charge-based effects. Since Spikes is a permanent
 		# charge buff, we add an explicit check to ensure it never decays. Debuffs
 		# like Bleed and Burn are also charge-based and should not decay over time.
-		if status.charges != -1 or status.status_name == "Spikes" or status.status_name == "Bleed" or status.status_name == "Burn":
+		if status.charges != -1 or status.status_name == "Spiky" or status.status_name == "Bleeding" or status.status_name == "Burning":
 			continue
 		
 		statuses[status] -= 1
+		changed = true
 		if statuses[status] <= 0:
 			keys_to_remove.append(status)
 			print("%s lost status '%s'." % [name, status.status_name])
@@ -213,7 +220,7 @@ func tick_down_statuses():
 	
 	for key in keys_to_remove:
 		statuses.erase(key)
-	if not keys_to_remove.is_empty():
+	if changed:
 		statuses_changed.emit(statuses)
 
 func update_resting_state():

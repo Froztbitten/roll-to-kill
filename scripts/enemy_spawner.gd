@@ -48,6 +48,10 @@ func spawn_random_encounter(encounter_type: EncounterData.EncounterType):
 	push_warning("%s pool is empty!", [encounter_type])
 	return []
 
+func spawn_specific_encounter(encounter: EncounterData) -> Array:
+	var number_to_spawn = randi_range(encounter.min_count, encounter.max_count)
+	return _spawn_enemies(encounter, number_to_spawn)
+
 func _spawn_enemies(encounter: EncounterData, count: int) -> Array:
 	var spawned_enemies = []
 	var enemies_to_spawn_data: Array[EnemyData] = []

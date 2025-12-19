@@ -11,7 +11,7 @@ config_version=5
 [application]
 
 config/name="Roll To Kill"
-run/main_scene="uid://bnpd5h2y0tnye"
+run/main_scene="res://scenes/screens/main_menu.tscn"
 config/features=PackedStringArray("4.5", "GL Compatibility")
 config/main_scene="res://scenes/main.tscn"
 

@@ -31,12 +31,13 @@ func _ready():
 	for side_count in starting_deck_sides:
 		var new_die = Die.new(side_count)
 
-		# Testing: Apply a random effect to every face
-		for face in new_die.faces:
-			var effect = EffectLibrary.get_random_effect_for_die(side_count, 3)
-			if effect:
-				print("Adding effect %s to D%d face value %d" % [effect.name, side_count, face.value])
-				face.effects.append(effect)
+		if MainGame.debug_mode:
+			# Testing: Apply a random effect to every face
+			for face in new_die.faces:
+				var effect = EffectLibrary.get_random_effect_for_die(side_count, 3)
+				if effect:
+					print("Adding effect %s to D%d face value %d" % [effect.name, side_count, face.value])
+					face.effects.append(effect)
 
 		add_to_game_bag([new_die])
 	print("added default dice bag of size: ", _game_dice_bag.size())
@@ -105,6 +106,10 @@ func reset_for_new_round():
 	_dice_discard.clear()
 	dice_discard_changed.emit(_dice_discard.size())
 	
+	statuses.clear()
+	_new_statuses_this_turn.clear()
+	statuses_changed.emit(statuses)
+	
 func add_to_game_bag(dice_to_add: Array[Die]):
 	_game_dice_bag.append_array(dice_to_add)
 
@@ -140,11 +145,26 @@ func get_and_clear_held_dice() -> Array[Die]:
 	for held_die in _held_dice:
 		if is_shrunk:
 			# If we are shrunken, ensure the die is shrunken.
-			dice_to_return.append(shrink_die(held_die))
+			var final_die = shrink_die(held_die)
+			if final_die != held_die:
+				var face_index = held_die.faces.find(held_die.result_face)
+				if face_index != -1 and face_index < final_die.faces.size():
+					final_die.result_face = final_die.faces[face_index]
+					final_die.result_value = final_die.result_face.value
+				else:
+					final_die.roll()
+			dice_to_return.append(final_die)
 		else:
 			# If we are NOT shrunken, ensure the die is normal.
 			if held_die.has_meta("is_shrunken") and held_die.has_meta("original_die"):
-				dice_to_return.append(held_die.get_meta("original_die"))
+				var original = held_die.get_meta("original_die")
+				var face_index = held_die.faces.find(held_die.result_face)
+				if face_index != -1 and face_index < original.faces.size():
+					original.result_face = original.faces[face_index]
+					original.result_value = original.result_face.value
+				else:
+					original.roll()
+				dice_to_return.append(original)
 			else:
 				dice_to_return.append(held_die)
 	

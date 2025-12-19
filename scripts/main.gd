@@ -1,4 +1,7 @@
 extends Node2D
+class_name MainGame
+
+static var debug_mode: bool = false
 
 @export var player: Player
 @onready var enemy_container = $EnemySpawner/Enemies
@@ -6,7 +9,6 @@ extends Node2D
 @onready var dice_pool_ui: DicePool = $UI/DicePool
 @onready var abilities_ui: VBoxContainer = $UI/Abilities
 @onready var total_dice_value_label: Label = $UI/TotalDiceValueLabel
-@onready var total_incoming_damage_label: Label = $UI/TotalIncomingDamageLabel
 @onready var gold_label: Label = $UI/GameInfo/GoldContainer/GoldLabel
 
 @onready var dice_bag_icon: TextureRect = $UI/RoundInfo/DiceBag/DiceBagIcon
@@ -35,7 +37,24 @@ const BOSS_ROUND = 10
 var starting_abilities: Array[AbilityData] = [load("res://resources/abilities/heal.tres"), 
 	load("res://resources/abilities/sweep.tres"), load("res://resources/abilities/hold.tres")]
 
+var debug_encounter_ui: Control
+var pause_menu_ui: Control
+
 func _ready() -> void:
+	# Set process modes to allow the MainGame script to handle input while the game is paused.
+	process_mode = Node.PROCESS_MODE_ALWAYS
+	player.process_mode = Node.PROCESS_MODE_PAUSABLE
+	enemy_container.process_mode = Node.PROCESS_MODE_PAUSABLE
+	dice_pool_ui.process_mode = Node.PROCESS_MODE_PAUSABLE
+	abilities_ui.process_mode = Node.PROCESS_MODE_PAUSABLE
+
+	if debug_mode:
+		print("--- DEBUG / GODMODE ACTIVE ---")
+		player.max_hp = 999
+		player.hp = 999
+		player.add_gold(1000)
+		player.update_health_display()
+
 	# Connect signals
 	player.died.connect(_on_player_died)
 	player.gold_changed.connect(_update_gold)
@@ -53,8 +72,9 @@ func _ready() -> void:
 	# Initialize player's starting abilities
 	for child: Node in abilities_ui.get_children():
 		child.queue_free()
-	for ability in starting_abilities:
-		player.add_ability(ability)
+	if debug_mode:
+		for ability in starting_abilities:
+			player.add_ability(ability)
 
 	# Wait for one frame to ensure all newly created nodes (like abilities) are fully ready.
 	await get_tree().process_frame
@@ -74,6 +94,9 @@ func player_turn() -> void:
 	# This prevents the player from being locked out if the flag gets stuck
 	# during a previous action, especially when transitioning between rounds.
 	is_resolving_action = false
+
+	# Decrement duration of statuses at the start of the turn.
+	await player.tick_down_statuses()
 
 	# Reset abilities and player block from the previous turn.
 	_tick_ability_cooldowns()
@@ -110,11 +133,14 @@ func player_turn() -> void:
 		enemy.update_health_display()
 
 		enemy.declare_intent(active_enemies)
-		if enemy.next_action and enemy.next_action.action_type == EnemyAction.ActionType.ATTACK:
+		if enemy.next_action and (enemy.next_action.action_type == EnemyAction.ActionType.ATTACK or \
+			enemy.next_action.action_type == EnemyAction.ActionType.PIERCING_ATTACK or \
+			(enemy.next_action.action_type == EnemyAction.ActionType.DEBUFF and enemy.next_action_value > 0)):
 			current_incoming_damage += enemy.next_action_value
 	
 	# Proactively apply shields that are meant to be active for the player's turn
 	for enemy: Enemy in active_enemies:
+		enemy.clear_provided_shields()
 		if enemy.next_action:
 			if enemy.next_action.action_type == EnemyAction.ActionType.SHIELD:
 				enemy.add_block(enemy.next_action_value)
@@ -125,6 +151,7 @@ func player_turn() -> void:
 					var tinkerers = active_enemies.filter(func(e): return e.enemy_data.enemy_name == "Gnomish Tinkerer")
 					for tinkerer in tinkerers:
 						tinkerer.add_block(shield_amount)
+						enemy.register_provided_shield(tinkerer, shield_amount)
 						print("%s shields %s for %d" % [enemy.name, tinkerer.name, shield_amount])
 				else:
 					# Default behavior: Shield self and one random ally.
@@ -133,9 +160,9 @@ func player_turn() -> void:
 					if not other_enemies.is_empty():
 						var random_ally = other_enemies.pick_random()
 						random_ally.add_block(enemy.next_action_value)
+						enemy.register_provided_shield(random_ally, enemy.next_action_value)
 						print("%s shields self and %s for %d" % [enemy.name, random_ally.name, enemy.next_action_value])
 
-	total_incoming_damage_label.text = str(current_incoming_damage)
 	player.update_health_display(current_incoming_damage)
 
 	end_turn_button.disabled = false
@@ -145,7 +172,6 @@ func _on_end_turn_button_pressed():
 		# Discard all dice that are left in the hand this turn.
 		player.discard(dice_pool_ui.get_current_dice())
 		print("Player block: " + str(player.block))
-		await player.tick_down_statuses()
 		next_turn()
 		await enemy_turn()
 
@@ -232,12 +258,16 @@ func enemy_turn() -> void:
 						# Apply advantage to all allies (including self) for 2 rounds.
 						# A duration of 2 means it lasts this enemy turn and the next.
 						for e in active_enemies:
-							e.apply_status("advantage", 2)
+							e.apply_duration_status("advantageous", 2)
 
 					EnemyAction.ActionType.DO_NOTHING:
 						pass # Do nothing, as intended.
 
 					EnemyAction.ActionType.DEBUFF:
+						# If the debuff action has damage associated with it (e.g. Shrink Ray), deal it.
+						if enemy.next_action_value > 0:
+							await player.take_damage(enemy.next_action_value, true, enemy, true)
+						
 						if enemy.next_action.status_id != "":
 							var effect = StatusLibrary.get_status(enemy.next_action.status_id)
 							if effect:
@@ -330,6 +360,11 @@ func _on_die_drag_started(die_display: DieDisplay):
 
 func _unhandled_input(event: InputEvent):
 	# This function catches input that was not handled by the UI.
+	if event.is_action_pressed("ui_cancel"):
+		_toggle_pause_menu()
+		get_viewport().set_input_as_handled()
+		return
+
 	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and event.is_pressed():
 		# Perform a physics query at the click position.
 		# Use get_global_mouse_position() for coordinates in the global 2D world space.
@@ -394,11 +429,6 @@ func _on_character_clicked(character: Character) -> void:
 		for die in dice_to_discard:
 			if die.result_face and not die.result_face.effects.is_empty():
 				for effect in die.result_face.effects:
-					# Check the status library to see if this effect is a debuff
-					var status_id = effect.name.to_lower()
-					var status_effect = StatusLibrary.get_status(status_id)
-					if status_effect and status_effect.is_debuff:
-						continue
 					# Pierce effect should not damage the player, it just acts as a normal block die.
 					# The value was already added to total_roll, so we just skip the effect processing.
 					if effect.process_effect == EffectLogic.pierce:
@@ -538,9 +568,6 @@ func _animate_dice_to_target(dice_displays: Array[DieDisplay], target: Character
 		await tweens.back().finished
 
 func _on_enemy_died():
-	# A short delay to prevent issues with processing the death mid-turn.
-	await get_tree().create_timer(0.1).timeout
-	
 	if get_active_enemies().is_empty():
 		# All enemies for the round are defeated
 		if round_number == BOSS_ROUND:
@@ -557,12 +584,19 @@ func start_new_round() -> void:
 	player.reset_for_new_round()
 	enemy_container.clear_everything()
 	
+	if MainGame.debug_mode:
+		_show_debug_encounter_selection()
+		return
+	
 	var spawned_enemies: Array
 	if start_with_boss_fight or round_number == BOSS_ROUND:
 		spawned_enemies = enemy_spawner.spawn_random_encounter(EncounterData.EncounterType.BOSS)
 	else:
 		spawned_enemies = enemy_spawner.spawn_random_encounter(EncounterData.EncounterType.NORMAL)
 	
+	await _setup_round(spawned_enemies)
+
+func _setup_round(spawned_enemies: Array) -> void:
 	if spawned_enemies.is_empty():
 		push_error("No enemies spawned, cannot start round.")
 		return
@@ -581,6 +615,74 @@ func start_new_round() -> void:
 
 	# Start the player's turn for the new round
 	await player_turn()
+
+func _show_debug_encounter_selection():
+	if not debug_encounter_ui:
+		_create_debug_ui()
+	
+	# Refresh the list
+	var container = debug_encounter_ui.get_node("ScrollContainer/VBoxContainer")
+	for child in container.get_children():
+		child.queue_free()
+		
+	var label = Label.new()
+	label.text = "DEBUG: Choose Encounter (Round %d)" % round_number
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	container.add_child(label)
+	
+	var all_encounters = enemy_spawner.encounter_pool
+	
+	for encounter in all_encounters:
+		var btn = Button.new()
+		var names = []
+		for type in encounter.enemy_types:
+			if not names.has(type.enemy_name):
+				names.append(type.enemy_name)
+		var name_str = ", ".join(names)
+		
+		var type_str = "NORMAL"
+		if encounter.encounter_type == EncounterData.EncounterType.BOSS:
+			type_str = "BOSS"
+		elif encounter.encounter_type == EncounterData.EncounterType.RARE:
+			type_str = "RARE"
+			
+		btn.text = "[%s] %s (%d-%d)" % [type_str, name_str, encounter.min_count, encounter.max_count]
+		btn.pressed.connect(_on_debug_encounter_selected.bind(encounter))
+		container.add_child(btn)
+		
+	debug_encounter_ui.visible = true
+
+func _create_debug_ui():
+	var canvas = get_node("UI")
+	var panel = Panel.new()
+	panel.name = "DebugEncounterSelector"
+	panel.set_anchors_preset(Control.PRESET_FULL_RECT)
+	var style = StyleBoxFlat.new()
+	style.bg_color = Color(0, 0, 0, 0.9)
+	panel.add_theme_stylebox_override("panel", style)
+	canvas.add_child(panel)
+	debug_encounter_ui = panel
+	
+	var scroll = ScrollContainer.new()
+	scroll.name = "ScrollContainer"
+	scroll.set_anchors_preset(Control.PRESET_FULL_RECT)
+	scroll.offset_left = 50
+	scroll.offset_top = 50
+	scroll.offset_right = -50
+	scroll.offset_bottom = -50
+	panel.add_child(scroll)
+	
+	var vbox = VBoxContainer.new()
+	vbox.name = "VBoxContainer"
+	vbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	vbox.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	vbox.add_theme_constant_override("separation", 10)
+	scroll.add_child(vbox)
+
+func _on_debug_encounter_selected(encounter: EncounterData):
+	debug_encounter_ui.visible = false
+	var spawned_enemies = enemy_spawner.spawn_specific_encounter(encounter)
+	await _setup_round(spawned_enemies)
 
 func get_active_enemies() -> Array[Enemy]:
 	# Helper function to get living enemies from the container.
@@ -760,3 +862,66 @@ func _update_total_dice_value():
 	for die in dice_pool_ui.get_current_dice():
 		current_total += die.result_value
 	total_dice_value_label.text = "Total: " + str(current_total)
+
+func _toggle_pause_menu():
+	if not pause_menu_ui:
+		_create_pause_menu()
+	
+	pause_menu_ui.visible = not pause_menu_ui.visible
+	get_tree().paused = pause_menu_ui.visible
+
+func _create_pause_menu():
+	var canvas = get_node("UI")
+	var panel = Panel.new()
+	panel.name = "PauseMenu"
+	panel.set_anchors_preset(Control.PRESET_FULL_RECT)
+	panel.visible = false
+	var style = StyleBoxFlat.new()
+	style.bg_color = Color(0, 0, 0, 0.8)
+	panel.add_theme_stylebox_override("panel", style)
+	canvas.add_child(panel)
+	pause_menu_ui = panel
+	
+	var vbox = VBoxContainer.new()
+	vbox.set_anchors_preset(Control.PRESET_CENTER)
+	vbox.add_theme_constant_override("separation", 20)
+	panel.add_child(vbox)
+	
+	var label = Label.new()
+	label.text = "Paused"
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	label.add_theme_font_size_override("font_size", 32)
+	vbox.add_child(label)
+	
+	var resume_btn = Button.new()
+	resume_btn.text = "Resume"
+	resume_btn.custom_minimum_size = Vector2(200, 50)
+	resume_btn.pressed.connect(_toggle_pause_menu)
+	vbox.add_child(resume_btn)
+	
+	if MainGame.debug_mode:
+		var debug_btn = Button.new()
+		debug_btn.text = "Debug: Change Encounter"
+		debug_btn.custom_minimum_size = Vector2(200, 50)
+		debug_btn.pressed.connect(_on_debug_change_encounter_pressed)
+		vbox.add_child(debug_btn)
+	
+	var menu_btn = Button.new()
+	menu_btn.text = "Main Menu"
+	menu_btn.custom_minimum_size = Vector2(200, 50)
+	menu_btn.pressed.connect(_on_main_menu_pressed)
+	vbox.add_child(menu_btn)
+	
+	var quit_btn = Button.new()
+	quit_btn.text = "Quit Game"
+	quit_btn.custom_minimum_size = Vector2(200, 50)
+	quit_btn.pressed.connect(func(): get_tree().quit())
+	vbox.add_child(quit_btn)
+
+func _on_main_menu_pressed():
+	get_tree().paused = false
+	get_tree().change_scene_to_file("res://scenes/screens/main_menu.tscn")
+
+func _on_debug_change_encounter_pressed():
+	_toggle_pause_menu()
+	start_new_round()

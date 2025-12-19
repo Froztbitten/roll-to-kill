@@ -9,6 +9,7 @@ var next_action: EnemyAction
 var next_action_value: int = 0
 var _is_charging := false
 var _turn_count := 0
+var _provided_shields: Array[Dictionary] = []
 
 @onready var intent_display: Control = $EnemyIntentDisplay
 @onready var sprite: TextureRect = $Sprite2D
@@ -76,7 +77,7 @@ func declare_intent(active_enemies: Array):
 				# Remove Summon Minions if more than 2 allies are present
 				possible_actions = possible_actions.filter(func(a): return a.action_type != EnemyAction.ActionType.SPAWN_MINIONS)
 			
-			if other_enemy_count < 2 or has_status("Advantage"):
+			if other_enemy_count < 2 or has_status("Advantageous"):
 				# Remove Inspiration if less than 2 allies are present OR if advantage is already active on the boss.
 				possible_actions = possible_actions.filter(func(a): return a.action_type != EnemyAction.ActionType.BUFF)
 
@@ -143,7 +144,7 @@ func declare_intent(active_enemies: Array):
 	# Roll the dice for that action and sum the result
 	next_action_value = next_action.base_value
 	if not next_action.ignore_dice_roll:
-		var advantage = has_status("Advantage")
+		var advantage = has_status("Advantageous")
 		for action_die: Die in next_action.dice_to_roll:
 			next_action_value += action_die.roll(advantage)
 	
@@ -182,6 +183,12 @@ func _center_intent_display():
 	intent_display.position.x = -150 # Position it to the left of the enemy sprite.
 	intent_display.position.y = sprite_center_y - (intent_display.size.y / 2)
 
+func register_provided_shield(target: Character, amount: int):
+	_provided_shields.append({"target": target, "amount": amount})
+
+func clear_provided_shields():
+	_provided_shields.clear()
+
 func die() -> void:
 	# Override the Character's die() function to add special on-death effects.
 	if not _is_dead and enemy_data and enemy_data.enemy_name == "Wick-wock":
@@ -189,6 +196,16 @@ func die() -> void:
 		var damage = explosion_die.roll()
 		print("Wick-wock explodes, dealing %d damage to the player!" % damage)
 		emit_signal("exploded", damage, self)
+
+	# Remove provided shields from allies if this unit dies.
+	if not _is_dead:
+		for entry in _provided_shields:
+			var target = entry.target
+			var amount = entry.amount
+			if is_instance_valid(target) and not target._is_dead and target != self:
+				target.block = max(0, target.block - amount)
+				target.update_health_display()
+		_provided_shields.clear()
 
 	# Explicitly hide the status display to ensure debuffs are visually removed immediately.
 	if status_display:
