@@ -55,6 +55,7 @@ func spawn_specific_encounter(encounter: EncounterData) -> Array:
 func _spawn_enemies(encounter: EncounterData, count: int) -> Array:
 	var spawned_enemies = []
 	var enemies_to_spawn_data: Array[EnemyData] = []
+	var should_shuffle = true
 
 	# Check for the special Goblin Warchief encounter
 	var warchief_data: EnemyData = null
@@ -83,13 +84,18 @@ func _spawn_enemies(encounter: EncounterData, count: int) -> Array:
 			enemies_to_spawn_data.append(random_invention)
 		elif count == 2:
 			push_warning("Invention pool is empty, cannot add to Gnomes encounter.")
+	elif encounter.resource_path.get_file() == "chivalry_cavalry.tres":
+		# Special logic for Chivalry Calvalry: Always 1 White Knight, 1 Femme Fatale, 1 Keyboard Warrior in order.
+		enemies_to_spawn_data.append_array(encounter.enemy_types)
+		should_shuffle = false
 	else:
 		# Default logic: pick randomly from the encounter's pool
 		for i in range(count):
 			enemies_to_spawn_data.append(encounter.enemy_types.pick_random())
 
 	# Shuffle the list so the leader doesn't always appear in the same position
-	enemies_to_spawn_data.shuffle()
+	if should_shuffle:
+		enemies_to_spawn_data.shuffle()
 	
 	for enemy_data in enemies_to_spawn_data:
 		var enemy: Enemy = ENEMY_UI.instantiate()

@@ -61,6 +61,50 @@ func _define_statuses():
 		"Shrinks all dice 1 size smaller for X turns.",
 		load("res://assets/ai/status_icons/shrink.svg")
 	)
+	statuses["charming"] = StatusEffect.new(
+		"Charming",
+		false,
+		"Cannot be damaged by attacks for X turns.",
+		load("res://assets/ai/status_icons/charm.svg")
+	)
+	statuses["lock_down"] = StatusEffect.new(
+		"Lock-Down",
+		true,
+		"Cannot change die faces (e.g. flip) for X turns.",
+		load("res://assets/ai/status_icons/lock_down.svg")
+	)
+	statuses["taunting"] = StatusEffect.new(
+		"Taunting",
+		false,
+		"Opponents must target this character for X turns.",
+		load("res://assets/ai/status_icons/taunt.svg")
+	)
+	statuses["raging"] = StatusEffect.new(
+		"Raging",
+		false,
+		"Rolls 2x dice. Takes 50% of damage dealt as recoil.",
+		load("res://assets/ai/status_icons/rage.svg")
+	)
+	statuses["crash_out"] = StatusEffect.new(
+		"Crash Out",
+		false,
+		"Becomes enraged if Femme Fatale is defeated.",
+		load("res://assets/ai/status_icons/crash_out.svg")
+	)
+	statuses["silence"] = StatusEffect.new(
+		"Silence",
+		true,
+		"Cannot use abilities for X turns.",
+		load("res://assets/ai/status_icons/silence.svg")
+	)
+	statuses["main_character_energy"] = StatusEffect.new(
+		"Main Character Energy",
+		false,
+		"Prevents death once, restoring 50% HP. Consumed on use.",
+		load("res://assets/ai/status_icons/main_character_energy.svg"),
+		-1,
+		1
+	)
 
 func get_status(id: String) -> StatusEffect:
 	if statuses.has(id):

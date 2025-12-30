@@ -1,7 +1,7 @@
 extends CharacterBody2D
 class_name Character
 
-signal died
+signal died(character)
 signal statuses_changed(statuses)
 
 @export var hp: int = 100
@@ -36,6 +36,11 @@ func _ready():
 func take_damage(damage: int, play_recoil: bool = true, attacker: Character = null, is_attack_action: bool = false):
 	if damage <= 0:
 		return
+	
+	# Check if self has Charming buff (cannot be damaged)
+	if has_status("Charming") and attacker != self:
+		print("%s is Charming and cannot be damaged!" % name)
+		return
 	var old_block = block
 	var damage_to_take = damage
 	if block > 0:
@@ -49,6 +54,11 @@ func take_damage(damage: int, play_recoil: bool = true, attacker: Character = nu
 func take_piercing_damage(damage: int, play_recoil: bool = true, attacker: Character = null, is_attack_action: bool = false):
 	# This damage type ignores block.
 	if damage <= 0:
+		return
+	
+	# Check if self has Charming buff (cannot be damaged)
+	if has_status("Charming") and attacker != self:
+		print("%s is Charming and cannot be damaged!" % name)
 		return
 	await _apply_damage(damage, "piercing damage", block, play_recoil, attacker, is_attack_action)
 
@@ -117,7 +127,7 @@ func add_block(amount: int):
 	else:
 		update_health_display()
 
-func apply_duration_status(status_id: String, duration: int = 1):
+func apply_duration_status(status_id: String, duration: int = 1, source: Character = null):
 	var effect: StatusEffect = StatusLibrary.get_status(status_id)
 	if effect:
 		statuses[effect] = duration
@@ -127,7 +137,7 @@ func apply_duration_status(status_id: String, duration: int = 1):
 	else:
 		push_warning("Attempted to apply unknown status with id: '%s'" % status_id)
 
-func apply_charges_status(status_id: String, charges: int = 1):
+func apply_charges_status(status_id: String, charges: int = 1, source: Character = null):
 	var effect: StatusEffect = StatusLibrary.get_status(status_id)
 	if effect:
 		if statuses.has(effect):
@@ -142,7 +152,7 @@ func apply_charges_status(status_id: String, charges: int = 1):
 	else:
 		push_warning("Attempted to apply unknown status with id: '%s'" % status_id)
 
-func apply_effect(effect: StatusEffect, value: int):
+func apply_effect(effect: StatusEffect, value: int, source: Character = null):
 	if statuses.has(effect):
 		if effect.charges != -1:
 			statuses[effect] += value
@@ -264,6 +274,21 @@ func _recoil(damage_amount: int) -> void:
 	_recoil_tween.parallel().tween_property(self, "rotation", _resting_rotation, 0.25).set_delay(0.08)
 
 func die() -> void:
+	if has_status("Main Character Energy"):
+		var old_hp = hp
+		var old_block = block
+		statuses.clear()
+		statuses_changed.emit(statuses)
+		block = 0
+		hp = int(max_hp / 2.0)
+		if health_bar.has_method("update_with_animation"):
+			health_bar.update_with_animation(old_hp, hp, old_block, block, max_hp)
+		else:
+			update_health_display()
+		print("%s's Main Character Energy activates!" % name)
+		# A visual/sound effect could be added here in the future.
+		return
+
 	if _is_dead: return
 	_is_dead = true
 	
@@ -277,7 +302,7 @@ func die() -> void:
 		audio_player.play()
 	
 	hp = 0
-	emit_signal("died")
+	emit_signal("died", self)
 
 	# This tween should continue processing when the game is paused for UI screens,
 	# so the death animation can complete in the background.

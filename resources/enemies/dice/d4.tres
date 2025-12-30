@@ -13,7 +13,6 @@ sides = 4
 script = ExtResource("1_action")
 action_name = "St4bby stab"
 action_type = 4
-dice_to_roll = Array[ExtResource("2_die")]([SubResource("d4_die")])
 
 [resource]
 script = ExtResource("3_data")

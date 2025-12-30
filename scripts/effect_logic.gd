@@ -85,7 +85,11 @@ static func splash_damage(value: int, _source: Character, target: Character, con
 		if idx < enemies.size() - 1:
 			await enemies[idx + 1].take_damage(splash_val, true, _source, true)
 
-static func wormhole(_value: int, _source: Character, _target: Character, context: Dictionary):
+static func wormhole(_value: int, source: Character, _target: Character, context: Dictionary):
+	if source and source.has_status("Lock-Down"):
+		print("%s is Locked-Down and cannot flip dice!" % source.name)
+		return
+
 	var die = context.get("die")
 	if die:
 		die.flip_die()

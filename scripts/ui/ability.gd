@@ -10,6 +10,7 @@ class_name AbilityUI
 const DIE_SLOT_SCENE = preload("res://scenes/ui/die_slot.tscn")
 
 var ability_data: AbilityData
+var player: Player
 var original_stylebox: StyleBox
 var active_stylebox: StyleBoxFlat
 
@@ -30,8 +31,9 @@ func _ready():
 	else:
 		push_error("Could not find 'panel' stylebox for AbilityUI. Theming will not work correctly.")
 
-func initialize(data: AbilityData):
+func initialize(data: AbilityData, p_player: Player):
 	self.ability_data = data
+	self.player = p_player
 	if not ability_data: return
 	
 	title_label.text = ability_data.title
@@ -48,6 +50,7 @@ func initialize(data: AbilityData):
 		# Use a cast (`as`) to safely handle the instantiated node.
 		var slot := DIE_SLOT_SCENE.instantiate() as DieSlotUI
 		if slot:
+			slot.player = player
 			dice_slots_container.add_child(slot)
 			slot.die_placed.connect(_on_die_placed)
 			slot.die_removed.connect(_on_die_removed)

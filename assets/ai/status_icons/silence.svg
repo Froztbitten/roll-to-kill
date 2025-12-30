@@ -1,0 +1,39 @@
+<svg width="64px" height="64px" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <radialGradient id="silenceBgGrad" cx="50%" cy="50%" r="50%" fx="50%" fy="50%">
+      <stop offset="0%" style="stop-color:#4A148C;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#311B92;stop-opacity:1" />
+    </radialGradient>
+    
+    <linearGradient id="lockGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#B0BEC5;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#78909C;stop-opacity:1" />
+    </linearGradient>
+
+    <filter id="silenceGlow">
+      <feGaussianBlur stdDeviation="0.8" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <circle cx="32" cy="32" r="30" fill="url(#silenceBgGrad)" stroke="#5E35B1" stroke-width="2" />
+
+  <path d="M32 12 C 44 12, 54 19, 54 28 C 54 37, 44 44, 32 44 C 29 44, 26 43, 24 42 L 14 48 L 18 38 C 12 34, 10 28, 10 28 C 10 19, 20 12, 32 12 Z" fill="#B39DDB" opacity="0.5" filter="url(#silenceGlow)"/>
+  
+  <g transform="translate(22, 20)" filter="url(#silenceGlow)">
+    <path d="M6 11 V 6 A 4 4 0 0 1 14 6 V 11" fill="none" stroke="url(#lockGrad)" stroke-width="3" stroke-linecap="round" />
+    <rect x="2" y="11" width="16" height="14" rx="2" fill="url(#lockGrad)" stroke="#546E7A" stroke-width="1.5"/>
+    <circle cx="10" cy="17" r="2" fill="#37474F"/>
+    <path d="M10 17 L9 22 L11 22 Z" fill="#37474F"/>
+  </g>
+  
+  <g stroke="#E0E0E0" stroke-width="2" stroke-linecap="round" opacity="0.8">
+    <path d="M50 36 l4 -4" />
+    <path d="M50 32 l4 4" />
+    <path d="M46 32 l8 8" />
+    <path d="M46 40 l8 -8" />
+  </g>
+</svg>

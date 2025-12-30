@@ -6,6 +6,7 @@
 
 [resource]
 script = ExtResource("3_encounter")
+encounter_type = 1
 enemy_types = Array[ExtResource("2_data")]([ExtResource("1_tinkerer")])
 min_count = 2
 max_count = 3

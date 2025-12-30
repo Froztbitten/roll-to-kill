@@ -9,6 +9,7 @@
 [ext_resource type="PackedScene" path="res://scenes/screens/victory_screen.tscn" id="6_vwxyz"]
 [ext_resource type="PackedScene" path="res://scenes/screens/defeat_screen.tscn" id="8_abcde"]
 [ext_resource type="PackedScene" uid="uid://c5hrch0sope6w" path="res://scenes/screens/reward_screen.tscn" id="8_reward"]
+[ext_resource type="PackedScene" path="res://scenes/screens/map_screen.tscn" id="9_map"]
 [ext_resource type="Script" uid="uid://dh54ve13ordnt" path="res://scripts/enemy_spawner.gd" id="10_choun"]
 [ext_resource type="Texture2D" uid="uid://bjqx06qgqmopi" path="res://assets/ai/ui/dice_bag.svg" id="10_jbj1t"]
 [ext_resource type="Texture2D" uid="uid://bd2c437hy5mh7" path="res://assets/ai/ui/discard_pile.svg" id="11_a8y0u"]
@@ -135,6 +136,9 @@ visible = false
 visible = false
 
 [node name="RewardScreen" parent="UI" instance=ExtResource("8_reward")]
+visible = false
+
+[node name="MapScreen" parent="UI" instance=ExtResource("9_map")]
 visible = false
 
 [node name="RoundInfo" type="HBoxContainer" parent="UI"]

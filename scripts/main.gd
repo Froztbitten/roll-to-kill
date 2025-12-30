@@ -18,6 +18,7 @@ static var debug_mode: bool = false
 @onready var victory_screen = $UI/VictoryScreen
 @onready var defeat_screen = $UI/DefeatScreen
 @onready var reward_screen = $UI/RewardScreen
+@onready var map_screen = $UI/MapScreen
 @onready var end_turn_button = $UI/EndTurnButton
 
 enum Turn {PLAYER, ENEMY}
@@ -70,6 +71,8 @@ func _ready() -> void:
 	player.dice_drawn.connect(_on_player_dice_drawn)
 	player.statuses_changed.connect(_on_player_statuses_changed)
 
+	map_screen.node_selected.connect(_on_map_node_selected)
+	dice_pool_ui.player = player
 	dice_pool_ui.die_clicked.connect(_on_die_clicked)
 	dice_pool_ui.die_drag_started.connect(_on_die_drag_started)
 	dice_pool_ui.die_value_changed.connect(_update_total_dice_value)
@@ -85,7 +88,11 @@ func _ready() -> void:
 	# Wait for one frame to ensure all newly created nodes (like abilities) are fully ready.
 	await get_tree().process_frame
 
-	await start_new_round()
+	if debug_mode:
+		await start_new_round()
+	else:
+		map_screen.generate_new_map()
+		map_screen.visible = true
 
 func _add_player_ability(new_ability: AbilityData):
 	# Instantiate and display a UI element for each ability the player has
@@ -93,7 +100,7 @@ func _add_player_ability(new_ability: AbilityData):
 	abilities_ui.add_child(ability_ui_instance)
 	ability_ui_instance.die_returned_from_slot.connect(_on_die_returned_to_pool)
 	ability_ui_instance.ability_activated.connect(_on_ability_activated)
-	ability_ui_instance.initialize(new_ability)
+	ability_ui_instance.initialize(new_ability, player)
 
 func player_turn() -> void:
 	# Failsafe: Reset the action lock at the start of the player's turn.
@@ -159,6 +166,13 @@ func player_turn() -> void:
 						tinkerer.add_block(shield_amount)
 						enemy.register_provided_shield(tinkerer, shield_amount)
 						print("%s shields %s for %d" % [enemy.name, tinkerer.name, shield_amount])
+				elif enemy.enemy_data.enemy_name == "White Knight":
+					var femme_fatales = active_enemies.filter(func(e): return e.enemy_data.enemy_name == "Femme Fatale")
+					if not femme_fatales.is_empty():
+						var target = femme_fatales[0]
+						target.add_block(enemy.next_action_value)
+						enemy.register_provided_shield(target, enemy.next_action_value)
+						print("%s shields %s for %d" % [enemy.name, target.name, enemy.next_action_value])
 				else:
 					# Default behavior: Shield self and one random ally.
 					enemy.add_block(enemy.next_action_value)
@@ -273,6 +287,10 @@ func enemy_turn() -> void:
 						if enemy.next_action.action_name == "Shrink Ray":
 							player.apply_duration_status("shrunk", 1)
 							print("Player has been shrunk!")
+						
+						if enemy.has_status("Raging"):
+							var recoil = ceili(enemy.next_action_value / 2.0)
+							await enemy.take_damage(recoil, true, enemy, false)
 
 					EnemyAction.ActionType.PIERCING_ATTACK:
 						await player.take_piercing_damage(enemy.next_action_value, true, enemy, true)
@@ -282,12 +300,18 @@ func enemy_turn() -> void:
 					EnemyAction.ActionType.SUPPORT_SHIELD:
 						pass # Proactive shield.
 					EnemyAction.ActionType.HEAL_ALLY:
-						# Prioritize healing injured allies
-						var injured_allies = active_enemies.filter(func(e): return e != enemy and e.hp < e.max_hp)
-						if not injured_allies.is_empty():
-							var ally_to_heal = injured_allies.pick_random()
-							ally_to_heal.heal(enemy.next_action_value)
-							print("%s is healing %s for %d" % [enemy.name, ally_to_heal.name, enemy.next_action_value])
+						if enemy.enemy_data.enemy_name == "White Knight" and enemy.next_action.action_name == "M'lady":
+							var femme_fatales = active_enemies.filter(func(e): return e.enemy_data.enemy_name == "Femme Fatale")
+							if not femme_fatales.is_empty():
+								femme_fatales[0].heal(enemy.next_action_value)
+								print("%s heals %s for %d" % [enemy.name, femme_fatales[0].name, enemy.next_action_value])
+						else:
+							# Prioritize healing injured allies
+							var injured_allies = active_enemies.filter(func(e): return e != enemy and e.hp < e.max_hp)
+							if not injured_allies.is_empty():
+								var ally_to_heal = injured_allies.pick_random()
+								ally_to_heal.heal(enemy.next_action_value)
+								print("%s is healing %s for %d" % [enemy.name, ally_to_heal.name, enemy.next_action_value])
 						enemy.update_health_display()
 
 					EnemyAction.ActionType.SPAWN_MINIONS:
@@ -307,8 +331,12 @@ func enemy_turn() -> void:
 
 					EnemyAction.ActionType.DEBUFF:
 						# If the debuff action has damage associated with it (e.g. Shrink Ray), deal it.
+						var damage_dealt = false
 						if enemy.next_action_value > 0:
+							var hp_before = player.hp
 							await player.take_damage(enemy.next_action_value, true, enemy, true)
+							if player.hp < hp_before:
+								damage_dealt = true
 						
 						if enemy.next_action.status_id != "":
 							var effect = StatusLibrary.get_status(enemy.next_action.status_id)
@@ -321,7 +349,15 @@ func enemy_turn() -> void:
 									if enemy.next_action.duration > -1:
 										value = enemy.next_action.duration
 								
-								player.apply_effect(effect, value)
+								# Special logic for Charm and Ragebait: only apply if damage was dealt
+								if (enemy.next_action.action_name == "Charm" or enemy.next_action.action_name == "Ragebait") and not damage_dealt:
+									print("%s failed: Player took no damage." % enemy.next_action.action_name)
+								else:
+									# Charm and Ragebait now apply buffs to the caster (enemy), not debuffs to the player.
+									if enemy.next_action.action_name == "Charm" or enemy.next_action.action_name == "Ragebait":
+										enemy.apply_effect(effect, value, enemy)
+									else:
+										player.apply_effect(effect, value, enemy)
 
 					EnemyAction.ActionType.FLEE:
 						enemy.die()
@@ -360,8 +396,9 @@ func _spawn_boss_minions(count: int):
 		var new_enemy: Enemy = enemy_spawner.ENEMY_UI.instantiate()
 		new_enemy.enemy_data = minion_data
 		enemy_container.add_child(new_enemy)
-		new_enemy.died.connect(_on_enemy_died.bind())
+		new_enemy.died.connect(_on_enemy_died)
 		new_enemy.exploded.connect(_on_enemy_exploded)
+		new_enemy.gold_dropped.connect(_on_enemy_gold_dropped.bind(new_enemy))
 	
 	enemy_container.call_deferred("arrange_enemies")
 
@@ -379,8 +416,9 @@ func _spawn_gnomish_invention():
 	new_enemy.enemy_data = invention_data
 	enemy_container.add_child(new_enemy)
 	# Connect the death signal so the game knows when it's defeated.
-	new_enemy.died.connect(_on_enemy_died.bind())
+	new_enemy.died.connect(_on_enemy_died)
 	new_enemy.exploded.connect(_on_enemy_exploded)
+	new_enemy.gold_dropped.connect(_on_enemy_gold_dropped.bind(new_enemy))
 	# Defer arrangement to prevent physics race conditions.
 	enemy_container.call_deferred("arrange_enemies")
 	print("Eureka! A %s has been summoned!" % invention_data.enemy_name)
@@ -453,6 +491,16 @@ func _on_character_clicked(character: Character) -> void:
 	is_resolving_action = true
 
 	var is_targeting_player = character is Player
+
+	# Check for Taunt restriction
+	if not is_targeting_player:
+		var taunting_enemies = get_active_enemies().filter(func(e): return e.has_status("Taunting"))
+		if not taunting_enemies.is_empty():
+			if not character.has_status("Taunting"):
+				print("Must attack a taunting enemy!")
+				is_resolving_action = false
+				return
+
 	var total_roll = 0
 	var dice_to_discard: Array[Die] = []
 	
@@ -705,10 +753,37 @@ func _animate_dice_to_target(dice_displays: Array[DieDisplay], target: Character
 	if not tweens.is_empty():
 		await tweens.back().finished
 
-func _on_enemy_died():
+func _on_map_node_selected(node_data):
+	map_screen.visible = false
+	
+	player.reset_for_new_round()
+	enemy_container.clear_everything()
+	
+	if node_data.type == "combat":
+		var spawned_enemies = enemy_spawner.spawn_random_encounter(EncounterData.EncounterType.NORMAL)
+		await _setup_round(spawned_enemies)
+	elif node_data.type == "rare_combat":
+		var spawned_enemies = enemy_spawner.spawn_random_encounter(EncounterData.EncounterType.RARE)
+		await _setup_round(spawned_enemies)
+	elif node_data.type == "boss":
+		var spawned_enemies = enemy_spawner.spawn_random_encounter(EncounterData.EncounterType.BOSS)
+		await _setup_round(spawned_enemies)
+	else:
+		print("Unknown node type selected: ", node_data.type)
+
+func _on_enemy_died(dead_enemy: Character):
+	# Check if a Femme Fatale died, and if so, enrage any White Knights
+	if dead_enemy is Enemy and dead_enemy.enemy_data and dead_enemy.enemy_data.enemy_name == "Femme Fatale":
+		var active_enemies = get_active_enemies()
+		for enemy in active_enemies:
+			if enemy.enemy_data.enemy_name == "White Knight" and enemy.has_status("Crash Out"):
+				print("White Knight becomes enraged!")
+				enemy.remove_status("crash_out")
+				enemy.apply_duration_status("raging", 99)
+
 	if get_active_enemies().is_empty():
 		# All enemies for the round are defeated
-		if round_number == BOSS_ROUND:
+		if map_screen.current_node and map_screen.current_node.type == "boss":
 			victory_screen.visible = true
 		else:
 			_show_reward_screen()
@@ -741,8 +816,9 @@ func _setup_round(spawned_enemies: Array) -> void:
 
 	for enemy in spawned_enemies:
 		# Connect to each new enemy's death signal
-		enemy.died.connect(_on_enemy_died.bind())
+		enemy.died.connect(_on_enemy_died)
 		enemy.exploded.connect(_on_enemy_exploded)
+		enemy.gold_dropped.connect(_on_enemy_gold_dropped.bind(enemy))
 	
 	# Wait for one frame. This is CRITICAL. It allows the engine to:
 	# 1. Process the `queue_free` from `clear_everything()`.
@@ -836,6 +912,66 @@ func _on_enemy_exploded(damage: int, source: Enemy):
 	# This is a generic handler for any enemy that might explode.
 	await player.take_damage(damage, true, source, false)
 
+func _on_enemy_gold_dropped(amount: int, source_enemy: Node2D):
+	_show_gold_popup(amount, source_enemy.global_position)
+	_animate_gold_collection(amount, source_enemy)
+	
+	# Delay adding gold until the animation (approx) finishes so the counter updates when gold arrives
+	get_tree().create_timer(0.8).timeout.connect(func(): player.add_gold(amount))
+
+func _show_gold_popup(amount: int, pos: Vector2):
+	var label = Label.new()
+	label.text = "+%d" % amount
+	label.add_theme_color_override("font_color", Color.GOLD)
+	label.add_theme_font_size_override("font_size", 32)
+	label.add_theme_color_override("font_outline_color", Color.BLACK)
+	label.add_theme_constant_override("outline_size", 6)
+	label.z_index = 100
+	add_child(label)
+	label.global_position = pos + Vector2(-20, -60)
+	
+	var tween = create_tween()
+	tween.tween_property(label, "global_position", label.global_position + Vector2(0, -50), 1.0)
+	tween.parallel().tween_property(label, "modulate:a", 0.0, 1.0)
+	tween.tween_callback(label.queue_free)
+
+func _animate_gold_collection(amount: int, source_node: Node2D):
+	var particle_count = min(amount, 10)
+	if amount > 0 and particle_count < 1: particle_count = 1
+	
+	var target_node = $UI/GameInfo/GoldContainer/GoldIcon
+	# Get screen position of the enemy to spawn UI particles correctly
+	var start_pos = source_node.get_global_transform_with_canvas().origin
+	
+	for i in range(particle_count):
+		var sprite = TextureRect.new()
+		sprite.texture = load("res://assets/ai/ui/gold.svg")
+		sprite.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		sprite.custom_minimum_size = Vector2(24, 24)
+		sprite.size = Vector2(24, 24)
+		sprite.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		sprite.pivot_offset = Vector2(12, 12)
+		
+		$UI.add_child(sprite)
+		sprite.global_position = start_pos
+		
+		var target_pos = target_node.get_global_rect().get_center() - (sprite.size / 2)
+		
+		# Random scatter
+		var scatter_dist = 60.0
+		var angle = randf() * TAU
+		var dist = randf() * scatter_dist
+		var scatter_pos = start_pos + Vector2(cos(angle), sin(angle)) * dist
+		
+		var tween = create_tween()
+		tween.set_parallel(false)
+		# Pop out
+		tween.tween_property(sprite, "global_position", scatter_pos, 0.3).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+		# Fly to stash
+		tween.tween_property(sprite, "global_position", target_pos, 0.6).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_IN).set_delay(0.1)
+		tween.parallel().tween_property(sprite, "scale", Vector2(0.5, 0.5), 0.6).set_delay(0.1)
+		tween.tween_callback(sprite.queue_free)
+
 func _show_reward_screen():
 	var reward_dice = _generate_reward_dice()
 	reward_screen.display_rewards(reward_dice)
@@ -903,7 +1039,11 @@ func _on_reward_chosen(chosen_die: Die) -> void:
 	round_number += 1
 	reward_screen.visible = false
 	
-	await start_new_round()
+	if debug_mode:
+		await start_new_round()
+	else:
+		# Return to map
+		map_screen.visible = true
 
 func _on_play_again_button_pressed():
 	# Reload the entire main scene to restart the game.

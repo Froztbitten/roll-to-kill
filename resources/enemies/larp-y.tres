@@ -1,0 +1,30 @@
+[gd_resource type="Resource" script_class="EnemyData" load_steps=8 format=3 uid="uid://b41n35hoc8dbr"]
+
+[ext_resource type="Script" uid="uid://djeev1jhalfah" path="res://scripts/character/enemy/enemy_action.gd" id="1_action"]
+[ext_resource type="Script" uid="uid://b62erl0h813g2" path="res://scripts/dice/die.gd" id="2_die"]
+[ext_resource type="Script" uid="uid://dv6r7tro15lnf" path="res://scripts/character/enemy/enemy_data.gd" id="3_data"]
+[ext_resource type="Texture2D" uid="uid://dcn1mf55mhloe" path="res://assets/ai/characters/larp_y.jpg" id="4_s1381"]
+
+[sub_resource type="GDScript" id="GDScript_s1381"]
+
+[sub_resource type="Resource" id="d8_die"]
+script = ExtResource("2_die")
+sides = 8
+
+[sub_resource type="Resource" id="action_deafening_shriek"]
+script = ExtResource("1_action")
+action_name = "Deafening Shriek"
+action_type = 9
+dice_to_roll = Array[ExtResource("2_die")]([SubResource("d8_die")])
+status_id = "silence"
+duration = 1
+
+[resource]
+script = ExtResource("3_data")
+enemy_name = "Larp-y"
+sprite_texture = ExtResource("4_s1381")
+minimum_hp = 10
+gold_minimum = 10
+gold_amount = Array[ExtResource("2_die")]([SubResource("d8_die"), SubResource("d8_die")])
+hp_dice = Array[ExtResource("2_die")]([SubResource("d8_die"), SubResource("d8_die"), SubResource("d8_die"), SubResource("d8_die")])
+action_pool = Array[ExtResource("1_action")]([SubResource("action_deafening_shriek")])

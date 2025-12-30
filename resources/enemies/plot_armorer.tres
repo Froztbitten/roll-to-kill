@@ -1,0 +1,47 @@
+[gd_resource type="Resource" script_class="EnemyData" load_steps=12 format=3 uid="uid://b6e7c620xv032"]
+
+[ext_resource type="Script" uid="uid://djeev1jhalfah" path="res://scripts/character/enemy/enemy_action.gd" id="1_action"]
+[ext_resource type="Script" uid="uid://b62erl0h813g2" path="res://scripts/dice/die.gd" id="2_die"]
+[ext_resource type="Script" uid="uid://dv6r7tro15lnf" path="res://scripts/character/enemy/enemy_data.gd" id="3_data"]
+[ext_resource type="Texture2D" uid="uid://bf3a5vqmwolx1" path="res://assets/ai/characters/plot_armorer.jpg" id="4_tbcas"]
+
+[sub_resource type="Resource" id="action_monologue"]
+script = ExtResource("1_action")
+action_name = "Monologue"
+action_type = 6
+status_id = "advantageous"
+duration = 2
+
+[sub_resource type="GDScript" id="GDScript_s1381"]
+
+[sub_resource type="Resource" id="d6_die"]
+script = ExtResource("2_die")
+
+[sub_resource type="Resource" id="action_plot_twist"]
+script = ExtResource("1_action")
+action_name = "Plot Twist"
+action_type = 4
+dice_to_roll = Array[ExtResource("2_die")]([SubResource("d6_die"), SubResource("d6_die")])
+
+[sub_resource type="Resource" id="d12_die"]
+script = ExtResource("2_die")
+sides = 12
+
+[sub_resource type="Resource" id="action_climactic_strike"]
+script = ExtResource("1_action")
+action_name = "Climactic Strike"
+dice_to_roll = Array[ExtResource("2_die")]([SubResource("d12_die")])
+
+[sub_resource type="Resource" id="d8_die"]
+script = ExtResource("2_die")
+sides = 8
+
+[resource]
+script = ExtResource("3_data")
+enemy_name = "Plot Armorer"
+sprite_texture = ExtResource("4_tbcas")
+minimum_hp = 10
+gold_minimum = 15
+gold_amount = Array[ExtResource("2_die")]([SubResource("d8_die"), SubResource("d8_die")])
+hp_dice = Array[ExtResource("2_die")]([SubResource("d8_die"), SubResource("d8_die"), SubResource("d8_die"), SubResource("d8_die")])
+action_pool = Array[ExtResource("1_action")]([SubResource("action_monologue"), SubResource("action_plot_twist"), SubResource("action_climactic_strike")])

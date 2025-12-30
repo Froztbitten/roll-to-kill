@@ -1,0 +1,22 @@
+<svg width="64px" height="64px" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <radialGradient id="charmGradient" cx="50%" cy="50%" r="50%" fx="50%" fy="50%">
+      <stop offset="0%" style="stop-color:#FFC0CB;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#FF69B4;stop-opacity:1" />
+    </radialGradient>
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="1.5" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  
+  <path d="M32 58C32 58 12 42 6 28C0 14 14 2 26 12C32 17 32 17 32 17C32 17 32 17 38 12C50 2 64 14 58 28C52 42 32 58 32 58Z" fill="url(#charmGradient)" stroke="#C71585" stroke-width="2" filter="url(#glow)" />
+  
+  <path d="M32 34 C 30 34, 29 32, 30 30 C 31 28, 34 28, 36 30 C 38 32, 38 36, 34 38 C 30 40, 26 38, 25 34 C 24 30, 27 24, 32 23 C 37 22, 42 26, 43 32" fill="none" stroke="#FFD700" stroke-width="2.5" stroke-linecap="round" filter="url(#glow)" opacity="0.9"/>
+  
+  <g fill="#FFD700" filter="url(#glow)">
+    <path d="M10 16 L12 20 L16 22 L12 24 L10 28 L8 24 L4 22 L8 20 Z" /> <path d="M54 16 L56 20 L60 22 L56 24 L54 28 L52 24 L48 22 L52 20 Z" /> <path d="M48 48 L49 50 L51 51 L49 52 L48 54 L47 52 L45 51 L47 50 Z" /> </g>
+</svg>

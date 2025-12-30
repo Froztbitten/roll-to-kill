@@ -1,0 +1,35 @@
+<svg width="64px" height="64px" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bossBgGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#D32F2F;stop-opacity:1" /> <stop offset="70%" style="stop-color:#B71C1C;stop-opacity:1" /> <stop offset="100%" style="stop-color:#4E0D0D;stop-opacity:1" /> </linearGradient>
+
+    <linearGradient id="bossMetalGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#455A64;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#263238;stop-opacity:1" />
+    </linearGradient>
+
+    <filter id="bossGlow">
+      <feGaussianBlur stdDeviation="1.2" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <path d="M32 4 L60 18 L54 46 C54 56, 32 62, 32 62 C32 62, 10 56, 10 46 L4 18 L32 4 Z" fill="url(#bossBgGrad)" stroke="#B71C1C" stroke-width="2"/>
+  
+  <path d="M32 8 L54 20 L50 42 C50 50, 32 56, 32 56 C32 56, 14 50, 14 42 L10 20 L32 8 Z" fill="none" stroke="#FF5722" stroke-width="1.5" opacity="0.6" filter="url(#bossGlow)"/>
+
+  <g transform="translate(32, 36)">
+    <path d="M-22 -26 C -28 -38, -18 -44, -8 -40 L -14 -22 Z" fill="#212121"/>
+    <path d="M22 -26 C 28 -38, 18 -44, 8 -40 L 14 -22 Z" fill="#212121"/>
+
+    <path d="M-18 -22 L -14 -10 L -20 4 L -12 16 L 0 20 L 12 16 L 20 4 L 14 -10 L 18 -22 C 8 -26, -8 -26, -18 -22 Z" fill="url(#bossMetalGrad)" stroke="#212121" stroke-width="1.5"/>
+
+    <path d="M-12 -6 L-4 -4 L-8 2 Z" fill="#FFC107" filter="url(#bossGlow)"/>
+    <path d="M12 -6 L4 -4 L8 2 Z" fill="#FFC107" filter="url(#bossGlow)"/>
+
+    <path d="M-8 8 L-4 14 L0 10 L4 14 L8 8" fill="none" stroke="#FF5722" stroke-width="2" stroke-linejoin="bevel" filter="url(#bossGlow)"/>
+  </g>
+</svg>

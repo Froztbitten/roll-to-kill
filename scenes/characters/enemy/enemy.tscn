@@ -1,10 +1,10 @@
-[gd_scene load_steps=6 format=3 uid="uid://c6x0j2f3a2w0g"]
+[gd_scene load_steps=7 format=3 uid="uid://c6x0j2f3a2w0g"]
 
 [ext_resource type="Script" uid="uid://dj62e2af6tm5x" path="res://scripts/character/enemy/enemy.gd" id="1_4qfxc"]
 [ext_resource type="Texture2D" uid="uid://bulxxtlabqtiy" path="res://assets/ai/characters/icon.svg" id="2_abcde"]
 [ext_resource type="PackedScene" uid="uid://cgrc3aet23kli" path="res://scenes/characters/health_bar.tscn" id="3_m1yav"]
 [ext_resource type="PackedScene" uid="uid://b1c2d3e4f5g6" path="res://scenes/characters/enemy/enemy_intent_display.tscn" id="4_hijkl"]
-[ext_resource type="PackedScene" uid="uid://b7c8d9e0f1g2" path="res://scenes/ui/status_effect_display.tscn" id="5_status"]
+[ext_resource type="PackedScene" uid="uid://b7c8eae0f1g2" path="res://scenes/ui/status_effect_display.tscn" id="5_status"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_12345"]
 size = Vector2(101, 130)
@@ -48,8 +48,8 @@ offset_right = -60.0
 grow_horizontal = 2
 
 [node name="StatusEffectDisplay" parent="." instance=ExtResource("5_status")]
+
 [node name="StatusCanvas" type="CanvasLayer" parent="."]
 layer = 2
 
 [node name="StatusEffectDisplay" parent="StatusCanvas" instance=ExtResource("5_status")]
-anchors_preset = 0

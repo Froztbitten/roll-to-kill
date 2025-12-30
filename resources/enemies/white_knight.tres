@@ -1,0 +1,48 @@
+[gd_resource type="Resource" script_class="EnemyData" load_steps=12 format=3 uid="uid://b2cv5v5icd0fu"]
+
+[ext_resource type="Script" uid="uid://djeev1jhalfah" path="res://scripts/character/enemy/enemy_action.gd" id="1_action"]
+[ext_resource type="Script" uid="uid://b62erl0h813g2" path="res://scripts/dice/die.gd" id="2_die"]
+[ext_resource type="Texture2D" uid="uid://5fgnfdqiwubs" path="res://assets/ai/characters/white_knight.jpg" id="3_6io7g"]
+[ext_resource type="Script" uid="uid://dv6r7tro15lnf" path="res://scripts/character/enemy/enemy_data.gd" id="3_data"]
+
+[sub_resource type="Resource" id="d8_die"]
+script = ExtResource("2_die")
+sides = 8
+
+[sub_resource type="Resource" id="action_defend_milady"]
+script = ExtResource("1_action")
+action_name = "M'lady"
+action_type = 3
+dice_to_roll = Array[ExtResource("2_die")]([SubResource("d8_die"), SubResource("d8_die"), SubResource("d8_die"), SubResource("d8_die")])
+
+[sub_resource type="Resource" id="action_chivalry"]
+script = ExtResource("1_action")
+action_name = "Chivalry isn't Dead"
+action_type = 2
+dice_to_roll = Array[ExtResource("2_die")]([SubResource("d8_die"), SubResource("d8_die"), SubResource("d8_die"), SubResource("d8_die"), SubResource("d8_die"), SubResource("d8_die"), SubResource("d8_die"), SubResource("d8_die")])
+
+[sub_resource type="Resource" id="d12_die"]
+script = ExtResource("2_die")
+sides = 12
+
+[sub_resource type="Resource" id="action_incel_sior"]
+script = ExtResource("1_action")
+action_name = "Incel-sior"
+dice_to_roll = Array[ExtResource("2_die")]([SubResource("d12_die"), SubResource("d12_die")])
+
+[sub_resource type="Resource" id="d10_die"]
+script = ExtResource("2_die")
+sides = 10
+
+[sub_resource type="Resource" id="d6_die"]
+script = ExtResource("2_die")
+sides = 6
+
+[resource]
+script = ExtResource("3_data")
+enemy_name = "White Knight"
+sprite_texture = ExtResource("3_6io7g")
+minimum_hp = 20
+gold_amount = Array[ExtResource("2_die")]([SubResource("d10_die"), SubResource("d10_die"), SubResource("d10_die"), SubResource("d10_die"), SubResource("d10_die")])
+hp_dice = Array[ExtResource("2_die")]([SubResource("d6_die"), SubResource("d6_die"), SubResource("d6_die"), SubResource("d6_die"), SubResource("d6_die"), SubResource("d6_die"), SubResource("d6_die"), SubResource("d6_die")])
+action_pool = Array[ExtResource("1_action")]([SubResource("action_defend_milady"), SubResource("action_chivalry"), SubResource("action_incel_sior")])

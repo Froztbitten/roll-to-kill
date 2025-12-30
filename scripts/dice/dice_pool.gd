@@ -9,6 +9,7 @@ signal layout_changed
 const DIE_DISPLAY_SCENE = preload("res://scenes/dice/die_display.tscn")
 
 var dice_pool_display: Array[DieDisplay] = []
+var player: Player
 
 func clear_pool():
 	for child in get_children():
@@ -22,6 +23,7 @@ func add_dice_instantly(dice_array: Array[Die]):
 func _add_die_to_pool(die_data: Die, invisible: bool) -> DieDisplay:
 	var die_display: DieDisplay = DIE_DISPLAY_SCENE.instantiate()
 	add_child(die_display)
+	die_display.player = player
 	die_display.dice_pool = self
 	die_display.die_clicked.connect(func(display): emit_signal("die_clicked", display))
 	die_display.die_value_changed.connect(func(): emit_signal("die_value_changed"))

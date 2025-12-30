@@ -1,4 +1,4 @@
-[gd_resource type="Resource" script_class="EnemyData" load_steps=9 format=3 uid="uid://cneoxudbbe41m"]
+[gd_resource type="Resource" script_class="EnemyData" load_steps=8 format=3 uid="uid://cneoxudbbe41m"]
 
 [ext_resource type="Script" uid="uid://djeev1jhalfah" path="res://scripts/character/enemy/enemy_action.gd" id="1_action"]
 [ext_resource type="Script" uid="uid://b62erl0h813g2" path="res://scripts/dice/die.gd" id="2_die"]
@@ -8,21 +8,15 @@
 [sub_resource type="Resource" id="Resource_windup_action"]
 script = ExtResource("1_action")
 action_name = "Winding Up"
-dice_to_roll = Array[ExtResource("2_die")]([])
-
-[sub_resource type="Resource" id="sub_d20_for_icon"]
-script = ExtResource("2_die")
-sides = 20
 
 [sub_resource type="Resource" id="Resource_unleash_action"]
 script = ExtResource("1_action")
 action_name = "De20nate"
 base_value = 20
-dice_to_roll = Array[ExtResource("2_die")]([SubResource("sub_d20_for_icon")])
 self_destructs = true
 ignore_dice_roll = true
 
-[sub_resource type="Resource" id="Resource_hp_die"]
+[sub_resource type="Resource" id="hp_d20"]
 script = ExtResource("2_die")
 sides = 20
 
@@ -31,5 +25,5 @@ script = ExtResource("3_data")
 enemy_name = "D20"
 sprite_texture = ExtResource("4_sprite")
 minimum_hp = 0
-hp_dice = Array[ExtResource("2_die")]([SubResource("Resource_hp_die")])
+hp_dice = Array[ExtResource("2_die")]([SubResource("hp_d20")])
 action_pool = Array[ExtResource("1_action")]([SubResource("Resource_windup_action"), SubResource("Resource_unleash_action")])

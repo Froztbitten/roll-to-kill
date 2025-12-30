@@ -4,10 +4,15 @@ class_name DieSlotUI
 signal die_placed(die_display, die_data)
 signal die_removed(die_display)
 
+var player: Player = null
 var current_die_display: Control = null
 
 # Checks if the dragged data can be dropped here.
 func _can_drop_data(at_position: Vector2, data: Variant) -> bool:
+	if player and player.has_status("Silence"):
+		print("Player is Silenced and cannot use abilities!")
+		return false
+
 	# We only accept drops if the slot is empty and the data is from a DieDisplay.
 	if current_die_display == null and data is Dictionary and data.has("die_data"):
 		var die_data: Die = data.die_data

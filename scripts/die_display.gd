@@ -21,6 +21,7 @@ var die: Die:
 @onready var hover_timer: Timer = $HoverTimer
 
 var dice_pool = null
+var player: Player = null
 
 func _ready():
 	# To prevent all dice from sharing the same glow state, we need to make
@@ -177,7 +178,7 @@ func _gui_input(event: InputEvent):
 				for effect in die.result_face.effects:
 					if effect.process_effect == EffectLogic.wormhole:
 						var context = {"die": die}
-						EffectLogic.wormhole(0, null, null, context)
+						EffectLogic.wormhole(0, player, null, context)
 						update_display()
 						emit_signal("die_value_changed")
 						get_viewport().set_input_as_handled()

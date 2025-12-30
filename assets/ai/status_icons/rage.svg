@@ -1,0 +1,36 @@
+<svg width="64px" height="64px" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <radialGradient id="rageBgGrad" cx="50%" cy="50%" r="50%" fx="50%" fy="50%">
+      <stop offset="40%" style="stop-color:#FF5722;stop-opacity:1" /> <stop offset="100%" style="stop-color:#B71C1C;stop-opacity:1" /> </radialGradient>
+
+    <linearGradient id="innerFireGrad" x1="0%" y1="100%" x2="0%" y2="0%">
+      <stop offset="0%" style="stop-color:#FFEB3B;stop-opacity:1" /> <stop offset="100%" style="stop-color:#FF9800;stop-opacity:1" /> </linearGradient>
+
+    <filter id="rageGlow">
+      <feGaussianBlur stdDeviation="1.2" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <circle cx="32" cy="32" r="30" fill="url(#rageBgGrad)" stroke="#FF5722" stroke-width="2" filter="url(#rageGlow)"/>
+
+  <g transform="translate(32, 32)" filter="url(#rageGlow)">
+    <path d="M0 -26 L4 -18 L0 -22 L-4 -18 Z" fill="#FFC107" /> <path d="M18 -18 L22 -10 L18 -14 L14 -10 Z" fill="#FF9800" transform="rotate(45)"/>
+    <path d="M26 0 L18 4 L22 0 L18 -4 Z" fill="#FF5722" /> <path d="M18 18 L14 10 L18 14 L22 10 Z" fill="#FF9800" transform="rotate(135)"/>
+    <path d="M-18 -18 L-14 -10 L-18 -14 L-22 -10 Z" fill="#FF9800" transform="rotate(-45)"/>
+    <path d="M-26 0 L-18 -4 L-22 0 L-18 4 Z" fill="#FF5722" /> </g>
+
+  <g filter="url(#rageGlow)">
+    <path d="M32 10 C 24 10, 18 16, 16 24 C 16 30, 20 36, 24 38 L 26 44 L 32 48 L 38 44 L 40 38 C 44 36, 48 30, 48 24 C 46 16, 40 10, 32 10 Z" fill="#8D1F1F" stroke="#4E0D0D" stroke-width="1.5"/>
+    
+    <path d="M22 22 L32 26 L42 22" stroke="#4E0D0D" stroke-width="2" fill="none" stroke-linecap="round"/>
+
+    <path d="M20 28 L26 30 L20 32 Z" fill="url(#innerFireGrad)"/>
+    <path d="M44 28 L38 30 L44 32 Z" fill="url(#innerFireGrad)"/>
+
+    <path d="M26 36 L24 42 L28 44 L32 46 L36 44 L40 42 L38 36 L34 38 L32 36 L30 38 Z" fill="url(#innerFireGrad)"/>
+  </g>
+</svg>

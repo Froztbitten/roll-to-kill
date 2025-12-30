@@ -1,0 +1,39 @@
+<svg width="64px" height="64px" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <radialGradient id="crashBgGrad" cx="50%" cy="50%" r="50%" fx="50%" fy="50%">
+      <stop offset="0%" style="stop-color:#FF5722;stop-opacity:1" /> <stop offset="80%" style="stop-color:#D84315;stop-opacity:1" /> <stop offset="100%" style="stop-color:#BF360C;stop-opacity:1" /> </radialGradient>
+
+    <linearGradient id="breakGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#FFC107;stop-opacity:1" /> <stop offset="40%" style="stop-color:#FF9800;stop-opacity:1" /> <stop offset="100%" style="stop-color:#5D4037;stop-opacity:1" /> </linearGradient>
+
+    <filter id="crashGlow">
+      <feGaussianBlur stdDeviation="1.2" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <circle cx="32" cy="32" r="30" fill="url(#crashBgGrad)" stroke="#FF5722" stroke-width="2" filter="url(#crashGlow)"/>
+
+  <path d="M32 32 L28 20 L36 16 L40 24 L52 20 L48 32 L56 40 L44 44 L40 56 L28 52 L20 56 L24 44 L12 40 L20 32 L16 20 L28 24 Z" fill="#FFEB3B" opacity="0.7" filter="url(#crashGlow)">
+    <animate attributeName="opacity" values="0.7;0.4;0.7" dur="0.5s" repeatCount="indefinite" />
+  </path>
+
+  <g filter="url(#crashGlow)">
+    <path d="M22 18 L18 26 L14 24 L12 32 L16 38 L14 46 L22 50 L28 44 L36 48 L44 46 L48 38 L52 34 L50 26 L44 20 L36 16 L28 22 Z" fill="url(#breakGrad)" stroke="#3E2723" stroke-width="1.5"/>
+    
+    <path d="M32 32 L20 14 M32 32 L48 18 M32 32 L54 36 M32 32 L42 52 M32 32 L18 50 M32 32 L10 34" stroke="#FFEB3B" stroke-width="2" stroke-linecap="round" />
+  </g>
+
+  <g fill="url(#breakGrad)" stroke="#FFEB3B" stroke-width="1" filter="url(#crashGlow)">
+    <polygon points="10,20 16,16 14,24" />
+    <polygon points="50,14 56,20 48,22" />
+    <polygon points="8,44 14,50 18,42" />
+    <polygon points="52,50 58,44 46,42" />
+  </g>
+
+  <path d="M32 32 m-20,0 a 20,20 0 1,0 40,0 a 20,20 0 1,0 -40,0 M32 32 m-26,0 a 26,26 0 1,0 52,0 a 26,26 0 1,0 -52,0" stroke="#FF5722" stroke-width="2" fill="none" stroke-dasharray="4 6" filter="url(#crashGlow)" opacity="0.6"/>
+
+</svg>

@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="EncounterData" load_steps=6 format=3 uid="uid://eyjkiq7q3kxg"]
+
+[ext_resource type="Script" uid="uid://dv6r7tro15lnf" path="res://scripts/character/enemy/enemy_data.gd" id="1_data"]
+[ext_resource type="Resource" uid="uid://b2cv5v5icd0fu" path="res://resources/enemies/white_knight.tres" id="2_wk"]
+[ext_resource type="Resource" uid="uid://d0v8v5xg7nftg" path="res://resources/enemies/femme_fatale.tres" id="3_ff"]
+[ext_resource type="Resource" uid="uid://fltcag5u4y6d" path="res://resources/enemies/keyboard_warrior.tres" id="4_kw"]
+[ext_resource type="Script" uid="uid://ck2drfaun3f25" path="res://scripts/encounter_data.gd" id="5_encounter"]
+
+[resource]
+script = ExtResource("5_encounter")
+enemy_types = Array[ExtResource("1_data")]([ExtResource("2_wk"), ExtResource("3_ff"), ExtResource("4_kw")])
+max_count = 3

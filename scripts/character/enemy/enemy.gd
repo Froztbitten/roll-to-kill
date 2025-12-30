@@ -4,12 +4,14 @@ class_name Enemy
 @export var enemy_data: EnemyData
 
 signal exploded(damage, source)
+signal gold_dropped(amount)
 
 var next_action: EnemyAction
 var next_action_value: int = 0
 var _is_charging := false
 var _turn_count := 0
 var _provided_shields: Array[Dictionary] = []
+var _has_triggered_death_logic := false
 
 @onready var intent_display: Control = $EnemyIntentDisplay
 @onready var sprite: TextureRect = $Sprite2D
@@ -53,6 +55,11 @@ func setup():
 	_is_charging = false
 	_turn_count = 0
 	update_health_display()
+
+	if enemy_data.enemy_name == "White Knight":
+		apply_duration_status("crash_out", 99)
+	elif enemy_data.enemy_name == "Plot Armorer":
+		apply_charges_status("main_character_energy", 1)
 
 func declare_intent(active_enemies: Array):
 	_turn_count += 1
@@ -135,9 +142,33 @@ func declare_intent(active_enemies: Array):
 		else:
 			next_action = enemy_data.action_pool[0]
 			_is_charging = true
+	elif enemy_data.enemy_name == "White Knight":
+		var femme_fatale_target = null
+		for e in active_enemies:
+			if e.enemy_data.enemy_name == "Femme Fatale" and not e._is_dead:
+				femme_fatale_target = e
+				break
+		
+		var possible_actions = enemy_data.action_pool.duplicate()
+		if not femme_fatale_target:
+			possible_actions = possible_actions.filter(func(a): return a.action_name != "M'lady" and a.action_name != "Chivalry isn't Dead")
+		elif femme_fatale_target.hp >= femme_fatale_target.max_hp:
+			# Femme Fatale is at full health, remove heal action
+			possible_actions = possible_actions.filter(func(a): return a.action_name != "M'lady")
+		
+		if possible_actions.is_empty():
+			# Fallback to attack if no other actions are valid
+			next_action = enemy_data.action_pool.filter(func(a): return a.action_name == "Incel-sior")[0]
+		else:
+			next_action = possible_actions.pick_random()
 	else:
 		# Default behavior: pick a random action from the pool.
-		next_action = enemy_data.action_pool.pick_random()
+		var possible_actions = enemy_data.action_pool.duplicate()
+		var injured_allies = active_enemies.filter(func(e): return e != self and e.hp < e.max_hp)
+		if injured_allies.is_empty():
+			possible_actions = possible_actions.filter(func(a): return a.action_type != EnemyAction.ActionType.HEAL_ALLY)
+		
+		next_action = possible_actions.pick_random() if not possible_actions.is_empty() else enemy_data.action_pool.pick_random()
 		_is_charging = false # Reset in case it's a mixed-type enemy
 
 	print("Next action: ", next_action.action_name)
@@ -145,8 +176,12 @@ func declare_intent(active_enemies: Array):
 	next_action_value = next_action.base_value
 	if not next_action.ignore_dice_roll:
 		var advantage = has_status("Advantageous")
-		for action_die: Die in next_action.dice_to_roll:
-			next_action_value += action_die.roll(advantage)
+		var raging = has_status("Raging")
+		var multiplier = 2 if raging else 1
+		
+		for i in range(multiplier):
+			for action_die: Die in next_action.dice_to_roll:
+				next_action_value += action_die.roll(advantage)
 	
 	# Safely get the icon for the intent display.
 	# This prevents a crash if an action has no dice.
@@ -191,27 +226,39 @@ func clear_provided_shields():
 
 func die() -> void:
 	# Override the Character's die() function to add special on-death effects.
-	if not _is_dead and enemy_data and enemy_data.enemy_name == "Wick-wock":
+	if _has_triggered_death_logic:
+		return
+
+	# Call the parent die function first. This will handle the revive logic.
+	super.die()
+
+	# If super.die() returned early because of a revive, _is_dead will be false.
+	if not _is_dead:
+		return # Revived, so stop here.
+
+	# If we reach here, the enemy is truly dead.
+	# Set the flag to prevent this logic from running again.
+	_has_triggered_death_logic = true
+
+	if enemy_data:
+		var total_gold = enemy_data.gold_minimum
+		for gold_die in enemy_data.gold_amount:
+			total_gold += gold_die.roll()
+		
+		if total_gold > 0:
+			emit_signal("gold_dropped", total_gold)
+
+	if enemy_data and enemy_data.enemy_name == "Wick-wock":
 		var explosion_die = Die.new(8)
 		var damage = explosion_die.roll()
 		print("Wick-wock explodes, dealing %d damage to the player!" % damage)
 		emit_signal("exploded", damage, self)
 
 	# Remove provided shields from allies if this unit dies.
-	if not _is_dead:
-		for entry in _provided_shields:
-			var target = entry.target
-			var amount = entry.amount
-			if is_instance_valid(target) and not target._is_dead and target != self:
-				target.block = max(0, target.block - amount)
-				target.update_health_display()
-		_provided_shields.clear()
-
-	# Explicitly hide the status display to ensure debuffs are visually removed immediately.
-	if status_display:
-		status_display.visible = false
-		if status_display.get_parent() is CanvasLayer:
-			status_display.get_parent().visible = false
-
-	# Call the original die function to handle the rest of the death process.
-	super.die()
+	for entry in _provided_shields:
+		var target = entry.target
+		var amount = entry.amount
+		if is_instance_valid(target) and not target._is_dead and target != self:
+			target.block = max(0, target.block - amount)
+			target.update_health_display()
+	_provided_shields.clear()

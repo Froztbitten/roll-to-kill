@@ -1,0 +1,43 @@
+[gd_resource type="Resource" script_class="EnemyData" load_steps=11 format=3 uid="uid://fltcag5u4y6d"]
+
+[ext_resource type="Script" uid="uid://djeev1jhalfah" path="res://scripts/character/enemy/enemy_action.gd" id="1_action"]
+[ext_resource type="Script" uid="uid://b62erl0h813g2" path="res://scripts/dice/die.gd" id="2_die"]
+[ext_resource type="Texture2D" uid="uid://dkbi1u8ox88qj" path="res://assets/ai/characters/keyboard_warrior.jpg" id="3_cj5mh"]
+[ext_resource type="Script" uid="uid://dv6r7tro15lnf" path="res://scripts/character/enemy/enemy_data.gd" id="3_data"]
+
+[sub_resource type="GDScript" id="GDScript_s1381"]
+
+[sub_resource type="Resource" id="d6_die"]
+script = ExtResource("2_die")
+
+[sub_resource type="Resource" id="action_vibe_killer"]
+script = ExtResource("1_action")
+action_name = "Vibe Killer"
+action_type = 9
+dice_to_roll = Array[ExtResource("2_die")]([SubResource("d6_die"), SubResource("d6_die")])
+status_id = "bleeding"
+charges = 1
+
+[sub_resource type="Resource" id="action_ragebait"]
+script = ExtResource("1_action")
+action_name = "Ragebait"
+action_type = 9
+dice_to_roll = Array[ExtResource("2_die")]([SubResource("d6_die"), SubResource("d6_die")])
+status_id = "taunting"
+duration = 1
+
+[sub_resource type="Resource" id="gold_d6"]
+script = ExtResource("2_die")
+
+[sub_resource type="Resource" id="hp_d10"]
+script = ExtResource("2_die")
+sides = 10
+
+[resource]
+script = ExtResource("3_data")
+enemy_name = "Keyboard Warrior"
+sprite_texture = ExtResource("3_cj5mh")
+minimum_hp = 15
+gold_amount = Array[ExtResource("2_die")]([SubResource("gold_d6"), SubResource("gold_d6"), SubResource("gold_d6"), SubResource("gold_d6"), SubResource("gold_d6")])
+hp_dice = Array[ExtResource("2_die")]([SubResource("hp_d10"), SubResource("hp_d10")])
+action_pool = Array[ExtResource("1_action")]([SubResource("action_vibe_killer"), SubResource("action_ragebait")])
