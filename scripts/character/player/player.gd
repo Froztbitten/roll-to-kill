@@ -48,10 +48,11 @@ func _process(delta):
 	if is_instance_valid(status_display):
 		status_display.global_position = global_position + Vector2(-50, -50)
 
-func draw_hand():
+func _draw_from_bag(count: int) -> Array[Die]:
 	var drawn_dice: Array[Die] = []
-	var is_shrunk = has_status("Shrunk")
-	for i in range(dice_pool_size):
+	var is_shrunk = has_status(STATUS_SHRUNK)
+	
+	for i in range(count):
 		if _round_dice_bag.size() == 0:
 			shuffle_dice_discard_into_bag()
 		
@@ -63,20 +64,11 @@ func draw_hand():
 			drawn_dice.append(shrink_die(drawn_die) if is_shrunk else drawn_die)
 	return drawn_dice
 
+func draw_hand():
+	return _draw_from_bag(dice_pool_size)
+
 func draw_dice(count: int):
-	var drawn_dice: Array[Die] = []
-	var is_shrunk = has_status("Shrunk")
-	for i in range(count):
-		if _round_dice_bag.size() == 0:
-			shuffle_dice_discard_into_bag()
-		
-		if _round_dice_bag.size() > 0:
-			var random_index = randi() % _round_dice_bag.size()
-			var drawn_die = _round_dice_bag.pop_at(random_index)
-			dice_bag_changed.emit(_round_dice_bag.size())
-			
-			drawn_dice.append(shrink_die(drawn_die) if is_shrunk else drawn_die)
-	
+	var drawn_dice = _draw_from_bag(count)
 	if not drawn_dice.is_empty():
 		dice_drawn.emit(drawn_dice)
 
@@ -144,7 +136,7 @@ func hold_die(die_to_hold: Die):
 
 func get_and_clear_held_dice() -> Array[Die]:
 	var dice_to_return: Array[Die] = []
-	var is_shrunk = has_status("Shrunk")
+	var is_shrunk = has_status(STATUS_SHRUNK)
 	
 	for held_die in _held_dice:
 		if is_shrunk:

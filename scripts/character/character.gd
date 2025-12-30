@@ -7,6 +7,16 @@ signal statuses_changed(statuses)
 @export var hp: int = 100
 @export var max_hp: int = 100
 @export var block: int = 0
+
+const STATUS_CHARMING = "Charming"
+const STATUS_SPIKY = "Spiky"
+const STATUS_RIPOSTE = "Ri-posted up"
+const STATUS_MAIN_CHARACTER = "Main Character Energy"
+const STATUS_ECHOING_IMPACT = "Echoing Impact"
+const STATUS_BLEEDING = "Bleeding"
+const STATUS_BURNING = "Burning"
+const STATUS_SHRUNK = "Shrunk"
+
 var statuses: Dictionary = {} # {StatusEffect: duration}
 var _new_statuses_this_turn: Array[StatusEffect] = []
 var _is_dead := false
@@ -38,7 +48,7 @@ func take_damage(damage: int, play_recoil: bool = true, attacker: Character = nu
 		return
 	
 	# Check if self has Charming buff (cannot be damaged)
-	if has_status("Charming") and attacker != self:
+	if has_status(STATUS_CHARMING) and attacker != self:
 		print("%s is Charming and cannot be damaged!" % name)
 		return
 	var old_block = block
@@ -57,7 +67,7 @@ func take_piercing_damage(damage: int, play_recoil: bool = true, attacker: Chara
 		return
 	
 	# Check if self has Charming buff (cannot be damaged)
-	if has_status("Charming") and attacker != self:
+	if has_status(STATUS_CHARMING) and attacker != self:
 		print("%s is Charming and cannot be damaged!" % name)
 		return
 	await _apply_damage(damage, "piercing damage", block, play_recoil, attacker, is_attack_action)
@@ -91,8 +101,8 @@ func _apply_damage(amount: int, type: String, old_block_value: int, play_recoil:
 
 	# --- Spikes Logic ---
 	# If this character was attacked and has Spikes, deal damage back to the attacker.
-	if attacker and not attacker._is_dead and has_status("Spiky") and is_attack_action:
-		var spikes_status = StatusLibrary.get_status("spiky")
+	if attacker and not attacker._is_dead and has_status(STATUS_SPIKY) and is_attack_action:
+		var spikes_status = StatusLibrary.get_status(STATUS_SPIKY.to_lower())
 		if statuses.has(spikes_status):
 			var spike_charges = statuses[spikes_status]
 			if spike_charges > 0 and attacker != self:
@@ -102,8 +112,8 @@ func _apply_damage(amount: int, type: String, old_block_value: int, play_recoil:
 	# --- Riposte Logic ---
 	# If this character was attacked and has Riposte, trigger the effect. This only
 	# triggers on direct attack actions, not on reactive or status damage.
-	if attacker and not attacker._is_dead and has_status("Ri-posted up") and is_attack_action:
-		var riposte_status = StatusLibrary.get_status("ri-posted up")
+	if attacker and not attacker._is_dead and has_status(STATUS_RIPOSTE) and is_attack_action:
+		var riposte_status = StatusLibrary.get_status(STATUS_RIPOSTE.to_lower())
 		if statuses.has(riposte_status):
 			var riposte_charges = statuses[riposte_status]
 			if riposte_charges > 0:
@@ -198,7 +208,7 @@ func tick_down_statuses():
 			continue
 
 		# --- Triggerable Effects ---
-		if status.status_name == "Echoing Impact":
+		if status.status_name == STATUS_ECHOING_IMPACT:
 			await EffectLogic.trigger_echoing_impact(self)
 			if _is_dead:
 				_new_statuses_this_turn.clear()
@@ -208,7 +218,7 @@ func tick_down_statuses():
 			continue
 
 		# Apply DoT effects at the end of the turn
-		if status.status_name == "Bleeding" or status.status_name == "Burning":
+		if status.status_name == STATUS_BLEEDING or status.status_name == STATUS_BURNING:
 			await take_damage(statuses[status], true, null, false) # DoT is not an attack action
 			if _is_dead:
 				_new_statuses_this_turn.clear()
@@ -217,7 +227,7 @@ func tick_down_statuses():
 		# Skip ticking down for charge-based effects. Since Spikes is a permanent
 		# charge buff, we add an explicit check to ensure it never decays. Debuffs
 		# like Bleed and Burn are also charge-based and should not decay over time.
-		if status.charges != -1 or status.status_name == "Spiky" or status.status_name == "Bleeding" or status.status_name == "Burning":
+		if status.charges != -1 or status.status_name == STATUS_SPIKY or status.status_name == STATUS_BLEEDING or status.status_name == STATUS_BURNING:
 			continue
 		
 		statuses[status] -= 1
@@ -274,7 +284,7 @@ func _recoil(damage_amount: int) -> void:
 	_recoil_tween.parallel().tween_property(self, "rotation", _resting_rotation, 0.25).set_delay(0.08)
 
 func die() -> void:
-	if has_status("Main Character Energy"):
+	if has_status(STATUS_MAIN_CHARACTER):
 		var old_hp = hp
 		var old_block = block
 		statuses.clear()
