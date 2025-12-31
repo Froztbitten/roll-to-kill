@@ -1,0 +1,14 @@
+<svg width="64px" height="64px" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="eoGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#BA68C8;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#7B1FA2;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  <rect x="4" y="4" width="56" height="56" rx="8" ry="8" fill="#263238" stroke="#BA68C8" stroke-width="2"/>
+  
+  <circle cx="20" cy="20" r="6" fill="url(#eoGrad)"/>
+  <circle cx="44" cy="44" r="6" fill="url(#eoGrad)"/>
+  
+  <text x="32" y="36" font-family="sans-serif" font-size="20" font-weight="bold" fill="#FFFFFF" text-anchor="middle" dominant-baseline="middle">E/O</text>
+</svg>

@@ -20,7 +20,7 @@ func _define_effects():
 	var d4_effects: Array[DieFaceEffect] = []
 	d4_effects.append(create.call("Spikes", "If used to block, gain [color=yellow]{value}[/color] [b]Spikes[/b]. When attacked, deal damage equal to your Spikes charges to the attacker.", 1, "#bfdfe8", EffectLogic.spikes))
 	d4_effects.append(create.call("Area of Effect", "If used to attack, deals [color=yellow]{value}[/color] damage to enemies adjacent to the target.", 2, "#10552a", EffectLogic.aoe))
-	d4_effects.append(create.call("Draw", "When used, draw [color=yellow]1[/color] extra die from your bag.", 2, "#328bde", EffectLogic.draw))
+	d4_effects.append(create.call("Draw", "If used to attack or block, draw [color=yellow]1[/color] extra die from your bag.", 2, "#328bde", EffectLogic.draw))
 	effects_by_die_size[4] = d4_effects
 
 	# --- D6 Effects ---

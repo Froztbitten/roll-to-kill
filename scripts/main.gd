@@ -47,7 +47,8 @@ const BOSS_ROUND = 10
 var starting_abilities: Array[AbilityData] = [load("res://resources/abilities/heal.tres"), 
 	load("res://resources/abilities/sweep.tres"), load("res://resources/abilities/hold.tres"),
 	load("res://resources/abilities/roulette.tres"), load("res://resources/abilities/explosive_shot.tres"),
-	load("res://resources/abilities/higher_lower.tres")]
+	load("res://resources/abilities/higher_lower.tres"),
+	load("res://resources/abilities/even_odd.tres")]
 
 var pause_menu_ui: Control
 var debug_ability_ui: Control
@@ -63,6 +64,15 @@ var higher_lower_die_display_node: DieDisplay
 var higher_lower_message_label: Label
 var higher_lower_buttons_container: HBoxContainer
 var higher_lower_accumulated_results: Array = []
+
+# Even Odd Ability Variables
+var even_odd_ui: Control
+var even_odd_target: Character
+var even_odd_die: Die
+var even_odd_die_display_node: DieDisplay
+var even_odd_message_label: Label
+var even_odd_buttons_container: HBoxContainer
+var even_odd_accumulated_results: Array = []
 
 func _ready() -> void:
 	# Set process modes to allow the MainGame script to handle input while the game is paused.
@@ -87,6 +97,7 @@ func _ready() -> void:
 	player.abilities_changed.connect(_add_player_ability)
 	player.total_dice_count_changed.connect(_update_total_dice_count)
 	player.statuses_changed.connect(_on_player_statuses_changed)
+	player.dice_drawn.connect(_on_player_dice_drawn)
 
 	map_screen.node_selected.connect(_on_map_node_selected)
 	dice_pool_ui.player = player
@@ -298,6 +309,12 @@ func _on_ability_activated(ability_ui: AbilityUI):
 		$UI.add_child(targeting_arrow)
 		targeting_arrow.set_source(ability_ui.dice_slots_container.get_child(0))
 	elif ability_data.title == "Higher Lower":
+		if slotted_dice_displays.is_empty(): return
+		active_targeting_ability = ability_ui
+		targeting_arrow = ARROW_SCENE.instantiate()
+		$UI.add_child(targeting_arrow)
+		targeting_arrow.set_source(ability_ui.dice_slots_container.get_child(0))
+	elif ability_data.title == "Even Odd":
 		if slotted_dice_displays.is_empty(): return
 		active_targeting_ability = ability_ui
 		targeting_arrow = ARROW_SCENE.instantiate()
@@ -665,6 +682,13 @@ func _resolve_targeted_ability(target: Character):
 			targeting_arrow.queue_free()
 			targeting_arrow = null
 		return
+	elif ability_data.title == "Even Odd":
+		_start_even_odd(target, die_display)
+		if targeting_arrow:
+			targeting_arrow.queue_free()
+			targeting_arrow = null
+		return
+
 
 	# Cleanup
 	if targeting_arrow:
@@ -899,6 +923,200 @@ func _animate_higher_lower_damage_sequence():
 		var damage = face.value * multiplier
 		await higher_lower_target.take_damage(damage, true, player, true)
 		await _apply_all_die_effects(higher_lower_die, higher_lower_target, face.value, face)
+		
+	anim_die.queue_free()
+
+func _start_even_odd(target: Character, source_display: DieDisplay):
+	even_odd_target = target
+	even_odd_die = source_display.die
+	even_odd_accumulated_results.clear()
+	# Add the initial die result to the accumulated results
+	even_odd_accumulated_results.append({"face": even_odd_die.result_face, "multiplier": 1})
+	
+	_create_even_odd_ui()
+	
+	# Update UI with current die state
+	even_odd_die_display_node.set_die(even_odd_die)
+	even_odd_message_label.text = "Current Roll: %d\nGuess Even or Odd!" % even_odd_die.result_value
+	
+	# Enable buttons
+	for btn in even_odd_buttons_container.get_children():
+		if btn is Button: btn.disabled = false
+	
+	even_odd_ui.visible = true
+
+func _create_even_odd_ui():
+	if even_odd_ui: return
+	
+	var canvas = get_node("UI")
+	var panel = Panel.new()
+	panel.name = "EvenOddUI"
+	panel.custom_minimum_size = Vector2(400, 300)
+	panel.set_anchors_preset(Control.PRESET_CENTER)
+	panel.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	panel.grow_vertical = Control.GROW_DIRECTION_BOTH
+	panel.offset_left = -200
+	panel.offset_top = -150
+	panel.offset_right = 200
+	panel.offset_bottom = 150
+	
+	var style = StyleBoxFlat.new()
+	style.bg_color = Color(0.15, 0.1, 0.15, 0.95)
+	style.border_width_left = 2
+	style.border_width_top = 2
+	style.border_width_right = 2
+	style.border_width_bottom = 2
+	style.border_color = Color(0.7, 0.3, 0.8)
+	style.corner_radius_top_left = 8
+	style.corner_radius_top_right = 8
+	style.corner_radius_bottom_right = 8
+	style.corner_radius_bottom_left = 8
+	panel.add_theme_stylebox_override("panel", style)
+	
+	canvas.add_child(panel)
+	even_odd_ui = panel
+	
+	var vbox = VBoxContainer.new()
+	vbox.set_anchors_preset(Control.PRESET_FULL_RECT)
+	vbox.offset_left = 20
+	vbox.offset_top = 20
+	vbox.offset_right = -20
+	vbox.offset_bottom = -20
+	vbox.add_theme_constant_override("separation", 20)
+	panel.add_child(vbox)
+	
+	var title = Label.new()
+	title.text = "Even or Odd?"
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	title.add_theme_font_size_override("font_size", 24)
+	vbox.add_child(title)
+	
+	# Container for the die display
+	var die_container = CenterContainer.new()
+	vbox.add_child(die_container)
+	
+	even_odd_die_display_node = DIE_DISPLAY_SCENE.instantiate()
+	die_container.add_child(even_odd_die_display_node)
+	# We don't want interactions with this display
+	even_odd_die_display_node.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	
+	even_odd_message_label = Label.new()
+	even_odd_message_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	even_odd_message_label.text = "Current Roll: ?"
+	vbox.add_child(even_odd_message_label)
+	
+	even_odd_buttons_container = HBoxContainer.new()
+	even_odd_buttons_container.alignment = BoxContainer.ALIGNMENT_CENTER
+	even_odd_buttons_container.add_theme_constant_override("separation", 20)
+	vbox.add_child(even_odd_buttons_container)
+	
+	var btn_even = Button.new()
+	btn_even.text = "Even"
+	btn_even.custom_minimum_size = Vector2(100, 50)
+	btn_even.pressed.connect(_on_even_odd_guess.bind("even"))
+	even_odd_buttons_container.add_child(btn_even)
+	
+	var btn_odd = Button.new()
+	btn_odd.text = "Odd"
+	btn_odd.custom_minimum_size = Vector2(100, 50)
+	btn_odd.pressed.connect(_on_even_odd_guess.bind("odd"))
+	even_odd_buttons_container.add_child(btn_odd)
+
+func _on_even_odd_guess(guess_type: String):
+	# Disable buttons during animation/processing
+	for btn in even_odd_buttons_container.get_children():
+		if btn is Button: btn.disabled = true
+	
+	var old_val = even_odd_die.result_value
+	even_odd_die.roll()
+	var new_val = even_odd_die.result_value
+	
+	even_odd_die_display_node.set_die(even_odd_die)
+	
+	var success = false
+	var multiplier = 1
+	
+	if guess_type == "even" and new_val % 2 == 0: success = true
+	elif guess_type == "odd" and new_val % 2 != 0: success = true
+	
+	if success:
+		even_odd_accumulated_results.append({"face": even_odd_die.result_face, "multiplier": multiplier})
+		even_odd_message_label.text = "Correct! Rolled %d. Guess again?" % new_val
+		# Re-enable buttons
+		for btn in even_odd_buttons_container.get_children():
+			if btn is Button: btn.disabled = false
+	else:
+		even_odd_message_label.text = "Wrong! Rolled %d." % new_val
+		
+		await get_tree().create_timer(1.5).timeout
+		_end_even_odd()
+
+func _end_even_odd():
+	even_odd_ui.visible = false
+	
+	if not even_odd_accumulated_results.is_empty() and even_odd_target and not even_odd_target._is_dead:
+		await _animate_even_odd_damage_sequence()
+	
+	active_targeting_ability = null
+	
+	# Refresh health preview
+	var net_damage = max(0, current_incoming_damage - player.block)
+	player.update_health_display(net_damage)
+
+func _animate_even_odd_damage_sequence():
+	# Create a visual die for animation
+	var anim_die = DIE_DISPLAY_SCENE.instantiate()
+	$UI.add_child(anim_die)
+	# Set initial state
+	anim_die.set_die(even_odd_die)
+	anim_die.pivot_offset = anim_die.size / 2
+	anim_die.scale = Vector2(0.6, 0.6)
+	
+	# Start position: Center of screen (where UI was)
+	var start_pos = get_viewport_rect().size / 2
+	anim_die.global_position = start_pos - (anim_die.size / 2)
+	
+	var target_pos = even_odd_target.global_position
+	# Adjust for center of target
+	var sprite = even_odd_target.get_node_or_null("Sprite2D")
+	if sprite:
+		if sprite is Control:
+			target_pos = sprite.get_global_rect().get_center()
+		elif sprite is Node2D:
+			target_pos = sprite.global_position
+	
+	for i in range(even_odd_accumulated_results.size()):
+		if even_odd_target._is_dead:
+			break
+			
+		var result_entry = even_odd_accumulated_results[i]
+		var face = result_entry["face"]
+		var multiplier = result_entry["multiplier"]
+		# Update die data to match this specific result
+		even_odd_die.result_face = face
+		even_odd_die.result_value = face.value
+		anim_die.set_die(even_odd_die)
+		
+		var tween = create_tween()
+		
+		if i == 0:
+			# First hit: Fly from center to target
+			tween.tween_property(anim_die, "global_position", target_pos - (anim_die.size / 2), 0.4).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN)
+		else:
+			# Subsequent hits: Bounce up and down
+			var bounce_height = 100.0
+			var up_pos = target_pos - Vector2(0, bounce_height) - (anim_die.size / 2)
+			var down_pos = target_pos - (anim_die.size / 2)
+			
+			tween.tween_property(anim_die, "global_position", up_pos, 0.2).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+			tween.tween_property(anim_die, "global_position", down_pos, 0.2).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+			
+		await tween.finished
+		
+		# Deal damage
+		var damage = face.value * multiplier
+		await even_odd_target.take_damage(damage, true, player, true)
+		await _apply_all_die_effects(even_odd_die, even_odd_target, face.value, face)
 		
 	anim_die.queue_free()
 
@@ -1314,6 +1532,11 @@ func _update_dice_discard(count: int):
 func _on_die_returned_to_pool(die_display: DieDisplay):
 	# This is called when a die is removed from an ability slot via right-click.
 	dice_pool_ui.add_die_display(die_display)
+
+func _on_player_dice_drawn(new_dice: Array[Die]):
+	for die in new_dice:
+		die.roll()
+	dice_pool_ui.animate_add_dice(new_dice, dice_bag_icon.get_global_rect().get_center())
 
 func _on_player_statuses_changed(statuses: Dictionary):
 	# Check if the player is currently shrunk
