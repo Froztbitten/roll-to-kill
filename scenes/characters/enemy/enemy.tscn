@@ -12,14 +12,16 @@ size = Vector2(101, 130)
 [node name="Enemy" type="CharacterBody2D" groups=["enemies"]]
 script = ExtResource("1_4qfxc")
 
-[node name="Sprite2D" type="TextureRect" parent="."]
+[node name="Visuals" type="Node2D" parent="."]
+
+[node name="Sprite2D" type="TextureRect" parent="Visuals"]
 offset_right = 40.0
 offset_bottom = 50.0
 texture = ExtResource("2_abcde")
 expand_mode = 5
 stretch_mode = 5
 
-[node name="NameLabel" type="Label" parent="."]
+[node name="NameLabel" type="Label" parent="Visuals"]
 offset_left = -19.0
 offset_top = -61.0
 offset_right = 81.0
@@ -29,7 +31,7 @@ text = "Enemy"
 horizontal_alignment = 1
 vertical_alignment = 1
 
-[node name="HealthBar" parent="." instance=ExtResource("3_m1yav")]
+[node name="HealthBar" parent="Visuals" instance=ExtResource("3_m1yav")]
 offset_left = -19.0
 offset_top = -35.0
 offset_right = 81.0
@@ -39,7 +41,7 @@ offset_bottom = -8.0
 position = Vector2(31.5, 6)
 shape = SubResource("RectangleShape2D_12345")
 
-[node name="EnemyIntentDisplay" parent="." instance=ExtResource("4_hijkl")]
+[node name="EnemyIntentDisplay" parent="Visuals" instance=ExtResource("4_hijkl")]
 anchors_preset = 5
 anchor_left = 0.5
 anchor_right = 0.5

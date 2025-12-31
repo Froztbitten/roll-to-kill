@@ -23,19 +23,6 @@
 script = ExtResource("1_v4h7v")
 player = NodePath("Player")
 
-[node name="ReferenceRect" type="ReferenceRect" parent="."]
-custom_minimum_size = Vector2(30, 0)
-anchors_preset = -1
-anchor_left = 0.703
-anchor_right = 1.0
-anchor_bottom = 1.0
-offset_left = 795.0
-offset_right = 1152.0
-offset_bottom = 648.0
-grow_horizontal = 2
-grow_vertical = 2
-border_width = 3.4
-
 [node name="Player" parent="." instance=ExtResource("1_t2esq")]
 position = Vector2(343, 316)
 
@@ -88,12 +75,13 @@ text = "Dice Bag: 0"
 
 [node name="Abilities" parent="UI" instance=ExtResource("4_a8y0u")]
 anchors_preset = -1
-anchor_top = 0.082
-anchor_right = 0.223
-anchor_bottom = 0.823
-offset_top = 14.863998
-offset_right = 0.104003906
-offset_bottom = -0.3040161
+anchor_bottom = 1.0
+offset_left = 20.0
+offset_top = 60.0
+offset_right = 270.0
+offset_bottom = -150.0
+grow_horizontal = 2
+grow_vertical = 2
 
 [node name="AbilityUI" parent="UI/Abilities" instance=ExtResource("5_jkv2x")]
 layout_mode = 2
@@ -232,10 +220,13 @@ size_flags_horizontal = 4
 text = "Close"
 
 [node name="RoundInfo" type="HBoxContainer" parent="UI"]
-offset_left = 51.0
-offset_top = 556.0
-offset_right = 219.0
-offset_bottom = 607.0
+anchors_preset = 2
+anchor_top = 1.0
+anchor_bottom = 1.0
+offset_left = 20.0
+offset_top = -80.0
+offset_right = 188.0
+offset_bottom = -29.0
 
 [node name="DiceBag" type="HBoxContainer" parent="UI/RoundInfo"]
 layout_mode = 2

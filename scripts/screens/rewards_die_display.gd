@@ -60,7 +60,8 @@ func set_die(die_data: Die, force_grid: bool = false, is_upgrade_reward: bool = 
 
 	if die.result_value > 0 and not force_grid:
 		# Standard display for rolled dice in hand
-		scale = Vector2(1, 1) # Reset scale for hand display
+		scale = Vector2.ONE
+		custom_minimum_size = Vector2(80, 80)
 		face_grid.columns = 1
 		
 		var cell = DieGridCell.instantiate()
@@ -72,7 +73,8 @@ func set_die(die_data: Die, force_grid: bool = false, is_upgrade_reward: bool = 
 		original_grid_text = str(die.result_value)
 	else:
 		# Larger display for unrolled dice on the reward screen
-		scale = Vector2(1.5, 1.5) # Scale up the entire control
+		scale = Vector2.ONE
+		custom_minimum_size = Vector2(120, 120)
 		
 		# Set columns to achieve the desired number of rows
 		match die.sides:
@@ -231,3 +233,7 @@ func _add_effect_panel_to_list(parent_container: VBoxContainer, effect: DieFaceE
 	panel.add_child(label)
 	
 	parent_container.add_child(panel)
+
+func update_scale(factor: float):
+	var base_size = 120.0
+	custom_minimum_size = Vector2(base_size, base_size) * factor

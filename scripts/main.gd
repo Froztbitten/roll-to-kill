@@ -113,6 +113,9 @@ func _ready() -> void:
 	dice_bag_button.pressed.connect(_on_dice_bag_button_pressed)
 	dice_bag_close_button.pressed.connect(func(): dice_bag_screen.visible = false)
 
+	get_viewport().size_changed.connect(_on_viewport_size_changed)
+	call_deferred("_on_viewport_size_changed")
+
 	# Initialize player's starting abilities
 	for child: Node in abilities_ui.get_children():
 		child.queue_free()
@@ -1303,6 +1306,9 @@ func _setup_round(spawned_enemies: Array) -> void:
 		enemy.exploded.connect(_on_enemy_exploded)
 		enemy.gold_dropped.connect(_on_enemy_gold_dropped.bind(enemy))
 	
+	# Defer positioning and scaling to ensure physics bodies are ready.
+	call_deferred("_on_viewport_size_changed")
+	
 	# Wait for one frame. This is CRITICAL. It allows the engine to:
 	# 1. Process the `queue_free` from `clear_everything()`.
 	# 2. Process the `call_deferred` for `arrange_enemies()`.
@@ -1625,12 +1631,15 @@ func _create_pause_menu():
 	panel.add_theme_stylebox_override("panel", style)
 	canvas.add_child(panel)
 	pause_menu_ui = panel
-	
+
+	var center_container = CenterContainer.new()
+	center_container.set_anchors_preset(Control.PRESET_FULL_RECT)
+	panel.add_child(center_container)
+
 	var vbox = VBoxContainer.new()
-	vbox.set_anchors_preset(Control.PRESET_CENTER)
 	vbox.add_theme_constant_override("separation", 20)
-	panel.add_child(vbox)
-	
+	center_container.add_child(vbox)
+
 	var label = Label.new()
 	label.text = "Paused"
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -1671,6 +1680,29 @@ func _create_pause_menu():
 func _on_main_menu_pressed():
 	get_tree().paused = false
 	get_tree().change_scene_to_file("res://scenes/screens/main_menu.tscn")
+
+func _on_viewport_size_changed():
+	# Define a base resolution to calculate the scale factor.
+	# 648 seems to be the original design height.
+	var base_height = 648.0
+	var viewport_size = get_viewport().get_visible_rect().size
+	var scale_factor = viewport_size.y / base_height
+
+	if is_instance_valid(player):
+		player.position.x = viewport_size.x * 0.25
+		player.position.y = viewport_size.y * 0.5
+		player.update_scale(scale_factor)
+		player.update_resting_state()
+
+	if is_instance_valid(enemy_container):
+		enemy_container.position.x = viewport_size.x * 0.75
+		enemy_container.position.y = viewport_size.y * 0.5
+		enemy_container.spawn_area_height = 500.0 * scale_factor
+		for enemy in enemy_container.get_children():
+			if enemy is Enemy:
+				enemy.update_scale(scale_factor)
+		# Re-arrange enemies to update their resting positions relative to the new container position.
+		enemy_container.arrange_enemies()
 
 func _on_debug_change_encounter_pressed():
 	_toggle_pause_menu()

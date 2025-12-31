@@ -27,6 +27,9 @@ func _ready():
 			display_node.pressed.connect(_on_die_display_clicked.bind(display_node))
 			
 	skip_reward_button.pressed.connect(_on_skip_rewards_clicked.bind(skip_reward_button))
+	
+	get_viewport().size_changed.connect(_on_viewport_size_changed)
+	call_deferred("_on_viewport_size_changed")
 
 func display_rewards(dice_options: Array[Die]):
 	visible = true
@@ -44,6 +47,7 @@ func display_rewards(dice_options: Array[Die]):
 				upgraded_faces_info = die.get_meta("upgraded_faces_info", [])
 			
 			display.set_die(die, false, is_upgrade, upgraded_faces_info, true)
+	_on_viewport_size_changed()
 
 func _on_die_display_clicked(display: RewardsDieDisplay):	
 	if (!rewardChosen):
@@ -66,3 +70,12 @@ func _on_skip_rewards_clicked(display):
 
 		await get_tree().create_timer(0.3).timeout
 		emit_signal("reward_chosen", null)
+
+func _on_viewport_size_changed():
+	var base_height = 648.0
+	var viewport_size = get_viewport().get_visible_rect().size
+	var scale_factor = viewport_size.y / base_height
+	
+	for display in dice_choices_container.get_children():
+		if display.has_method("update_scale"):
+			display.update_scale(scale_factor)

@@ -1,39 +1,27 @@
 extends Node2D
 
-@onready var spawn_zone: ReferenceRect = $"../../ReferenceRect"
+@export var spawn_area_height: float = 500.0
 
 func _ready():
 	arrange_enemies()
 
 func arrange_enemies():
-	# Filter for only living enemies to arrange them.
-	# This prevents trying to position enemies that are in the process of being removed.
 	var enemies = get_children().filter(func(c): return c is Enemy and not c._is_dead and not c.is_queued_for_deletion())
 	var count = enemies.size()
 	
-	if count == 0 or not spawn_zone:
+	if count == 0:
 		return
 
-	# 1. Get the bounds from the UI node
-	# We use global_position so it works even if the nodes are in different parents
-	var zone_top = spawn_zone.global_position.y
-	var zone_height = spawn_zone.size.y
-	var zone_center_x = spawn_zone.global_position.x + (spawn_zone.size.x / 2.0)
-	
-	# 2. Calculate the spacing
-	# (count + 1) creates even padding at top and bottom
-	var step_y = zone_height / (count + 1)
+	# Calculate vertical spacing to center enemies within the spawn_area_height
+	var step_y = spawn_area_height / (count + 1)
+	var start_y = -spawn_area_height / 2.0
 	
 	for i in range(count):
 		var enemy = enemies[i]
-		
-		# 3. Calculate target Y position
-		# Start at top edge + step down for each enemy
-		var new_y = zone_top + (step_y * (i + 1))
-		
-		# 4. Apply Global Position
-		# We force the X to be the center of the box, and Y to be the calculated step
-		enemy.global_position = Vector2(zone_center_x, new_y)
+		# Calculate the target Y position relative to this container's origin
+		var new_y = start_y + (step_y * (i + 1))
+		# Position the enemy. X is 0 because it's centered on this container.
+		enemy.position = Vector2(0, new_y)
 		enemy.update_resting_state()
 		
 func clear_everything():

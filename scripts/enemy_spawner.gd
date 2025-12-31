@@ -101,12 +101,8 @@ func _spawn_enemies(encounter: EncounterData, count: int) -> Array:
 		var enemy: Enemy = ENEMY_UI.instantiate()
 		enemy.enemy_data = enemy_data
 		# Hide the intent display immediately on spawn to prevent a 1-frame flicker of default data.
-		enemy.get_node("EnemyIntentDisplay").visible = false
+		enemy.get_node("Visuals/EnemyIntentDisplay").visible = false
 		enemy_container.add_child(enemy)
 		spawned_enemies.append(enemy)
 
-	# Defer the arrangement to the end of the frame. This ensures that the nodes
-	# are fully initialized and their physics bodies are registered correctly
-	# before we try to position them, preventing targeting issues.
-	enemy_container.call_deferred("arrange_enemies")
 	return spawned_enemies

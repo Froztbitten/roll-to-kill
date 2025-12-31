@@ -13,8 +13,8 @@ var _turn_count := 0
 var _provided_shields: Array[Dictionary] = []
 var _has_triggered_death_logic := false
 
-@onready var intent_display: Control = $EnemyIntentDisplay
-@onready var sprite: TextureRect = $Sprite2D
+@onready var intent_display: Control = $Visuals/EnemyIntentDisplay
+@onready var sprite: TextureRect = $Visuals/Sprite2D
 @onready var status_display: HBoxContainer = $StatusCanvas/StatusEffectDisplay
 
 func _ready():
@@ -22,7 +22,6 @@ func _ready():
 	# Hide the intent display by default to prevent showing stale data on spawn.
 	intent_display.visible = false
 	statuses_changed.connect(_on_statuses_changed)
-	call_deferred("_center_intent_display")
 	if not enemy_data:
 		# Disable the enemy if it has no data, to prevent crashes.
 		# This can be useful for debugging in the editor.
@@ -36,7 +35,7 @@ func _process(delta):
 	# Manually position the status display relative to the enemy's global position,
 	# since it's on a separate CanvasLayer.
 	if is_instance_valid(status_display):
-		status_display.global_position = global_position + Vector2(-19, -5)
+		status_display.global_position = global_position + (Vector2(-19, -5) * current_scale_factor)
 
 func setup():
 	"""Initializes the enemy's stats and appearance from its EnemyData resource."""
@@ -56,6 +55,7 @@ func setup():
 	_is_charging = false
 	_turn_count = 0
 	update_health_display()
+	call_deferred("_center_intent_display")
 
 	if enemy_data.enemy_name == "White Knight":
 		apply_duration_status("crash_out", 99)
@@ -131,16 +131,22 @@ func _on_statuses_changed(current_statuses: Dictionary):
 
 func _center_intent_display():
 	if not is_inside_tree() or not intent_display: return
-	# This function vertically centers the intent display relative to the sprite.
-	var sprite_center_y = sprite.position.y + (sprite.size.y / 2)
-	intent_display.position.x = -150 # Position it to the left of the enemy sprite.
-	intent_display.position.y = sprite_center_y - (intent_display.size.y / 2)
+	# This function positions the intent display to the left of the sprite.
+	# The position is relative to the "Visuals" node.
+	var sprite_rect = sprite.get_rect()
+	var intent_rect = intent_display.get_rect()
+	intent_display.position.x = sprite.position.x - intent_rect.size.x - 20
+	intent_display.position.y = sprite.position.y + (sprite_rect.size.y / 2.0) - (intent_rect.size.y / 2.0)
 
 func register_provided_shield(target: Character, amount: int):
 	_provided_shields.append({"target": target, "amount": amount})
 
 func clear_provided_shields():
 	_provided_shields.clear()
+
+func update_scale(factor: float):
+	super.update_scale(factor)
+	_center_intent_display()
 
 func die() -> void:
 	# Override the Character's die() function to add special on-death effects.

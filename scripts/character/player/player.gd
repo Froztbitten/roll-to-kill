@@ -49,7 +49,7 @@ func _process(delta):
 	# Manually position the status display relative to the player's global position,
 	# since it's on a separate CanvasLayer.
 	if is_instance_valid(status_display):
-		status_display.global_position = global_position + Vector2(-50, -50)
+		status_display.global_position = global_position + (Vector2(-50, -50) * current_scale_factor)
 
 func _draw_from_bag(count: int) -> Array[Die]:
 	var drawn_dice: Array[Die] = []

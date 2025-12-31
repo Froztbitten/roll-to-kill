@@ -18,6 +18,7 @@ const STATUS_BURNING = "Burning"
 const STATUS_GLANCE_BLOWS = "Glance Blows"
 const STATUS_SHRUNK = "Shrunk"
 
+var current_scale_factor: float = 1.0
 var statuses: Dictionary = {} # {StatusEffect: duration}
 var _new_statuses_this_turn: Array[StatusEffect] = []
 var _is_dead := false
@@ -28,8 +29,8 @@ var _damage_sound: AudioStream
 var audio_player: AudioStreamPlayer
 var _death_sound: AudioStream
 
-@onready var health_bar = $HealthBar
-@onready var name_label: Label = $NameLabel
+@onready var health_bar = $Visuals/HealthBar
+@onready var name_label: Label = $Visuals/NameLabel
 
 func _ready():
 	_resting_position = position
@@ -361,3 +362,9 @@ func die() -> void:
 func update_health_display(intended_damage: int = 0, intended_block: int = 0):
 	if health_bar:
 		health_bar.update_display(hp, max_hp, block + intended_block, intended_damage)
+
+func update_scale(factor: float):
+	current_scale_factor = factor
+	var visuals = get_node_or_null("Visuals")
+	if visuals:
+		visuals.scale = Vector2.ONE * factor
