@@ -23,10 +23,14 @@ func generate_new_map():
 	current_node = null
 	
 	# Layer 0: Start
+	var start_node_type = "start"
+	if get_tree().root.has_meta("force_shop_encounter") and get_tree().root.get_meta("force_shop_encounter"):
+		start_node_type = "shop"
+	
 	map_layers.append([{
 		"layer": 0,
 		"index": 0,
-		"type": "start",
+		"type": start_node_type,
 		"next": [],
 		"pos": Vector2(MAP_START_X, MAP_START_Y)
 	}])
@@ -37,13 +41,23 @@ func generate_new_map():
 		var layer_nodes = []
 		# Randomly generate 2 to 4 paths/nodes per layer
 		var node_count = randi_range(2, 4)
+		
+		# Guarantee a shop on layer 5
+		var guaranteed_shop_index = -1
+		if i == 5:
+			guaranteed_shop_index = randi() % node_count
+			
 		for j in range(node_count):
 			# Center the nodes vertically around MAP_START_Y
 			var y_pos = MAP_START_Y + (j - (node_count - 1) / 2.0) * NODE_SPACING
 			var node_type = "combat"
 			# 15% chance for a rare encounter
-			if randf() < 0.15:
+			if i == 5 and j == guaranteed_shop_index:
+				node_type = "shop"
+			elif randf() < 0.15:
 				node_type = "rare_combat"
+			elif randf() < 0.15:
+				node_type = "shop"
 
 			layer_nodes.append({
 				"layer": i,
@@ -128,6 +142,9 @@ func draw_map():
 				icon.texture = load("res://assets/ai/ui/boss_encounter.svg")
 			elif node.type == "rare_combat":
 				icon.texture = load("res://assets/ai/ui/rare_encounter.svg")
+			elif node.type == "shop":
+				icon.texture = load("res://assets/ai/ui/shop_encounter.svg")
+				icon.modulate = Color(1, 0.8, 0.2) # Gold color for shop
 			else:
 				icon.texture = load("res://assets/ai/ui/normal_encounter.svg")
 

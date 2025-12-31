@@ -24,7 +24,7 @@ func _ready():
 		"attack": load("res://assets/ai/ui/sword.svg"),
 		"shield": load("res://assets/ai/ui/shield.svg"),
 		"charge": load("res://assets/ai/ui/reload.svg"),
-		"heal": load("res://assets/ai/ability_icons/heal_ability_icon.jpg")
+		"heal": load("res://assets/ai/ability_icons/heal_ability_icon.svg")
 	}
 
 func update_display(action_name: String, value: int, sides: int, action_type: String, dice_count: int):

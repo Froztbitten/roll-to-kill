@@ -1,4 +1,4 @@
-[gd_scene load_steps=15 format=3 uid="uid://bnpd5h2y0tnye"]
+[gd_scene load_steps=17 format=3 uid="uid://bnpd5h2y0tnye"]
 
 [ext_resource type="PackedScene" uid="uid://bvyv5m1pde7i7" path="res://scenes/characters/player.tscn" id="1_t2esq"]
 [ext_resource type="Script" uid="uid://bik3wojuaq330" path="res://scripts/main.gd" id="1_v4h7v"]
@@ -12,6 +12,7 @@
 [ext_resource type="PackedScene" path="res://scenes/screens/map_screen.tscn" id="9_map_screen"]
 [ext_resource type="Script" uid="uid://dh54ve13ordnt" path="res://scripts/enemy_spawner.gd" id="10_choun"]
 [ext_resource type="Texture2D" uid="uid://bjqx06qgqmopi" path="res://assets/ai/ui/dice_bag.svg" id="10_jbj1t"]
+[ext_resource type="PackedScene" path="res://scenes/screens/shop_screen.tscn" id="10_shop_screen"]
 [ext_resource type="Texture2D" uid="uid://bd2c437hy5mh7" path="res://assets/ai/ui/discard_pile.svg" id="11_a8y0u"]
 [ext_resource type="PackedScene" uid="uid://cgljl8xduck7a" path="res://scenes/ui/enemies.tscn" id="12_a8y0u"]
 [ext_resource type="Script" uid="uid://kby8d4xma06b" path="res://scripts/character/enemy/enemies.gd" id="14_jkv2x"]
@@ -139,6 +140,9 @@ visible = false
 visible = false
 
 [node name="MapScreen" parent="UI" instance=ExtResource("9_map_screen")]
+visible = false
+
+[node name="ShopScreen" parent="UI" instance=ExtResource("10_shop_screen")]
 visible = false
 
 [node name="RoundInfo" type="HBoxContainer" parent="UI"]

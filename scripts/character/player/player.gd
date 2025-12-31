@@ -14,6 +14,7 @@ var _round_dice_bag: Array[Die] = []
 var _dice_discard: Array[Die] = []
 var _held_dice: Array[Die] = []
 var gold: int = 0
+var die_removal_cost: int = 75
 var _shield_sound: AudioStream
 @onready var status_display: HBoxContainer = $StatusCanvas/StatusEffectDisplay
 
@@ -214,3 +215,38 @@ func heal(amount: int):
 func _on_statuses_changed(current_statuses: Dictionary):
 	if status_display:
 		status_display.update_display(current_statuses)
+
+func die() -> void:
+	if _is_dead: return
+	await super.die()
+	
+	if _is_dead and not MainGame.debug_mode:
+		var defeat_screen = get_node_or_null("../UI/DefeatScreen")
+		if defeat_screen:
+			defeat_screen.visible = true
+
+func remove_die_from_bag(die: Die):
+	if _game_dice_bag.has(die):
+		_game_dice_bag.erase(die)
+		# Also remove from round bag if present
+		if _round_dice_bag.has(die):
+			_round_dice_bag.erase(die)
+		dice_bag_changed.emit(_round_dice_bag.size())
+
+func upgrade_die(die: Die):
+	# Increase value of all faces by 1
+	for face in die.faces:
+		face.value += 1
+	# Update metadata to track upgrade count
+	var current_upgrades = die.get_meta("upgrade_count", 0)
+	die.set_meta("upgrade_count", current_upgrades + 1)
+
+func apply_effect_to_random_dice(effect: DieFaceEffect, count: int = 3):
+	# Pick random dice from game bag
+	var candidates = _game_dice_bag.duplicate()
+	candidates.shuffle()
+	
+	for i in range(min(count, candidates.size())):
+		var die = candidates[i]
+		var face = die.faces.pick_random()
+		face.effects.append(effect)

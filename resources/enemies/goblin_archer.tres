@@ -15,7 +15,7 @@ script = ExtResource("1_qu8um")
 action_name = "Fire Arrow"
 metadata/_custom_type_script = "uid://djeev1jhalfah"
 
-[sub_resource type="GDScript" id="GDScript_s1381"]
+[sub_resource type="GDScript" id="GDScript_74g23"]
 
 [sub_resource type="Resource" id="gold_d4"]
 script = ExtResource("2_die")

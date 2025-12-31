@@ -1,0 +1,171 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/screens/shop_screen.gd" id="1_script"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_bg"]
+bg_color = Color(0.1, 0.1, 0.1, 0.95)
+
+[node name="ShopScreen" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_script")
+
+[node name="Panel" type="Panel" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_bg")
+
+[node name="VBoxContainer" type="VBoxContainer" parent="Panel"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -400.0
+offset_top = -300.0
+offset_right = 400.0
+offset_bottom = 300.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 20
+
+[node name="Header" type="HBoxContainer" parent="Panel/VBoxContainer"]
+layout_mode = 2
+alignment = 1
+
+[node name="TitleLabel" type="Label" parent="Panel/VBoxContainer/Header"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 48
+text = "Shop"
+
+[node name="Control" type="Control" parent="Panel/VBoxContainer/Header"]
+custom_minimum_size = Vector2(50, 0)
+layout_mode = 2
+
+[node name="GoldLabel" type="Label" parent="Panel/VBoxContainer/Header"]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.843137, 0, 1)
+theme_override_font_sizes/font_size = 32
+text = "Gold: 0"
+
+[node name="Options" type="VBoxContainer" parent="Panel/VBoxContainer"]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_constants/separation = 30
+
+[node name="RemoveDieButton" type="Button" parent="Panel/VBoxContainer/Options"]
+custom_minimum_size = Vector2(0, 50)
+layout_mode = 2
+text = "Remove Die (75g)"
+
+[node name="Label" type="Label" parent="Panel/VBoxContainer/Options"]
+layout_mode = 2
+text = "Add Effect to 3 Random Dice (50g):"
+
+[node name="EffectsContainer" type="HBoxContainer" parent="Panel/VBoxContainer/Options"]
+layout_mode = 2
+theme_override_constants/separation = 20
+alignment = 1
+
+[node name="UpgradeDieButton" type="Button" parent="Panel/VBoxContainer/Options"]
+custom_minimum_size = Vector2(0, 50)
+layout_mode = 2
+text = "Upgrade Die (Cost varies)"
+
+[node name="Label2" type="Label" parent="Panel/VBoxContainer/Options"]
+layout_mode = 2
+text = "Buy Abilities (150g):"
+
+[node name="AbilitiesContainer" type="HBoxContainer" parent="Panel/VBoxContainer/Options"]
+layout_mode = 2
+theme_override_constants/separation = 20
+alignment = 1
+
+[node name="CloseButton" type="Button" parent="Panel/VBoxContainer"]
+custom_minimum_size = Vector2(200, 60)
+layout_mode = 2
+size_flags_horizontal = 4
+text = "Leave Shop"
+
+[node name="SelectionOverlay" type="Control" parent="."]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="ColorRect" type="ColorRect" parent="SelectionOverlay"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0, 0, 0, 0.9)
+
+[node name="TitleLabel" type="Label" parent="SelectionOverlay"]
+layout_mode = 1
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -100.0
+offset_top = 50.0
+offset_right = 100.0
+offset_bottom = 95.0
+grow_horizontal = 2
+theme_override_font_sizes/font_size = 32
+text = "Select Die"
+horizontal_alignment = 1
+
+[node name="ScrollContainer" type="ScrollContainer" parent="SelectionOverlay"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -400.0
+offset_top = -200.0
+offset_right = 400.0
+offset_bottom = 200.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="GridContainer" type="GridContainer" parent="SelectionOverlay/ScrollContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+theme_override_constants/h_separation = 20
+theme_override_constants/v_separation = 20
+columns = 6
+
+[node name="CancelButton" type="Button" parent="SelectionOverlay"]
+layout_mode = 1
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -100.0
+offset_top = -100.0
+offset_right = 100.0
+offset_bottom = -50.0
+grow_horizontal = 2
+grow_vertical = 0
+text = "Cancel"
+
+[connection signal="pressed" from="Panel/VBoxContainer/Options/RemoveDieButton" to="." method="_on_remove_die_pressed"]
+[connection signal="pressed" from="Panel/VBoxContainer/Options/UpgradeDieButton" to="." method="_on_upgrade_die_pressed"]
+[connection signal="pressed" from="Panel/VBoxContainer/CloseButton" to="." method="_on_close_button_pressed"]
+[connection signal="pressed" from="SelectionOverlay/CancelButton" to="." method="_on_cancel_selection_pressed"]

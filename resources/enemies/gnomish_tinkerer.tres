@@ -10,7 +10,7 @@ script = ExtResource("1_action")
 action_name = "Eureka!"
 action_type = 5
 
-[sub_resource type="GDScript" id="GDScript_s1381"]
+[sub_resource type="GDScript" id="GDScript_74g23"]
 
 [sub_resource type="Resource" id="d8_die"]
 script = ExtResource("2_die")

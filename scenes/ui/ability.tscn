@@ -1,7 +1,7 @@
 [gd_scene load_steps=5 format=3 uid="uid://cihuho6da82op"]
 
 [ext_resource type="Script" uid="uid://583in5m6jwjr" path="res://scripts/ui/ability.gd" id="1_2512i"]
-[ext_resource type="Texture2D" uid="uid://otvtxyqu8dfr" path="res://assets/ai/ability_icons/heal_ability_icon.jpg" id="2_2512i"]
+[ext_resource type="Texture2D" uid="uid://cq1sv54irfyd4" path="res://assets/ai/ability_icons/heal_ability_icon.svg" id="2_2512i"]
 [ext_resource type="PackedScene" uid="uid://cgrd2w2flg23s" path="res://scenes/ui/die_slot.tscn" id="2_smjc0"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_vyino"]

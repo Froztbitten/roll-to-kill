@@ -28,7 +28,7 @@ script = ExtResource("1_action")
 action_name = "Fright"
 action_type = 7
 
-[sub_resource type="GDScript" id="GDScript_s1381"]
+[sub_resource type="GDScript" id="GDScript_74g23"]
 
 [sub_resource type="Resource" id="Resource_df5qo"]
 script = ExtResource("2_die")

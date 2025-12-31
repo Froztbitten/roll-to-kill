@@ -5,7 +5,7 @@
 [ext_resource type="Script" uid="uid://dv6r7tro15lnf" path="res://scripts/character/enemy/enemy_data.gd" id="3_data"]
 [ext_resource type="Texture2D" uid="uid://bfqldn4x8s423" path="res://assets/ai/characters/foam_wizard.jpg" id="4_qbgdc"]
 
-[sub_resource type="GDScript" id="GDScript_s1381"]
+[sub_resource type="GDScript" id="GDScript_74g23"]
 
 [sub_resource type="Resource" id="d6_die"]
 script = ExtResource("2_die")
