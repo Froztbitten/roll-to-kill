@@ -46,13 +46,23 @@ const BOSS_ROUND = 10
 # Testing values
 var starting_abilities: Array[AbilityData] = [load("res://resources/abilities/heal.tres"), 
 	load("res://resources/abilities/sweep.tres"), load("res://resources/abilities/hold.tres"),
-	load("res://resources/abilities/roulette.tres"), load("res://resources/abilities/explosive_shot.tres")]
+	load("res://resources/abilities/roulette.tres"), load("res://resources/abilities/explosive_shot.tres"),
+	load("res://resources/abilities/higher_lower.tres")]
 
 var pause_menu_ui: Control
 var debug_ability_ui: Control
 
 var active_targeting_ability: AbilityUI = null
 var targeting_arrow: Line2D = null
+
+# Higher Lower Ability Variables
+var higher_lower_ui: Control
+var higher_lower_target: Character
+var higher_lower_die: Die
+var higher_lower_die_display_node: DieDisplay
+var higher_lower_message_label: Label
+var higher_lower_buttons_container: HBoxContainer
+var higher_lower_accumulated_results: Array = []
 
 func _ready() -> void:
 	# Set process modes to allow the MainGame script to handle input while the game is paused.
@@ -283,6 +293,12 @@ func _on_ability_activated(ability_ui: AbilityUI):
 		if slotted_dice_displays.is_empty(): return
 		
 		# Enter targeting mode
+		active_targeting_ability = ability_ui
+		targeting_arrow = ARROW_SCENE.instantiate()
+		$UI.add_child(targeting_arrow)
+		targeting_arrow.set_source(ability_ui.dice_slots_container.get_child(0))
+	elif ability_data.title == "Higher Lower":
+		if slotted_dice_displays.is_empty(): return
 		active_targeting_ability = ability_ui
 		targeting_arrow = ARROW_SCENE.instantiate()
 		$UI.add_child(targeting_arrow)
@@ -641,6 +657,14 @@ func _resolve_targeted_ability(target: Character):
 
 		# Apply die face effects to the main target
 		await _apply_all_die_effects(die_display.die, target, damage)
+		
+	elif ability_data.title == "Higher Lower":
+		_start_higher_lower(target, die_display)
+		# Clean up targeting arrow immediately, but keep active_targeting_ability set until game ends
+		if targeting_arrow:
+			targeting_arrow.queue_free()
+			targeting_arrow = null
+		return
 
 	# Cleanup
 	if targeting_arrow:
@@ -669,12 +693,224 @@ func _cancel_targeting():
 		
 		active_targeting_ability = null
 
-func _apply_all_die_effects(die: Die, target: Character, value: int):
-	if die.result_face and not die.result_face.effects.is_empty():
-		for effect in die.result_face.effects:
+func _start_higher_lower(target: Character, source_display: DieDisplay):
+	higher_lower_target = target
+	higher_lower_die = source_display.die
+	higher_lower_accumulated_results.clear()
+	# Add the initial die result to the accumulated results
+	higher_lower_accumulated_results.append({"face": higher_lower_die.result_face, "multiplier": 1})
+	
+	_create_higher_lower_ui()
+	
+	# Update UI with current die state
+	higher_lower_die_display_node.set_die(higher_lower_die)
+	higher_lower_message_label.text = "Current Roll: %d\nGuess Higher or Lower!" % higher_lower_die.result_value
+	
+	# Enable buttons
+	for btn in higher_lower_buttons_container.get_children():
+		if btn is Button: btn.disabled = false
+	
+	higher_lower_ui.visible = true
+
+func _create_higher_lower_ui():
+	if higher_lower_ui: return
+	
+	var canvas = get_node("UI")
+	var panel = Panel.new()
+	panel.name = "HigherLowerUI"
+	panel.custom_minimum_size = Vector2(400, 300)
+	panel.set_anchors_preset(Control.PRESET_CENTER)
+	panel.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	panel.grow_vertical = Control.GROW_DIRECTION_BOTH
+	panel.offset_left = -200
+	panel.offset_top = -150
+	panel.offset_right = 200
+	panel.offset_bottom = 150
+	
+	var style = StyleBoxFlat.new()
+	style.bg_color = Color(0.1, 0.1, 0.15, 0.95)
+	style.border_width_left = 2
+	style.border_width_top = 2
+	style.border_width_right = 2
+	style.border_width_bottom = 2
+	style.border_color = Color(0.3, 0.6, 0.9)
+	style.corner_radius_top_left = 8
+	style.corner_radius_top_right = 8
+	style.corner_radius_bottom_right = 8
+	style.corner_radius_bottom_left = 8
+	panel.add_theme_stylebox_override("panel", style)
+	
+	canvas.add_child(panel)
+	higher_lower_ui = panel
+	
+	var vbox = VBoxContainer.new()
+	vbox.set_anchors_preset(Control.PRESET_FULL_RECT)
+	vbox.offset_left = 20
+	vbox.offset_top = 20
+	vbox.offset_right = -20
+	vbox.offset_bottom = -20
+	vbox.add_theme_constant_override("separation", 20)
+	panel.add_child(vbox)
+	
+	var title = Label.new()
+	title.text = "Higher or Lower?"
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	title.add_theme_font_size_override("font_size", 24)
+	vbox.add_child(title)
+	
+	# Container for the die display
+	var die_container = CenterContainer.new()
+	vbox.add_child(die_container)
+	
+	higher_lower_die_display_node = DIE_DISPLAY_SCENE.instantiate()
+	die_container.add_child(higher_lower_die_display_node)
+	# We don't want interactions with this display
+	higher_lower_die_display_node.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	
+	higher_lower_message_label = Label.new()
+	higher_lower_message_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	higher_lower_message_label.text = "Current Roll: ?"
+	vbox.add_child(higher_lower_message_label)
+	
+	higher_lower_buttons_container = HBoxContainer.new()
+	higher_lower_buttons_container.alignment = BoxContainer.ALIGNMENT_CENTER
+	higher_lower_buttons_container.add_theme_constant_override("separation", 20)
+	vbox.add_child(higher_lower_buttons_container)
+	
+	var btn_higher = Button.new()
+	btn_higher.text = "Higher"
+	btn_higher.custom_minimum_size = Vector2(100, 50)
+	btn_higher.pressed.connect(_on_higher_lower_guess.bind("higher"))
+	higher_lower_buttons_container.add_child(btn_higher)
+	
+	var btn_lower = Button.new()
+	btn_lower.text = "Lower"
+	btn_lower.custom_minimum_size = Vector2(100, 50)
+	btn_lower.pressed.connect(_on_higher_lower_guess.bind("lower"))
+	higher_lower_buttons_container.add_child(btn_lower)
+	
+	var btn_equal = Button.new()
+	btn_equal.text = "Equal"
+	btn_equal.custom_minimum_size = Vector2(100, 50)
+	btn_equal.pressed.connect(_on_higher_lower_guess.bind("equal"))
+	higher_lower_buttons_container.add_child(btn_equal)
+
+func _on_higher_lower_guess(guess_type: String):
+	# Disable buttons during animation/processing
+	for btn in higher_lower_buttons_container.get_children():
+		if btn is Button: btn.disabled = true
+	
+	var old_val = higher_lower_die.result_value
+	higher_lower_die.roll()
+	var new_val = higher_lower_die.result_value
+	
+	higher_lower_die_display_node.set_die(higher_lower_die)
+	
+	var success = false
+	var multiplier = 1
+	
+	if guess_type == "higher" and new_val > old_val: success = true
+	elif guess_type == "lower" and new_val < old_val: success = true
+	elif guess_type == "equal" and new_val == old_val:
+		success = true
+		multiplier = 2
+	
+	if success:
+		higher_lower_accumulated_results.append({"face": higher_lower_die.result_face, "multiplier": multiplier})
+		if multiplier > 1:
+			higher_lower_message_label.text = "Correct! Equal! (x2) Rolled %d. Guess again?" % new_val
+		else:
+			higher_lower_message_label.text = "Correct! Rolled %d. Guess again?" % new_val
+		# Re-enable buttons
+		for btn in higher_lower_buttons_container.get_children():
+			if btn is Button: btn.disabled = false
+	else:
+		if new_val == old_val:
+			higher_lower_message_label.text = "Equal! (%d) It's a loss." % new_val
+		else:
+			higher_lower_message_label.text = "Wrong! Rolled %d." % new_val
+		
+		await get_tree().create_timer(1.5).timeout
+		_end_higher_lower()
+
+func _end_higher_lower():
+	higher_lower_ui.visible = false
+	
+	if not higher_lower_accumulated_results.is_empty() and higher_lower_target and not higher_lower_target._is_dead:
+		await _animate_higher_lower_damage_sequence()
+	
+	active_targeting_ability = null
+	
+	# Refresh health preview
+	var net_damage = max(0, current_incoming_damage - player.block)
+	player.update_health_display(net_damage)
+
+func _animate_higher_lower_damage_sequence():
+	# Create a visual die for animation
+	var anim_die = DIE_DISPLAY_SCENE.instantiate()
+	$UI.add_child(anim_die)
+	# Set initial state
+	anim_die.set_die(higher_lower_die)
+	anim_die.pivot_offset = anim_die.size / 2
+	anim_die.scale = Vector2(0.6, 0.6)
+	
+	# Start position: Center of screen (where UI was)
+	var start_pos = get_viewport_rect().size / 2
+	anim_die.global_position = start_pos - (anim_die.size / 2)
+	
+	var target_pos = higher_lower_target.global_position
+	# Adjust for center of target
+	var sprite = higher_lower_target.get_node_or_null("Sprite2D")
+	if sprite:
+		if sprite is Control:
+			target_pos = sprite.get_global_rect().get_center()
+		elif sprite is Node2D:
+			target_pos = sprite.global_position
+	
+	for i in range(higher_lower_accumulated_results.size()):
+		if higher_lower_target._is_dead:
+			break
+			
+		var result_entry = higher_lower_accumulated_results[i]
+		var face = result_entry["face"]
+		var multiplier = result_entry["multiplier"]
+		# Update die data to match this specific result
+		higher_lower_die.result_face = face
+		higher_lower_die.result_value = face.value
+		anim_die.set_die(higher_lower_die)
+		
+		var tween = create_tween()
+		
+		if i == 0:
+			# First hit: Fly from center to target
+			tween.tween_property(anim_die, "global_position", target_pos - (anim_die.size / 2), 0.4).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN)
+		else:
+			# Subsequent hits: Bounce up and down
+			var bounce_height = 100.0
+			var up_pos = target_pos - Vector2(0, bounce_height) - (anim_die.size / 2)
+			var down_pos = target_pos - (anim_die.size / 2)
+			
+			tween.tween_property(anim_die, "global_position", up_pos, 0.2).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+			tween.tween_property(anim_die, "global_position", down_pos, 0.2).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+			
+		await tween.finished
+		
+		# Deal damage
+		var damage = face.value * multiplier
+		await higher_lower_target.take_damage(damage, true, player, true)
+		await _apply_all_die_effects(higher_lower_die, higher_lower_target, face.value, face)
+		
+	anim_die.queue_free()
+
+func _apply_all_die_effects(die: Die, target: Character, value: int, force_face: Resource = null):
+	var face = force_face if force_face else die.result_face
+	
+	if face and not face.effects.is_empty():
+		for effect in face.effects:
 			# Spikes is a self-buff, it should not be applied to enemies.
 			if effect.name == "Spikes":
 				continue
+			print("Applying effect '%s' (Value: %d) to %s" % [effect.name, value, target.name])
 			await _process_die_face_effect(effect, value, target, die)
 
 func _process_die_face_effect(effect: DieFaceEffect, value: int, target: Character = null, die: Die = null):

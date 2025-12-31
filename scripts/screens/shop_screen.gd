@@ -108,8 +108,13 @@ func _generate_offer(existing_container: VBoxContainer = null):
 		
 		var die_display = preload("res://scenes/screens/rewards_die_display.tscn").instantiate()
 		offer_vbox.add_child(die_display)
-		die_display.set_die(random_die)
-		die_display.scale = Vector2.ONE
+		
+		var upgraded_faces_info = [{
+			"face_value": random_face.value,
+			"effect_name": effect.name,
+			"effect_color": effect.highlight_color.to_html()
+		}]
+		die_display.set_die(random_die, true, true, upgraded_faces_info)
 		die_display.size_flags_horizontal = SIZE_SHRINK_CENTER
 		die_display.disabled = true
 		die_display.mouse_filter = Control.MOUSE_FILTER_PASS
