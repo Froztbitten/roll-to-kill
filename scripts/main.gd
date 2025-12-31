@@ -168,6 +168,14 @@ func player_turn() -> void:
 	for enemy: Enemy in active_enemies:
 		enemy.clear_provided_shields()
 		if enemy.next_action:
+			if enemy.next_action.action_name == "Wing Buffet":
+				enemy.apply_duration_status("glance_blows", 1)
+				# Ensure it expires at the end of the round (enemy turn) by removing it from the "new" list
+				var gb_status = StatusLibrary.get_status("glance_blows")
+				if enemy._new_statuses_this_turn.has(gb_status):
+					enemy._new_statuses_this_turn.erase(gb_status)
+				print("%s gains Glance Blows!" % enemy.name)
+
 			if enemy.next_action.action_type == EnemyAction.ActionType.SHIELD:
 				enemy.add_block(enemy.next_action_value)
 			elif enemy.next_action.action_type == EnemyAction.ActionType.SUPPORT_SHIELD:
@@ -303,9 +311,6 @@ func enemy_turn() -> void:
 						if enemy.next_action.action_name == "Shrink Ray":
 							player.apply_duration_status("shrunk", 1)
 							print("Player has been shrunk!")
-						elif enemy.next_action.action_name == "Wing Buffet":
-							enemy.apply_duration_status("glance_blows", 1)
-							print("%s gains Glance Blows!" % enemy.name)
 						
 						if enemy.has_status("Raging"):
 							var recoil = ceili(enemy.next_action_value / 2.0)
