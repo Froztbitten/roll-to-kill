@@ -1,28 +1,25 @@
-[gd_resource type="Resource" script_class="EnemyData" load_steps=8 format=3 uid="uid://b1s2t3u4v5w6"]
+[gd_resource type="Resource" script_class="EnemyData" load_steps=6 format=3 uid="uid://b1s2t3u4v5w6"]
 
 [ext_resource type="Script" uid="uid://djeev1jhalfah" path="res://scripts/character/enemy/enemy_action.gd" id="1_action"]
-[ext_resource type="Script" uid="uid://b62erl0h813g2" path="res://scripts/dice/die.gd" id="2_die"]
 [ext_resource type="Script" uid="uid://dv6r7tro15lnf" path="res://scripts/character/enemy/enemy_data.gd" id="3_data"]
 [ext_resource type="Texture2D" uid="uid://cqhctfl2qm3a5" path="res://assets/ai/dice/d6.svg" id="4_sprite"]
-
-[sub_resource type="Resource" id="d6_die"]
-script = ExtResource("2_die")
 
 [sub_resource type="Resource" id="d6_heal_action"]
 script = ExtResource("1_action")
 action_name = "6ive aid"
 action_type = 3
-dice_to_roll = Array[ExtResource("2_die")]([SubResource("d6_die")])
+dice_count = 1
 
 [sub_resource type="Resource" id="d6_donothing_action"]
 script = ExtResource("1_action")
 action_name = "6lazed over"
 action_type = 7
+dice_sides = 0
 
 [resource]
 script = ExtResource("3_data")
 enemy_name = "D6"
 sprite_texture = ExtResource("4_sprite")
 minimum_hp = 0
-hp_dice = Array[ExtResource("2_die")]([SubResource("d6_die")])
+gold_dice_sides = 0
 action_pool = Array[ExtResource("1_action")]([SubResource("d6_heal_action"), SubResource("d6_donothing_action")])

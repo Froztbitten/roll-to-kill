@@ -1,27 +1,20 @@
-[gd_resource type="Resource" script_class="EnemyData" load_steps=7 format=3]
+[gd_resource type="Resource" script_class="EnemyData" load_steps=5 format=3 uid="uid://c1ww36rro3xgw"]
 
 [ext_resource type="Script" uid="uid://djeev1jhalfah" path="res://scripts/character/enemy/enemy_action.gd" id="1_action"]
-[ext_resource type="Script" path="res://scripts/dice/die.gd" id="2_die"]
 [ext_resource type="Script" uid="uid://dv6r7tro15lnf" path="res://scripts/character/enemy/enemy_data.gd" id="3_data"]
 [ext_resource type="Texture2D" uid="uid://cotix4d2mo5fq" path="res://assets/ai/characters/koko_the_pelican.jpg" id="4_sprite"]
-
-[sub_resource type="Resource" id="d12_die"]
-script = ExtResource("2_die")
-sides = 12
-
-[sub_resource type="Resource" id="d4_die"]
-script = ExtResource("2_die")
-sides = 4
 
 [sub_resource type="Resource" id="action_peck"]
 script = ExtResource("1_action")
 action_name = "Peck"
-dice_to_roll = Array[ExtResource("2_die")]([SubResource("d4_die")])
+dice_count = 1
+dice_sides = 4
 
 [resource]
 script = ExtResource("3_data")
 enemy_name = "Koko the Pelican"
 sprite_texture = ExtResource("4_sprite")
 minimum_hp = 4
-hp_dice = Array[ExtResource("2_die")]([SubResource("d12_die")])
+gold_dice_sides = 0
+hp_dice_sides = 12
 action_pool = Array[ExtResource("1_action")]([SubResource("action_peck")])

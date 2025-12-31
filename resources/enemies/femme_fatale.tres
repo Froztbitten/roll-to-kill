@@ -1,20 +1,14 @@
-[gd_resource type="Resource" script_class="EnemyData" load_steps=11 format=3 uid="uid://d0v8v5xg7nftg"]
+[gd_resource type="Resource" script_class="EnemyData" load_steps=6 format=3 uid="uid://d0v8v5xg7nftg"]
 
 [ext_resource type="Script" uid="uid://djeev1jhalfah" path="res://scripts/character/enemy/enemy_action.gd" id="1_action"]
-[ext_resource type="Script" uid="uid://b62erl0h813g2" path="res://scripts/dice/die.gd" id="2_die"]
 [ext_resource type="Script" uid="uid://dv6r7tro15lnf" path="res://scripts/character/enemy/enemy_data.gd" id="3_data"]
 [ext_resource type="Texture2D" uid="uid://catqw43huvajm" path="res://assets/ai/characters/femme_fatale.jpg" id="3_u8xck"]
-
-[sub_resource type="GDScript" id="GDScript_74g23"]
-
-[sub_resource type="Resource" id="d6_die"]
-script = ExtResource("2_die")
 
 [sub_resource type="Resource" id="action_charm"]
 script = ExtResource("1_action")
 action_name = "Charm"
 action_type = 9
-dice_to_roll = Array[ExtResource("2_die")]([SubResource("d6_die")])
+dice_count = 1
 status_id = "charming"
 duration = 1
 
@@ -25,19 +19,12 @@ action_type = 9
 status_id = "lock_down"
 duration = 1
 
-[sub_resource type="Resource" id="gold_d8"]
-script = ExtResource("2_die")
-sides = 8
-
-[sub_resource type="Resource" id="d4_die"]
-script = ExtResource("2_die")
-sides = 4
-
 [resource]
 script = ExtResource("3_data")
 enemy_name = "Femme Fatale"
 sprite_texture = ExtResource("3_u8xck")
 minimum_hp = 10
-gold_amount = Array[ExtResource("2_die")]([SubResource("gold_d8"), SubResource("gold_d8")])
-hp_dice = Array[ExtResource("2_die")]([SubResource("d4_die"), SubResource("d4_die"), SubResource("d4_die")])
+gold_dice = 1
+hp_dice_count = 3
+hp_dice_sides = 4
 action_pool = Array[ExtResource("1_action")]([SubResource("action_charm"), SubResource("action_widows_web")])

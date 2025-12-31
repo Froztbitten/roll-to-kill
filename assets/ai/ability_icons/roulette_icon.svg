@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <defs>
+    <style>
+      .main-body { fill: #37474F; }
+      .chamber-empty { fill: #546E7A; }
+      .chamber-loaded { fill: #FF3D00; }
+      .center-pin { fill: #263238; }
+      .spin-arrow { fill: #B0BEC5; }
+    </style>
+  </defs>
+
+  <title>Roulette Ability Icon</title>
+
+  <path class="spin-arrow" d="M32,2 A30,30 0 0,1 62,32 L56,32 A24,24 0 0,0 32,8 Z"/>
+  <polygon class="spin-arrow" points="62,32 56,24 50,32"/>
+  
+  <path class="spin-arrow" d="M32,62 A30,30 0 0,1 2,32 L8,32 A24,24 0 0,0 32,56 Z"/>
+  <polygon class="spin-arrow" points="2,32 8,40 14,32"/>
+
+  <circle class="main-body" cx="32" cy="32" r="20"/>
+
+  <circle class="center-pin" cx="32" cy="32" r="4"/>
+
+  <circle class="chamber-empty" cx="32" cy="18" r="4.5"/>
+  <circle class="chamber-empty" cx="44.12" cy="25" r="4.5"/>
+  <circle class="chamber-empty" cx="44.12" cy="39" r="4.5"/>
+  <circle class="chamber-loaded" cx="32" cy="46" r="5"/>
+  <circle class="chamber-empty" cx="19.88" cy="39" r="4.5"/>
+  <circle class="chamber-empty" cx="19.88" cy="25" r="4.5"/>
+</svg>

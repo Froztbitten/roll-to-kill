@@ -45,30 +45,18 @@ theme_override_styles/hover = SubResource("StyleBoxFlat_eho2l")
 script = ExtResource("1_a3on2")
 
 [node name="FaceGrid" type="GridContainer" parent="."]
-layout_mode = 0
-offset_right = 180.0
-offset_bottom = 187.0
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_bottom = -70.0
+grow_horizontal = 2
+grow_vertical = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
 columns = 4
 
-[node name="DieLabel" type="Label" parent="."]
-z_as_relative = false
-layout_mode = 1
-anchors_preset = -1
-anchor_top = 0.77000004
-anchor_right = 1.0
-anchor_bottom = 1.0
-offset_top = -0.05000305
-size_flags_vertical = 1
-text = "D4"
-label_settings = SubResource("LabelSettings_eho2l")
-horizontal_alignment = 1
-autowrap_mode = 3
-text_overrun_behavior = 6
-uppercase = true
-
-[node name="DieIcon" type="TextureRect" parent="DieLabel"]
+[node name="DieIcon" type="TextureRect" parent="."]
 modulate = Color(1, 1, 1, 0.392157)
 show_behind_parent = true
 light_mask = 0
@@ -83,7 +71,41 @@ texture = ExtResource("2_eho2l")
 expand_mode = 1
 stretch_mode = 5
 
+[node name="DieLabel" type="Label" parent="."]
+visible = false
+z_as_relative = false
+layout_mode = 1
+anchors_preset = -1
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = 129.0
+offset_bottom = -55.0
+grow_horizontal = 2
+grow_vertical = 2
+text = "D4"
+label_settings = SubResource("LabelSettings_eho2l")
+horizontal_alignment = 1
+vertical_alignment = 2
+autowrap_mode = 3
+text_overrun_behavior = 6
+uppercase = true
+
+[node name="StatusLabel" type="Label" parent="."]
+layout_mode = 1
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = -25.0
+grow_horizontal = 2
+grow_vertical = 0
+theme_override_font_sizes/font_size = 16
+text = "(New)"
+horizontal_alignment = 1
+vertical_alignment = 1
+
 [node name="AverageLabel" type="Label" parent="."]
+visible = false
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0

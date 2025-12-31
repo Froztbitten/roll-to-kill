@@ -44,8 +44,9 @@ func setup():
 	sprite.texture = enemy_data.sprite_texture
 	
 	var rolled_hp = 0
-	for hp_die in enemy_data.hp_dice:
-		rolled_hp += hp_die.roll()
+	for i in range(enemy_data.hp_dice_count):
+		var d = Die.new(enemy_data.hp_dice_sides)
+		rolled_hp += d.roll()
 	
 	# Set the health properties inherited from the Character class
 	# Ensure the starting HP is not below the defined minimum.
@@ -96,17 +97,18 @@ func declare_intent(active_enemies: Array):
 		var multiplier = 2 if raging else 1
 		
 		for i in range(multiplier):
-			for action_die: Die in next_action.dice_to_roll:
-				next_action_value += action_die.roll(advantage)
+			for j in range(next_action.dice_count):
+				var d = Die.new(next_action.dice_sides)
+				next_action_value += d.roll(advantage)
 	
 	# Safely get the icon for the intent display.
 	# This prevents a crash if an action has no dice.
 	var die_sides_for_icon = 8 # Default to d8 icon
-	if not next_action.dice_to_roll.is_empty():
-		die_sides_for_icon = next_action.dice_to_roll[0].sides
+	if next_action.dice_count > 0:
+		die_sides_for_icon = next_action.dice_sides
 
 	var intent_icon_type = "attack"
-	if next_action.dice_to_roll.is_empty():
+	if next_action.dice_count == 0:
 		# Any action with no dice is considered a "charge" or "setup" move.
 		intent_icon_type = "charge"
 	elif next_action.action_type == EnemyAction.ActionType.SHIELD or next_action.action_type == EnemyAction.ActionType.SUPPORT_SHIELD:
@@ -115,7 +117,7 @@ func declare_intent(active_enemies: Array):
 		intent_icon_type = "heal"
 
 	# Update the UI to show the intent
-	intent_display.update_display(next_action.action_name, next_action_value, die_sides_for_icon, intent_icon_type, next_action.dice_to_roll.size())
+	intent_display.update_display(next_action.action_name, next_action_value, die_sides_for_icon, intent_icon_type, next_action.dice_count)
 	intent_display.visible = true
 
 
@@ -158,8 +160,9 @@ func die() -> void:
 
 	if enemy_data:
 		var total_gold = enemy_data.gold_minimum
-		for gold_die in enemy_data.gold_amount:
-			total_gold += gold_die.roll()
+		for i in range(enemy_data.gold_dice):
+			var d = Die.new(enemy_data.gold_dice_sides)
+			total_gold += d.roll()
 		
 		if total_gold > 0:
 			emit_signal("gold_dropped", total_gold)

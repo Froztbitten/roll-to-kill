@@ -1,36 +1,30 @@
-[gd_resource type="Resource" script_class="EnemyData" load_steps=10 format=3 uid="uid://b7dqjdxtlr5m1"]
+[gd_resource type="Resource" script_class="EnemyData" load_steps=6 format=3 uid="uid://b7dqjdxtlr5m1"]
 
 [ext_resource type="Script" uid="uid://djeev1jhalfah" path="res://scripts/character/enemy/enemy_action.gd" id="1_qu8um"]
-[ext_resource type="Script" uid="uid://b62erl0h813g2" path="res://scripts/dice/die.gd" id="2_die"]
 [ext_resource type="Script" uid="uid://dv6r7tro15lnf" path="res://scripts/character/enemy/enemy_data.gd" id="3_xbyo6"]
 [ext_resource type="Texture2D" uid="uid://ce0tqejetabvb" path="res://assets/ai/characters/goblin_archer.jpg" id="4_g4trc"]
 
 [sub_resource type="Resource" id="Resource_draw_action"]
 script = ExtResource("1_qu8um")
 action_name = "Draw Arrow"
+action_type = 7
+dice_sides = 0
 metadata/_custom_type_script = "uid://djeev1jhalfah"
 
 [sub_resource type="Resource" id="Resource_fire_action"]
 script = ExtResource("1_qu8um")
 action_name = "Fire Arrow"
+dice_count = 1
+dice_sides = 8
 metadata/_custom_type_script = "uid://djeev1jhalfah"
-
-[sub_resource type="GDScript" id="GDScript_74g23"]
-
-[sub_resource type="Resource" id="gold_d4"]
-script = ExtResource("2_die")
-sides = 4
-
-[sub_resource type="Resource" id="hp_d8"]
-script = ExtResource("2_die")
-sides = 8
 
 [resource]
 script = ExtResource("3_xbyo6")
 enemy_name = "Goblin Archer"
 sprite_texture = ExtResource("4_g4trc")
 minimum_hp = 8
-gold_amount = Array[ExtResource("2_die")]([SubResource("gold_d4")])
-hp_dice = Array[ExtResource("2_die")]([SubResource("hp_d8")])
+gold_dice = 1
+gold_dice_sides = 4
+hp_dice_sides = 8
 action_pool = Array[ExtResource("1_qu8um")]([SubResource("Resource_draw_action"), SubResource("Resource_fire_action")])
 metadata/_custom_type_script = "uid://dv6r7tro15lnf"

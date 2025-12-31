@@ -1,11 +1,11 @@
-[gd_resource type="Resource" script_class="AbilityData" load_steps=2 format=3]
+[gd_resource type="Resource" script_class="AbilityData" load_steps=3 format=3 uid="uid://xgjvlkuggkwq"]
 
-[ext_resource type="Script" path="res://scripts/character/player/ability_data.gd" id="1_script"]
+[ext_resource type="Texture2D" uid="uid://bs31tad002fqp" path="res://assets/ai/ability_icons/explosive_shot_icon.svg" id="1_34x33"]
+[ext_resource type="Script" uid="uid://uw8x16ewdua0" path="res://scripts/character/player/ability_data.gd" id="1_script"]
 
 [resource]
 script = ExtResource("1_script")
 title = "Explosive Shot"
 description = "Deal [color=yellow]X[/color] damage to target and [color=yellow]X/2[/color] (rounded up) to adjacent enemies."
-dice_slots = 1
-discard_dice_on_reset = true
+icon = ExtResource("1_34x33")
 cooldown_duration = 2

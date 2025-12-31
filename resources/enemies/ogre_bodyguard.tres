@@ -1,28 +1,21 @@
-[gd_resource type="Resource" script_class="EnemyData" load_steps=9 format=3 uid="uid://btp545hyphd1x"]
+[gd_resource type="Resource" script_class="EnemyData" load_steps=5 format=3 uid="uid://btp545hyphd1x"]
 
 [ext_resource type="Script" uid="uid://djeev1jhalfah" path="res://scripts/character/enemy/enemy_action.gd" id="1_action"]
-[ext_resource type="Script" uid="uid://b62erl0h813g2" path="res://scripts/dice/die.gd" id="2_die"]
 [ext_resource type="Script" uid="uid://dv6r7tro15lnf" path="res://scripts/character/enemy/enemy_data.gd" id="3_data"]
 [ext_resource type="Texture2D" uid="uid://dmchwilmlm235" path="res://assets/ai/characters/ogre.jpg" id="4_sprite"]
 
 [sub_resource type="Resource" id="smash_action"]
 script = ExtResource("1_action")
 action_name = "Smash"
-
-[sub_resource type="GDScript" id="GDScript_74g23"]
-
-[sub_resource type="Resource" id="gold"]
-script = ExtResource("2_die")
-sides = 2
-
-[sub_resource type="Resource" id="hp_d6"]
-script = ExtResource("2_die")
+dice_count = 1
+dice_sides = 10
 
 [resource]
 script = ExtResource("3_data")
 enemy_name = "Ogre Bodyguard"
 sprite_texture = ExtResource("4_sprite")
 minimum_hp = 12
-gold_amount = Array[ExtResource("2_die")]([SubResource("gold")])
-hp_dice = Array[ExtResource("2_die")]([SubResource("hp_d6"), SubResource("hp_d6"), SubResource("hp_d6")])
+gold_dice = 1
+gold_dice_sides = 2
+hp_dice_count = 3
 action_pool = Array[ExtResource("1_action")]([SubResource("smash_action")])

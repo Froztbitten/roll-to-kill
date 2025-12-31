@@ -20,6 +20,7 @@ static var debug_mode: bool = false
 @onready var reward_screen = $UI/RewardScreen
 @onready var map_screen = $UI/MapScreen
 @onready var shop_screen = $UI/ShopScreen
+@onready var campfire_screen = $UI/CampfireScreen
 @onready var end_turn_button = $UI/EndTurnButton
 @onready var debug_menu = $UI/DebugMenu
 
@@ -87,6 +88,7 @@ func _ready() -> void:
 	
 	debug_menu.encounter_selected.connect(_on_debug_menu_encounter_selected)
 	debug_menu.close_requested.connect(func(): debug_menu.visible = false)
+	campfire_screen.leave_campfire.connect(func(): map_screen.visible = true)
 	
 	dice_bag_button.pressed.connect(_on_dice_bag_button_pressed)
 	dice_bag_close_button.pressed.connect(func(): dice_bag_screen.visible = false)
@@ -295,6 +297,9 @@ func enemy_turn() -> void:
 	if current_turn == Turn.ENEMY:
 		# Each living enemy attacks with its declared damage
 		for enemy in active_enemies:
+			if enemy.hp > 0:
+				await enemy.trigger_start_of_turn_statuses()
+			
 			if enemy.hp > 0 and enemy.next_action:
 				match enemy.next_action.action_type:
 					EnemyAction.ActionType.ATTACK:
@@ -783,6 +788,8 @@ func _on_map_node_selected(node_data):
 	elif node_data.type == "boss":
 		var spawned_enemies = enemy_spawner.spawn_random_encounter(EncounterData.EncounterType.BOSS)
 		await _setup_round(spawned_enemies)
+	elif node_data.type == "campfire":
+		campfire_screen.open()
 	else:
 		print("Unknown node type selected: ", node_data.type)
 
@@ -988,13 +995,17 @@ func _generate_reward_dice() -> Array[Die]:
 			
 		# Add new effects (Guaranteed at least 1 for upgrade option)
 		var num_upgrade = randi_range(1, max_effects)
+		var upgraded_faces_info = []
 		for k in range(num_upgrade):
 			var effect = EffectLibrary.get_random_effect_for_die(upgrade_offer.sides, tier_limit)
 			if effect:
-				upgrade_offer.faces.pick_random().effects.append(effect)
+				var target_face = upgrade_offer.faces.pick_random()
+				target_face.effects.append(effect)
+				upgraded_faces_info.append({"face_value": target_face.value, "effect_name": effect.name, "effect_color": effect.highlight_color.to_html()})
 		
 		upgrade_offer.set_meta("is_upgrade_reward", true)
 		upgrade_offer.set_meta("upgrade_target", original_die)
+		upgrade_offer.set_meta("upgraded_faces_info", upgraded_faces_info)
 		
 		dice_options.append(upgrade_offer)
 	else:

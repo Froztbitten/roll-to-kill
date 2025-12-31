@@ -14,7 +14,7 @@ var _game_dice_bag: Array[Die] = []
 var _round_dice_bag: Array[Die] = []
 var _dice_discard: Array[Die] = []
 var _held_dice: Array[Die] = []
-var gold: int = 0
+var gold: int = 50
 var die_removal_cost: int = 75
 var _shield_sound: AudioStream
 @onready var status_display: HBoxContainer = $StatusCanvas/StatusEffectDisplay
@@ -28,7 +28,7 @@ func _ready():
 	statuses_changed.connect(_on_statuses_changed)
 	
 	# Define the initial deck
-	var starting_deck_sides = [2, 4, 4, 6, 6, 6, 8, 8, 10]
+	var starting_deck_sides = [4, 4, 6, 6, 6, 8, 8, 10, 12]
 	
 	for side_count in starting_deck_sides:
 		var new_die = Die.new(side_count)

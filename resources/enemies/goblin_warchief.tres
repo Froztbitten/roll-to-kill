@@ -1,7 +1,6 @@
-[gd_resource type="Resource" script_class="EnemyData" load_steps=24 format=3 uid="uid://mxdbguridwuc"]
+[gd_resource type="Resource" script_class="EnemyData" load_steps=9 format=3 uid="uid://mxdbguridwuc"]
 
 [ext_resource type="Script" uid="uid://djeev1jhalfah" path="res://scripts/character/enemy/enemy_action.gd" id="1_action"]
-[ext_resource type="Script" uid="uid://b62erl0h813g2" path="res://scripts/dice/die.gd" id="2_die"]
 [ext_resource type="Script" uid="uid://dv6r7tro15lnf" path="res://scripts/character/enemy/enemy_data.gd" id="3_data"]
 [ext_resource type="Texture2D" uid="uid://jny6xgny3tl6" path="res://assets/ai/characters/goblin_warchief.jpg" id="4_sprite"]
 
@@ -9,14 +8,19 @@
 script = ExtResource("1_action")
 action_name = "King of Cowards"
 action_type = 1
+dice_count = 1
+dice_sides = 8
 
 [sub_resource type="Resource" id="warstrike_action"]
 script = ExtResource("1_action")
 action_name = "Warstrike"
+dice_count = 1
+dice_sides = 4
 
 [sub_resource type="Resource" id="fight_action"]
 script = ExtResource("1_action")
 action_name = "Fight"
+dice_count = 1
 
 [sub_resource type="Resource" id="flight_action"]
 script = ExtResource("1_action")
@@ -28,76 +32,12 @@ script = ExtResource("1_action")
 action_name = "Fright"
 action_type = 7
 
-[sub_resource type="GDScript" id="GDScript_74g23"]
-
-[sub_resource type="Resource" id="Resource_df5qo"]
-script = ExtResource("2_die")
-sides = 4
-metadata/_custom_type_script = "uid://b62erl0h813g2"
-
-[sub_resource type="Resource" id="Resource_xfce6"]
-script = ExtResource("2_die")
-sides = 4
-metadata/_custom_type_script = "uid://b62erl0h813g2"
-
-[sub_resource type="Resource" id="Resource_rkup4"]
-script = ExtResource("2_die")
-sides = 4
-metadata/_custom_type_script = "uid://b62erl0h813g2"
-
-[sub_resource type="Resource" id="Resource_viilu"]
-script = ExtResource("2_die")
-sides = 4
-metadata/_custom_type_script = "uid://b62erl0h813g2"
-
-[sub_resource type="Resource" id="Resource_st6dj"]
-script = ExtResource("2_die")
-sides = 4
-metadata/_custom_type_script = "uid://b62erl0h813g2"
-
-[sub_resource type="Resource" id="Resource_uy2lr"]
-script = ExtResource("2_die")
-sides = 4
-metadata/_custom_type_script = "uid://b62erl0h813g2"
-
-[sub_resource type="Resource" id="Resource_36qek"]
-script = ExtResource("2_die")
-sides = 4
-metadata/_custom_type_script = "uid://b62erl0h813g2"
-
-[sub_resource type="Resource" id="Resource_3cwoy"]
-script = ExtResource("2_die")
-sides = 4
-metadata/_custom_type_script = "uid://b62erl0h813g2"
-
-[sub_resource type="Resource" id="Resource_0871y"]
-script = ExtResource("2_die")
-sides = 4
-metadata/_custom_type_script = "uid://b62erl0h813g2"
-
-[sub_resource type="Resource" id="Resource_364vn"]
-script = ExtResource("2_die")
-sides = 4
-metadata/_custom_type_script = "uid://b62erl0h813g2"
-
-[sub_resource type="Resource" id="Resource_02hao"]
-script = ExtResource("2_die")
-sides = 4
-metadata/_custom_type_script = "uid://b62erl0h813g2"
-
-[sub_resource type="Resource" id="Resource_56dlp"]
-script = ExtResource("2_die")
-sides = 4
-metadata/_custom_type_script = "uid://b62erl0h813g2"
-
-[sub_resource type="Resource" id="hp_d6"]
-script = ExtResource("2_die")
-
 [resource]
 script = ExtResource("3_data")
 enemy_name = "Goblin Warchief"
 sprite_texture = ExtResource("4_sprite")
 minimum_hp = 6
-gold_amount = Array[ExtResource("2_die")]([SubResource("Resource_df5qo"), SubResource("Resource_xfce6"), SubResource("Resource_rkup4"), SubResource("Resource_viilu"), SubResource("Resource_st6dj"), SubResource("Resource_uy2lr"), SubResource("Resource_36qek"), SubResource("Resource_3cwoy"), SubResource("Resource_0871y"), SubResource("Resource_364vn"), SubResource("Resource_02hao"), SubResource("Resource_56dlp")])
-hp_dice = Array[ExtResource("2_die")]([SubResource("hp_d6"), SubResource("hp_d6")])
+gold_dice = 12
+gold_dice_sides = 4
+hp_dice_count = 2
 action_pool = Array[ExtResource("1_action")]([SubResource("king_of_cowards_action"), SubResource("warstrike_action"), SubResource("fight_action"), SubResource("flight_action"), SubResource("fright_action")])

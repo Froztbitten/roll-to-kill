@@ -1,7 +1,6 @@
-[gd_resource type="Resource" script_class="EnemyData" load_steps=11 format=3 uid="uid://nuoxudbbe41l"]
+[gd_resource type="Resource" script_class="EnemyData" load_steps=8 format=3 uid="uid://nuoxudbbe41l"]
 
 [ext_resource type="Script" uid="uid://djeev1jhalfah" path="res://scripts/character/enemy/enemy_action.gd" id="1_na7ep"]
-[ext_resource type="Script" uid="uid://b62erl0h813g2" path="res://scripts/dice/die.gd" id="2_die"]
 [ext_resource type="Script" uid="uid://dv6r7tro15lnf" path="res://scripts/character/enemy/enemy_data.gd" id="3_sayl4"]
 [ext_resource type="Texture2D" uid="uid://cintk8vw78ojk" path="res://assets/ai/characters/evil_dice_tower.jpg" id="4_owyre"]
 
@@ -9,26 +8,26 @@
 script = ExtResource("1_na7ep")
 action_name = "Summon Minions"
 action_type = 5
-
-[sub_resource type="GDScript" id="GDScript_74g23"]
-
-[sub_resource type="Resource" id="sub_d6"]
-script = ExtResource("2_die")
+dice_sides = 0
 
 [sub_resource type="Resource" id="sub_shield_action"]
 script = ExtResource("1_na7ep")
 action_name = "Withdrawl Bridge"
 action_type = 1
-dice_to_roll = Array[ExtResource("2_die")]([SubResource("sub_d6"), SubResource("sub_d6"), SubResource("sub_d6"), SubResource("sub_d6")])
+dice_count = 4
 
 [sub_resource type="Resource" id="sub_buff_action"]
 script = ExtResource("1_na7ep")
 action_name = "Inspiration"
 action_type = 6
+dice_sides = 0
 
-[sub_resource type="Resource" id="sub_d10"]
-script = ExtResource("2_die")
-sides = 10
+[sub_resource type="Resource" id="Resource_mpbxs"]
+script = ExtResource("1_na7ep")
+action_name = "Die Cast"
+dice_count = 1
+dice_sides = 20
+metadata/_custom_type_script = "uid://djeev1jhalfah"
 
 [resource]
 script = ExtResource("3_sayl4")
@@ -36,6 +35,8 @@ enemy_name = "Evil Dice Tower"
 sprite_texture = ExtResource("4_owyre")
 minimum_hp = 75
 gold_minimum = 50
-gold_amount = Array[ExtResource("2_die")]([SubResource("sub_d10"), SubResource("sub_d10"), SubResource("sub_d10"), SubResource("sub_d10"), SubResource("sub_d10")])
-hp_dice = Array[ExtResource("2_die")]([SubResource("sub_d10"), SubResource("sub_d10"), SubResource("sub_d10"), SubResource("sub_d10"), SubResource("sub_d10")])
-action_pool = Array[ExtResource("1_na7ep")]([SubResource("sub_spawn_action"), SubResource("sub_shield_action"), SubResource("sub_buff_action")])
+gold_dice = 10
+gold_dice_sides = 10
+hp_dice_count = 5
+hp_dice_sides = 10
+action_pool = Array[ExtResource("1_na7ep")]([SubResource("sub_spawn_action"), SubResource("sub_shield_action"), SubResource("sub_buff_action"), SubResource("Resource_mpbxs")])

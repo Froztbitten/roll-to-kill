@@ -68,3 +68,10 @@ func get_random_effect_for_die(sides: int, tier_limit: int = 1) -> DieFaceEffect
 			print("Returning random effect for D%d: %s" % [sides, chosen_effect.name])
 			return duplicated_effect
 	return null
+
+func get_effect_by_name(name: String) -> DieFaceEffect:
+	for sides in effects_by_die_size.keys():
+		for effect in effects_by_die_size[sides]:
+			if effect.name == name:
+				return effect
+	return null

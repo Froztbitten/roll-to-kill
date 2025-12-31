@@ -7,7 +7,8 @@ enum ActionType { ATTACK, SHIELD, SUPPORT_SHIELD, HEAL_ALLY, PIERCING_ATTACK, SP
 @export var action_type: ActionType = ActionType.ATTACK
 
 @export var base_value: int = 0
-@export var dice_to_roll: Array[Die]
+@export var dice_count: int = 0
+@export var dice_sides: int = 6
 @export var status_id: String = ""
 @export var duration: int = -1
 @export var charges: int = -1

@@ -58,6 +58,8 @@ func generate_new_map():
 				node_type = "rare_combat"
 			elif randf() < 0.15:
 				node_type = "shop"
+			elif randf() < 0.15:
+				node_type = "campfire"
 
 			layer_nodes.append({
 				"layer": i,
@@ -145,6 +147,9 @@ func draw_map():
 			elif node.type == "shop":
 				icon.texture = load("res://assets/ai/ui/shop_encounter.svg")
 				icon.modulate = Color(1, 0.8, 0.2) # Gold color for shop
+			elif node.type == "campfire":
+				icon.texture = load("res://assets/ai/ui/campfire_encounter.svg") # Placeholder
+				icon.modulate = Color(1, 0.4, 0.0) # Orange/Fire color
 			else:
 				icon.texture = load("res://assets/ai/ui/normal_encounter.svg")
 

@@ -137,7 +137,9 @@ func add_block(amount: int):
 	else:
 		update_health_display()
 
-func apply_duration_status(status_id: String, duration: int = 1, source: Character = null):
+func apply_duration_status(status_id: String, duration: int = 1, _source: Character = null):
+	if _is_dead: return
+
 	var effect: StatusEffect = StatusLibrary.get_status(status_id)
 	if effect:
 		statuses[effect] = duration
@@ -147,7 +149,9 @@ func apply_duration_status(status_id: String, duration: int = 1, source: Charact
 	else:
 		push_warning("Attempted to apply unknown status with id: '%s'" % status_id)
 
-func apply_charges_status(status_id: String, charges: int = 1, source: Character = null):
+func apply_charges_status(status_id: String, charges: int = 1, _source: Character = null):
+	if _is_dead: return
+
 	var effect: StatusEffect = StatusLibrary.get_status(status_id)
 	if effect:
 		if statuses.has(effect):
@@ -162,7 +166,9 @@ func apply_charges_status(status_id: String, charges: int = 1, source: Character
 	else:
 		push_warning("Attempted to apply unknown status with id: '%s'" % status_id)
 
-func apply_effect(effect: StatusEffect, value: int, source: Character = null):
+func apply_effect(effect: StatusEffect, value: int, _source: Character = null):
+	if _is_dead: return
+
 	if statuses.has(effect):
 		if effect.charges != -1:
 			statuses[effect] += value
@@ -194,6 +200,17 @@ func has_status(status_name: String) -> bool:
 			return true
 	return false
 
+func trigger_start_of_turn_statuses():
+	if statuses.is_empty():
+		return
+	
+	var statuses_to_process = statuses.keys()
+	for status in statuses_to_process:
+		if status.status_name == STATUS_BLEEDING or status.status_name == STATUS_BURNING:
+			await take_damage(statuses[status], true, null, false)
+			if _is_dead:
+				return
+
 func tick_down_statuses():
 	if statuses.is_empty():
 		return
@@ -216,13 +233,6 @@ func tick_down_statuses():
 			keys_to_remove.append(status)
 			changed = true
 			continue
-
-		# Apply DoT effects at the end of the turn
-		if status.status_name == STATUS_BLEEDING or status.status_name == STATUS_BURNING:
-			await take_damage(statuses[status], true, null, false) # DoT is not an attack action
-			if _is_dead:
-				_new_statuses_this_turn.clear()
-				return
 
 		# Skip ticking down for charge-based effects. Since Spikes is a permanent
 		# charge buff, we add an explicit check to ensure it never decays. Debuffs
@@ -304,6 +314,7 @@ func die() -> void:
 	
 	# Clear statuses so icons disappear immediately upon death.
 	statuses.clear()
+	_new_statuses_this_turn.clear()
 	statuses_changed.emit(statuses)
 	
 	# Play death sound for enemies

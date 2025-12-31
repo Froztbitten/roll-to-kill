@@ -1,30 +1,21 @@
-[gd_resource type="Resource" script_class="EnemyData" load_steps=9 format=3 uid="uid://dll6mcbs150uq"]
+[gd_resource type="Resource" script_class="EnemyData" load_steps=5 format=3 uid="uid://dll6mcbs150uq"]
 
 [ext_resource type="Script" uid="uid://djeev1jhalfah" path="res://scripts/character/enemy/enemy_action.gd" id="1_action"]
-[ext_resource type="Script" uid="uid://b62erl0h813g2" path="res://scripts/dice/die.gd" id="2_die"]
 [ext_resource type="Script" uid="uid://dv6r7tro15lnf" path="res://scripts/character/enemy/enemy_data.gd" id="3_data"]
 [ext_resource type="Texture2D" uid="uid://bfqldn4x8s423" path="res://assets/ai/characters/foam_wizard.jpg" id="4_qbgdc"]
-
-[sub_resource type="GDScript" id="GDScript_74g23"]
-
-[sub_resource type="Resource" id="d6_die"]
-script = ExtResource("2_die")
 
 [sub_resource type="Resource" id="action_lightning_bolt"]
 script = ExtResource("1_action")
 action_name = "Lightning Bolt!"
-dice_to_roll = Array[ExtResource("2_die")]([SubResource("d6_die"), SubResource("d6_die"), SubResource("d6_die"), SubResource("d6_die"), SubResource("d6_die"), SubResource("d6_die"), SubResource("d6_die"), SubResource("d6_die")])
-
-[sub_resource type="Resource" id="d8_die"]
-script = ExtResource("2_die")
-sides = 8
+dice_count = 8
 
 [resource]
 script = ExtResource("3_data")
 enemy_name = "Foam Wizard"
 sprite_texture = ExtResource("4_qbgdc")
 minimum_hp = 10
-gold_minimum = 10
-gold_amount = Array[ExtResource("2_die")]([SubResource("d6_die"), SubResource("d6_die"), SubResource("d6_die"), SubResource("d6_die"), SubResource("d6_die"), SubResource("d6_die"), SubResource("d6_die"), SubResource("d6_die")])
-hp_dice = Array[ExtResource("2_die")]([SubResource("d8_die"), SubResource("d8_die"), SubResource("d8_die"), SubResource("d8_die")])
+gold_minimum = 30
+gold_dice = 8
+hp_dice_count = 4
+hp_dice_sides = 4
 action_pool = Array[ExtResource("1_action")]([SubResource("action_lightning_bolt")])

@@ -1,0 +1,35 @@
+<svg width="64px" height="64px" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <radialGradient id="explosionGrad" cx="50%" cy="50%" r="50%" fx="50%" fy="50%">
+      <stop offset="0%" style="stop-color:#FFEB3B;stop-opacity:1" /> <stop offset="60%" style="stop-color:#FF9800;stop-opacity:1" /> <stop offset="100%" style="stop-color:#F44336;stop-opacity:1" /> </radialGradient>
+    
+    <linearGradient id="metalGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#90A4AE;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#37474F;stop-opacity:1" />
+    </linearGradient>
+
+    <filter id="explodeGlow">
+      <feGaussianBlur stdDeviation="1" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <circle cx="32" cy="32" r="30" fill="#FFF3E0" stroke="#FF5722" stroke-width="2"/>
+
+  <path d="M32 32 L24 16 L36 12 L40 20 L52 16 L48 28 L56 36 L44 40 L40 52 L28 48 L20 52 L24 40 L12 36 L20 28 L16 16 L28 20 Z" fill="url(#explosionGrad)" filter="url(#explodeGlow)"/>
+
+  <g transform="translate(32, 32) rotate(-45)">
+    <path d="M-8 -10 L8 -10 L6 0 L-6 0 Z" fill="url(#metalGrad)"/>
+    <path d="M0 2 L-6 8 L0 14 L6 8 Z" fill="url(#metalGrad)" transform="translate(0, 4)"/>
+    <polygon points="10,6 16,10 12,16" fill="url(#metalGrad)" />
+    <polygon points="-10,6 -16,10 -12,16" fill="url(#metalGrad)" />
+    <polygon points="0,18 -4,24 4,24" fill="url(#metalGrad)" />
+  </g>
+
+  <circle cx="32" cy="32" r="24" fill="none" stroke="#FF9800" stroke-width="1.5" stroke-dasharray="4 4" filter="url(#explodeGlow)" opacity="0.8"/>
+  <circle cx="32" cy="32" r="28" fill="none" stroke="#F44336" stroke-width="1" stroke-dasharray="2 6" filter="url(#explodeGlow)" opacity="0.6"/>
+
+</svg>

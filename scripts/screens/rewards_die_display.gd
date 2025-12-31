@@ -4,7 +4,8 @@ class_name RewardsDieDisplay
 signal die_hovered(die_display)
 
 @onready var die_label: Label = $DieLabel
-@onready var die_icon: TextureRect = $DieLabel/DieIcon
+@onready var die_icon: TextureRect = $DieIcon
+@onready var status_label: Label = $StatusLabel
 @onready var face_grid: GridContainer = $FaceGrid
 @onready var average_label: Label = $AverageLabel
 const DieGridCell = preload("res://scenes/dice/die_grid_cell.tscn")
@@ -46,10 +47,11 @@ func _process(_delta):
 		average_label.visible = false
 
 
-func set_die(die_data: Die, force_grid: bool = false):
+func set_die(die_data: Die, force_grid: bool = false, is_upgrade_reward: bool = false, upgraded_faces_info: Array = [], show_status_text: bool = false):
 	deselect()
 	
 	self.die = die_data
+	status_label.text = ""
 	var die_object: Die = die_data
 
 	# Clear previous contents of the grid
@@ -101,47 +103,70 @@ func set_die(die_data: Die, force_grid: bool = false):
 				var style = cell.get_theme_stylebox("panel").duplicate() as StyleBoxFlat
 				style.bg_color = effect.highlight_color
 				cell.add_theme_stylebox_override("panel", style)
-		
 		# Clear previous list
 		for child in upgrades_list.get_children():
 			child.queue_free()
 			
-		var unique_effects = []
-		for face_data in die_object.faces:
-			if not face_data.effects.is_empty():
-				for effect in face_data.effects:
-					if not unique_effects.has(effect.name):
-						unique_effects.append(effect.name)
+		if is_upgrade_reward:
+			die_label.text = "d" + str(die.sides)
+			status_label.text = "(Upgrade)" if show_status_text else ""
+			for face_info in upgraded_faces_info:
+				var face_value = face_info["face_value"]
+				var effect_name = face_info["effect_name"]
+				var effect_color = face_info["effect_color"]
+				
+				# Highlight the corresponding cell in the grid
+				for cell_idx in range(face_grid.get_child_count()):
+					var cell = face_grid.get_child(cell_idx)
+					if cell.get_node("Label").text == str(face_value):
+						var style = cell.get_theme_stylebox("panel").duplicate() as StyleBoxFlat
+						style.border_color = Color(effect_color)
+						style.border_width_left = 3
+						style.border_width_top = 3
+						style.border_width_right = 3
+						style.border_width_bottom = 3
+						cell.add_theme_stylebox_override("panel", style)
+						break
 						
-						var panel = PanelContainer.new()
-						var style = StyleBoxFlat.new()
-						style.bg_color = Color(0.15, 0.15, 0.15, 0.9)
-						style.border_width_bottom = 2
-						style.border_color = effect.highlight_color
-						style.content_margin_left = 6
-						style.content_margin_right = 6
-						style.content_margin_top = 2
-						style.content_margin_bottom = 2
-						panel.add_theme_stylebox_override("panel", style)
-						
-						panel.mouse_filter = MOUSE_FILTER_PASS
-						panel.mouse_default_cursor_shape = Control.CURSOR_HELP
-						panel.tooltip_text = _clean_bbcode(effect.description.replace("{value}", "Face Value").replace("{value / 2}", "Face Value / 2"))
-						
-						var label = Label.new()
-						label.text = effect.name
-						label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-						label.add_theme_color_override("font_color", effect.highlight_color)
-						panel.add_child(label)
-						
-						upgrades_list.add_child(panel)
-		
-		upgrades_list.visible = not unique_effects.is_empty()
+				var panel = PanelContainer.new()
+				var style = StyleBoxFlat.new()
+				style.bg_color = Color(0.15, 0.15, 0.15, 0.9)
+				style.border_width_bottom = 2
+				style.border_color = Color(effect_color)
+				style.content_margin_left = 6
+				style.content_margin_right = 6
+				style.content_margin_top = 2
+				style.content_margin_bottom = 2
+				panel.add_theme_stylebox_override("panel", style)
+				
+				panel.mouse_filter = MOUSE_FILTER_PASS
+				panel.mouse_default_cursor_shape = Control.CURSOR_HELP
+				# Need to get the actual effect description from EffectLibrary
+				var actual_effect = EffectLibrary.get_effect_by_name(effect_name)
+				if actual_effect:
+					panel.tooltip_text = _clean_bbcode(actual_effect.description.replace("{value}", str(face_value)).replace("{value / 2}", str(ceili(face_value / 2.0))))
+				
+				var label = Label.new()
+				label.text = "Face %d: %s" % [face_value, effect_name]
+				label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+				label.add_theme_color_override("font_color", Color(effect_color))
+				panel.add_child(label)
+				upgrades_list.add_child(panel)
+			upgrades_list.visible = not upgraded_faces_info.is_empty()
+		else: # New Die
+			die_label.text = "d" + str(die.sides)
+			status_label.text = "(New)" if show_status_text else ""
+			var unique_effects = []
+			for face_data in die_object.faces:
+				if not face_data.effects.is_empty():
+					for effect in face_data.effects:
+						if not unique_effects.has(effect.name):
+							unique_effects.append(effect.name)
+							_add_effect_panel_to_list(upgrades_list, effect, "Face Value") # Re-use existing helper
+			upgrades_list.visible = not unique_effects.is_empty()
 
 		original_grid_text = "" # Not needed for multi-cell grid
 		
-	die_label.text = "d" + str(die.sides)
-	
 	# Set the icon behind the side label
 	if die_icon:
 		if die_object:
@@ -178,3 +203,31 @@ func _clean_bbcode(text: String) -> String:
 	var regex = RegEx.new()
 	regex.compile("\\[.*?\\]")
 	return regex.sub(text, "", true)
+
+func _add_effect_panel_to_list(parent_container: VBoxContainer, effect: DieFaceEffect, face_value_placeholder: String):
+	var panel = PanelContainer.new()
+	var style = StyleBoxFlat.new()
+	style.bg_color = Color(0.15, 0.15, 0.15, 0.9)
+	style.border_width_bottom = 2
+	style.border_color = effect.highlight_color
+	style.content_margin_left = 6
+	style.content_margin_right = 6
+	style.content_margin_top = 2
+	style.content_margin_bottom = 2
+	panel.add_theme_stylebox_override("panel", style)
+	
+	panel.mouse_filter = MOUSE_FILTER_PASS
+	panel.mouse_default_cursor_shape = Control.CURSOR_HELP
+	
+	var tooltip_desc = effect.description
+	tooltip_desc = tooltip_desc.replace("{value}", face_value_placeholder)
+	tooltip_desc = tooltip_desc.replace("{value / 2}", face_value_placeholder + " / 2")
+	panel.tooltip_text = _clean_bbcode(tooltip_desc)
+	
+	var label = Label.new()
+	label.text = effect.name
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	label.add_theme_color_override("font_color", effect.highlight_color)
+	panel.add_child(label)
+	
+	parent_container.add_child(panel)
