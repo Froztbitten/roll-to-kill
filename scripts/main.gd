@@ -19,7 +19,9 @@ static var debug_mode: bool = false
 @onready var defeat_screen = $UI/DefeatScreen
 @onready var reward_screen = $UI/RewardScreen
 @onready var map_screen = $UI/MapScreen
+@onready var shop_screen = $UI/ShopScreen
 @onready var end_turn_button = $UI/EndTurnButton
+@onready var debug_menu = $UI/DebugMenu
 
 enum Turn {PLAYER, ENEMY}
 
@@ -40,7 +42,6 @@ var starting_abilities: Array[AbilityData] = [load("res://resources/abilities/he
 	load("res://resources/abilities/sweep.tres"), load("res://resources/abilities/hold.tres"),
 	load("res://resources/abilities/roulette.tres"), load("res://resources/abilities/explosive_shot.tres")]
 
-var debug_encounter_ui: Control
 var pause_menu_ui: Control
 var debug_ability_ui: Control
 
@@ -77,6 +78,9 @@ func _ready() -> void:
 	dice_pool_ui.die_drag_started.connect(_on_die_drag_started)
 	dice_pool_ui.die_value_changed.connect(_update_total_dice_value)
 	reward_screen.reward_chosen.connect(_on_reward_chosen)
+	
+	debug_menu.encounter_selected.connect(_on_debug_menu_encounter_selected)
+	debug_menu.close_requested.connect(func(): debug_menu.visible = false)
 
 	# Initialize player's starting abilities
 	for child: Node in abilities_ui.get_children():
@@ -831,72 +835,16 @@ func _setup_round(spawned_enemies: Array) -> void:
 	await player_turn()
 
 func _show_debug_encounter_selection():
-	if not debug_encounter_ui:
-		_create_debug_ui()
-	
-	# Refresh the list
-	var container = debug_encounter_ui.get_node("ScrollContainer/VBoxContainer")
-	for child in container.get_children():
-		child.queue_free()
-		
-	var label = Label.new()
-	label.text = "DEBUG: Choose Encounter (Round %d)" % round_number
-	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	container.add_child(label)
-	
-	var all_encounters = enemy_spawner.encounter_pool
-	
-	for encounter in all_encounters:
-		var btn = Button.new()
-		var names = []
-		for type in encounter.enemy_types:
-			if not names.has(type.enemy_name):
-				names.append(type.enemy_name)
-		var name_str = ", ".join(names)
-		
-		var type_str = "NORMAL"
-		if encounter.encounter_type == EncounterData.EncounterType.BOSS:
-			type_str = "BOSS"
-		elif encounter.encounter_type == EncounterData.EncounterType.RARE:
-			type_str = "RARE"
-			
-		btn.text = "[%s] %s (%d-%d)" % [type_str, name_str, encounter.min_count, encounter.max_count]
-		btn.pressed.connect(_on_debug_encounter_selected.bind(encounter))
-		container.add_child(btn)
-		
-	debug_encounter_ui.visible = true
+	debug_menu.setup_encounters(enemy_spawner.encounter_pool)
+	debug_menu.visible = true
 
-func _create_debug_ui():
-	var canvas = get_node("UI")
-	var panel = Panel.new()
-	panel.name = "DebugEncounterSelector"
-	panel.set_anchors_preset(Control.PRESET_FULL_RECT)
-	var style = StyleBoxFlat.new()
-	style.bg_color = Color(0, 0, 0, 0.9)
-	panel.add_theme_stylebox_override("panel", style)
-	canvas.add_child(panel)
-	debug_encounter_ui = panel
-	
-	var scroll = ScrollContainer.new()
-	scroll.name = "ScrollContainer"
-	scroll.set_anchors_preset(Control.PRESET_FULL_RECT)
-	scroll.offset_left = 50
-	scroll.offset_top = 50
-	scroll.offset_right = -50
-	scroll.offset_bottom = -50
-	panel.add_child(scroll)
-	
-	var vbox = VBoxContainer.new()
-	vbox.name = "VBoxContainer"
-	vbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	vbox.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	vbox.add_theme_constant_override("separation", 10)
-	scroll.add_child(vbox)
-
-func _on_debug_encounter_selected(encounter: EncounterData):
-	debug_encounter_ui.visible = false
-	var spawned_enemies = enemy_spawner.spawn_specific_encounter(encounter)
-	await _setup_round(spawned_enemies)
+func _on_debug_menu_encounter_selected(type, data):
+	debug_menu.visible = false
+	if type == "shop":
+		shop_screen.open()
+	elif type == "combat":
+		var spawned_enemies = enemy_spawner.spawn_specific_encounter(data)
+		await _setup_round(spawned_enemies)
 
 func get_active_enemies() -> Array[Enemy]:
 	# Helper function to get living enemies from the container.

@@ -16,6 +16,7 @@
 [ext_resource type="Texture2D" uid="uid://bd2c437hy5mh7" path="res://assets/ai/ui/discard_pile.svg" id="11_a8y0u"]
 [ext_resource type="PackedScene" uid="uid://cgljl8xduck7a" path="res://scenes/ui/enemies.tscn" id="12_a8y0u"]
 [ext_resource type="Script" uid="uid://kby8d4xma06b" path="res://scripts/character/enemy/enemies.gd" id="14_jkv2x"]
+[ext_resource type="PackedScene" uid="uid://debug_menu_scene_uid" path="res://scenes/screens/debug_menu.tscn" id="15_debug"]
 
 [node name="Main" type="Node2D" node_paths=PackedStringArray("player")]
 script = ExtResource("1_v4h7v")
@@ -143,6 +144,9 @@ visible = false
 visible = false
 
 [node name="ShopScreen" parent="UI" instance=ExtResource("10_shop_screen")]
+visible = false
+
+[node name="DebugMenu" parent="UI" instance=ExtResource("15_debug")]
 visible = false
 
 [node name="RoundInfo" type="HBoxContainer" parent="UI"]

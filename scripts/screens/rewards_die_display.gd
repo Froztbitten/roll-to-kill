@@ -13,7 +13,7 @@ var die: Die
 var original_grid_text: String # Used for the Alt-hover average display
 var is_selected = false
 var average_roll = 0
-var upgrades_list: RichTextLabel
+var upgrades_list: VBoxContainer
 
 func _ready():
 	# 1. Create a new stylebox
@@ -24,16 +24,12 @@ func _ready():
 	add_theme_stylebox_override("hover", new_style)
 	add_theme_stylebox_override("pressed", new_style)
 
-	# Create a label to display the list of upgrades on the die.
-	upgrades_list = RichTextLabel.new()
+	# Create a container to display the list of upgrades on the die.
+	upgrades_list = VBoxContainer.new()
 	upgrades_list.name = "UpgradesList"
-	upgrades_list.bbcode_enabled = true
-	upgrades_list.fit_content = true
 	upgrades_list.mouse_filter = MOUSE_FILTER_IGNORE # Let clicks pass through to the button.
 	upgrades_list.set_anchors_preset(Control.PRESET_TOP_WIDE)
 	upgrades_list.position.y = 45 # Position it below the face grid.
-	upgrades_list.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	upgrades_list.add_theme_font_size_override("font_size", 14)
 	add_child(upgrades_list)
 
 func _process(_delta):
@@ -106,14 +102,30 @@ func set_die(die_data: Die):
 				style.bg_color = effect.highlight_color
 				cell.add_theme_stylebox_override("panel", style)
 		
-		var upgrades_text = ""
+		# Clear previous list
+		for child in upgrades_list.get_children():
+			child.queue_free()
+			
+		var unique_effects = []
 		for face_data in die_object.faces:
 			if not face_data.effects.is_empty():
 				for effect in face_data.effects:
-					upgrades_text += "[b]%d[/b] - %s\n" % [face_data.value, effect.name]
+					if not unique_effects.has(effect.name):
+						unique_effects.append(effect.name)
+						
+						var label = RichTextLabel.new()
+						label.bbcode_enabled = true
+						label.text = "[center][color=#%s]%s[/color][/center]" % [effect.highlight_color.to_html(), effect.name]
+						label.fit_content = true
+						label.autowrap_mode = TextServer.AUTOWRAP_OFF
+						label.mouse_filter = MOUSE_FILTER_PASS
+						label.scroll_active = false
+						label.add_theme_font_size_override("normal_font_size", 14)
+						
+						label.tooltip_text = _clean_bbcode(effect.description.replace("{value}", "Face Value").replace("{value / 2}", "Face Value / 2"))
+						upgrades_list.add_child(label)
 		
-		upgrades_list.text = upgrades_text.strip_edges()
-		upgrades_list.visible = not upgrades_text.is_empty()
+		upgrades_list.visible = not unique_effects.is_empty()
 
 		original_grid_text = "" # Not needed for multi-cell grid
 		
@@ -150,3 +162,8 @@ func _on_mouse_exited():
 	if face_grid.get_child_count() > 0 and original_grid_text != "":
 		var first_cell_label = face_grid.get_child(0).get_node("Label") as Label
 		first_cell_label.text = original_grid_text
+
+func _clean_bbcode(text: String) -> String:
+	var regex = RegEx.new()
+	regex.compile("\\[.*?\\]")
+	return regex.sub(text, "", true)

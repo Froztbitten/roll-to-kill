@@ -225,3 +225,8 @@ func _get_drag_data(at_position: Vector2):
 	main_display.visible = false
 	
 	return payload
+
+func _clean_bbcode(text: String) -> String:
+	var regex = RegEx.new()
+	regex.compile("\\[.*?\\]")
+	return regex.sub(text, "", true)
