@@ -2,7 +2,7 @@ extends Control
 class_name DieDisplay
 
 signal die_clicked(die_display)
-signal die_value_changed
+signal die_value_changed(die_display)
 signal drag_started(die_display)
 
 const DieGridCell = preload("res://scenes/dice/die_grid_cell.tscn")
@@ -180,7 +180,7 @@ func _gui_input(event: InputEvent):
 						var context = {"die": die}
 						EffectLogic.wormhole(0, player, null, context)
 						update_display()
-						emit_signal("die_value_changed")
+						emit_signal("die_value_changed", self)
 						get_viewport().set_input_as_handled()
 						return # Effect triggered, stop processing.
 

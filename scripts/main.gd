@@ -8,7 +8,7 @@ static var debug_mode: bool = false
 @onready var enemy_spawner = $EnemySpawner
 @onready var dice_pool_ui: DicePool = $UI/DicePool
 @onready var abilities_ui: VBoxContainer = $UI/Abilities
-@onready var total_dice_value_label: Label = $UI/TotalDiceValueLabel
+@onready var selected_value_label: Label = $UI/SelectedValueLabel
 @onready var gold_label: Label = $UI/GameInfo/TopBar/GoldContainer/GoldLabel
 
 @onready var dice_bag_icon: TextureRect = $UI/RoundInfo/DiceBag/DiceBagIcon
@@ -76,14 +76,13 @@ func _ready() -> void:
 	player.dice_discard_changed.connect(_update_dice_discard)
 	player.abilities_changed.connect(_add_player_ability)
 	player.total_dice_count_changed.connect(_update_total_dice_count)
-	player.dice_drawn.connect(_on_player_dice_drawn)
 	player.statuses_changed.connect(_on_player_statuses_changed)
 
 	map_screen.node_selected.connect(_on_map_node_selected)
 	dice_pool_ui.player = player
 	dice_pool_ui.die_clicked.connect(_on_die_clicked)
-	dice_pool_ui.die_drag_started.connect(_on_die_drag_started)
-	dice_pool_ui.die_value_changed.connect(_update_total_dice_value)
+	dice_pool_ui.drag_started.connect(_on_die_drag_started)
+	dice_pool_ui.die_value_changed.connect(_on_die_value_changed)
 	reward_screen.reward_chosen.connect(_on_reward_chosen)
 	
 	debug_menu.encounter_selected.connect(_on_debug_menu_encounter_selected)
@@ -104,6 +103,7 @@ func _ready() -> void:
 	await get_tree().process_frame
 
 	_update_total_dice_count(player._game_dice_bag.size())
+	_update_selected_value_label()
 
 	if debug_mode:
 		await start_new_round()
@@ -136,23 +136,18 @@ func player_turn() -> void:
 	selected_dice_display.clear()
 	
 	dice_pool_ui.clear_pool()
-	var total_dice_value = 0
 	
 	# Add any dice held from the previous turn to the hand first.
 	var held_dice = player.get_and_clear_held_dice()
 	dice_pool_ui.add_dice_instantly(held_dice)
-	for die in held_dice:
-		total_dice_value += die.result_value
 	
 	# Draw and roll new dice
 	var new_dice: Array[Die] = player.draw_hand()
 	for die: Die in new_dice:
-		total_dice_value += die.roll()
+		die.roll()
 	
 	# Animate the new dice into the pool
 	await dice_pool_ui.animate_add_dice(new_dice, dice_bag_icon.get_global_rect().get_center())
-
-	total_dice_value_label.text = "Total: " + str(total_dice_value)
 	current_incoming_damage = 0
 	var active_enemies = get_active_enemies()
 	# Have all living enemies declare their intents for the turn
@@ -451,12 +446,14 @@ func _on_die_clicked(die_display):
 	else:
 		selected_dice_display.append(die_display)
 		die_display.select()
+	_update_selected_value_label()
 
 func _on_die_drag_started(die_display: DieDisplay):
 	# If the die being dragged is in the selection, remove it.
 	if selected_dice_display.has(die_display):
 		selected_dice_display.erase(die_display)
 		die_display.deselect()
+	_update_selected_value_label()
 
 func _unhandled_input(event: InputEvent):
 	# This function catches input that was not handled by the UI.
@@ -527,6 +524,7 @@ func _on_character_clicked(character: Character) -> void:
 	# Make a copy because we will be modifying the dice pool
 	var used_dice_displays = selected_dice_display.duplicate()
 	selected_dice_display.clear()
+	_update_selected_value_label()
 	
 	for die_display in used_dice_displays:
 		var is_piercing = false
@@ -1072,13 +1070,6 @@ func _on_die_returned_to_pool(die_display: DieDisplay):
 	# This is called when a die is removed from an ability slot via right-click.
 	dice_pool_ui.add_die_display(die_display)
 
-func _on_player_dice_drawn(new_dice: Array[Die]):
-	for die in new_dice:
-		die.roll()
-	await dice_pool_ui.animate_add_dice(new_dice, dice_bag_icon.get_global_rect().get_center())
-	
-	_update_total_dice_value()
-
 func _on_player_statuses_changed(statuses: Dictionary):
 	# Check if the player is currently shrunk
 	var is_shrunk = false
@@ -1133,14 +1124,20 @@ func _on_player_statuses_changed(statuses: Dictionary):
 								new_die.roll()
 								die_display.die = new_die # Triggers visual update
 								print("Shrunk die in ability slot due to status.")
-		
-		_update_total_dice_value()
 
-func _update_total_dice_value():
-	var current_total = 0
-	for die in dice_pool_ui.get_current_dice():
-		current_total += die.result_value
-	total_dice_value_label.text = "Total: " + str(current_total)
+func _on_die_value_changed(_die_display: DieDisplay):
+	_update_selected_value_label()
+
+func _update_selected_value_label():
+	var current_selection_total = 0
+	for die_display in selected_dice_display:
+		if is_instance_valid(die_display) and die_display.die:
+			current_selection_total += die_display.die.result_value
+	
+	if current_selection_total > 0:
+		selected_value_label.text = "Selected: " + str(current_selection_total)
+	else:
+		selected_value_label.text = ""
 
 func _toggle_pause_menu():
 	if not pause_menu_ui:

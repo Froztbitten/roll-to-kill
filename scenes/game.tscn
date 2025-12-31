@@ -128,7 +128,7 @@ grow_horizontal = 2
 grow_vertical = 0
 text = "End Turn"
 
-[node name="TotalDiceValueLabel" type="Label" parent="UI"]
+[node name="SelectedValueLabel" type="Label" parent="UI"]
 anchors_preset = 7
 anchor_left = 0.5
 anchor_top = 1.0
