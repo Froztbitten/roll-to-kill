@@ -38,6 +38,9 @@ func display_rewards(dice_options: Array[Die]):
 			# Cast the node to its actual script type to access custom functions.
 			var display = dice_displays[i]
 			display.set_die(die)
+			
+			if die.has_meta("is_upgrade_reward"):
+				display.die_label.text += "\n(Upgrade)"
 
 func _on_die_display_clicked(display: RewardsDieDisplay):	
 	if (!rewardChosen):

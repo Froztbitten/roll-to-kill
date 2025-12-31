@@ -9,7 +9,7 @@ static var debug_mode: bool = false
 @onready var dice_pool_ui: DicePool = $UI/DicePool
 @onready var abilities_ui: VBoxContainer = $UI/Abilities
 @onready var total_dice_value_label: Label = $UI/TotalDiceValueLabel
-@onready var gold_label: Label = $UI/GameInfo/GoldContainer/GoldLabel
+@onready var gold_label: Label = $UI/GameInfo/TopBar/GoldContainer/GoldLabel
 
 @onready var dice_bag_icon: TextureRect = $UI/RoundInfo/DiceBag/DiceBagIcon
 @onready var dice_bag_label: Label = $UI/RoundInfo/DiceBag/DiceBagLabel
@@ -22,6 +22,11 @@ static var debug_mode: bool = false
 @onready var shop_screen = $UI/ShopScreen
 @onready var end_turn_button = $UI/EndTurnButton
 @onready var debug_menu = $UI/DebugMenu
+
+@onready var dice_bag_button = $UI/GameInfo/TopBar/DiceBagButton
+@onready var dice_bag_screen = $UI/DiceBagScreen
+@onready var dice_bag_grid = $UI/DiceBagScreen/Panel/VBoxContainer/ScrollContainer/GridContainer
+@onready var dice_bag_close_button = $UI/DiceBagScreen/Panel/VBoxContainer/CloseButton
 
 enum Turn {PLAYER, ENEMY}
 
@@ -69,6 +74,7 @@ func _ready() -> void:
 	player.dice_bag_changed.connect(_update_dice_bag)
 	player.dice_discard_changed.connect(_update_dice_discard)
 	player.abilities_changed.connect(_add_player_ability)
+	player.total_dice_count_changed.connect(_update_total_dice_count)
 	player.dice_drawn.connect(_on_player_dice_drawn)
 	player.statuses_changed.connect(_on_player_statuses_changed)
 
@@ -81,6 +87,9 @@ func _ready() -> void:
 	
 	debug_menu.encounter_selected.connect(_on_debug_menu_encounter_selected)
 	debug_menu.close_requested.connect(func(): debug_menu.visible = false)
+	
+	dice_bag_button.pressed.connect(_on_dice_bag_button_pressed)
+	dice_bag_close_button.pressed.connect(func(): dice_bag_screen.visible = false)
 
 	# Initialize player's starting abilities
 	for child: Node in abilities_ui.get_children():
@@ -91,6 +100,8 @@ func _ready() -> void:
 
 	# Wait for one frame to ensure all newly created nodes (like abilities) are fully ready.
 	await get_tree().process_frame
+
+	_update_total_dice_count(player._game_dice_bag.size())
 
 	if debug_mode:
 		await start_new_round()
@@ -887,7 +898,7 @@ func _animate_gold_collection(amount: int, source_node: Node2D):
 	var particle_count = min(amount, 10)
 	if amount > 0 and particle_count < 1: particle_count = 1
 	
-	var target_node = $UI/GameInfo/GoldContainer/GoldIcon
+	var target_node = $UI/GameInfo/TopBar/GoldContainer/GoldIcon
 	# Get screen position of the enemy to spawn UI particles correctly
 	var start_pos = source_node.get_global_transform_with_canvas().origin
 	
@@ -927,53 +938,75 @@ func _show_reward_screen():
 
 func _generate_reward_dice() -> Array[Die]:
 	var dice_options: Array[Die] = []
-	# Define a target average value for the dice. This can be adjusted for balance.
-	var target_average = 4.5
-	var possible_sides = [4, 6, 8]
-	possible_sides.shuffle()
 	
-	# Create two standard reward dice
+	# Scaling Logic based on round_number
+	var available_sizes = [4, 6]
+	var max_effects = 1
+	var tier_limit = 1
+	
+	if round_number >= 3:
+		available_sizes.append(8)
+		max_effects = 2
+	if round_number >= 5:
+		available_sizes.erase(4)
+		tier_limit = 2
+	if round_number >= 7:
+		available_sizes.append(10)
+		max_effects = 3
+	if round_number >= 9:
+		available_sizes.erase(6)
+		available_sizes.append(12)
+		tier_limit = 3
+
+	# --- Option 1 & 2: New Dice with potential effects ---
 	for i in range(2):
-		var sides = possible_sides.pop_front()
+		var sides = available_sizes.pick_random()
 		var new_die = Die.new(sides)
 		
-		var total_value = int(round(target_average * sides))
-		for face in new_die.faces:
-			face.value = 1
+		# Initialize faces 1..N
+		for j in range(sides):
+			new_die.faces[j].value = j + 1
 		
-		var remaining_value = total_value - sides
-		
-		for _j in range(remaining_value):
-			var random_index = randi() % sides
-			new_die.faces[random_index].value += 1
-		
-		new_die.faces.sort_custom(func(a, b): return a.value < b.value)
+		# Always add at least one effect
+		var num_effects_to_add = randi_range(1, max_effects)
+		for k in range(num_effects_to_add):
+			var effect = EffectLibrary.get_random_effect_for_die(sides, tier_limit)
+			if effect:
+				new_die.faces.pick_random().effects.append(effect)
+					
 		dice_options.append(new_die)
 
-	# --- Create the special upgraded die ---
-	# Get a list of die sizes that have defined effects in our library
-	var upgradable_die_sizes = EffectLibrary.effects_by_die_size.keys()
-	if not upgradable_die_sizes.is_empty():
-		# Pick a random die size from the ones that have available upgrades
-		var random_upgradable_size = upgradable_die_sizes.pick_random()
-		var upgraded_die = Die.new(random_upgradable_size)
-
-		# Give it standard 1-to-N faces
-		for i in range(random_upgradable_size):
-			upgraded_die.faces[i].value = i + 1
-
-		# Pick a random face to upgrade (that isn't 1, to make it more interesting)
-		var face_to_upgrade_index = randi_range(1, random_upgradable_size - 1)
-		var face_to_upgrade: Die.DieFace = upgraded_die.faces[face_to_upgrade_index]
-
-		# Get a random effect suitable for this die size from the library
-		var new_effect = EffectLibrary.get_random_effect_for_die(random_upgradable_size)
-		if new_effect:
-			face_to_upgrade.effects.append(new_effect)
+	# --- Option 3: Upgrade Existing Die ---
+	if not player._game_dice_bag.is_empty():
+		var original_die = player._game_dice_bag.pick_random()
 		
-		dice_options.append(upgraded_die)
-
-	dice_options.shuffle()
+		# Create a copy for the offer
+		var upgrade_offer = Die.new(original_die.sides)
+		for j in range(original_die.faces.size()):
+			upgrade_offer.faces[j].value = original_die.faces[j].value
+			upgrade_offer.faces[j].effects = original_die.faces[j].effects.duplicate()
+			
+		# Add new effects (Guaranteed at least 1 for upgrade option)
+		var num_upgrade = randi_range(1, max_effects)
+		for k in range(num_upgrade):
+			var effect = EffectLibrary.get_random_effect_for_die(upgrade_offer.sides, tier_limit)
+			if effect:
+				upgrade_offer.faces.pick_random().effects.append(effect)
+		
+		upgrade_offer.set_meta("is_upgrade_reward", true)
+		upgrade_offer.set_meta("upgrade_target", original_die)
+		
+		dice_options.append(upgrade_offer)
+	else:
+		# Fallback if bag is empty
+		var sides = available_sizes.pick_random()
+		var new_die = Die.new(sides)
+		var num_effects_to_add = randi_range(1, max_effects)
+		for k in range(num_effects_to_add):
+			var effect = EffectLibrary.get_random_effect_for_die(sides, tier_limit)
+			if effect:
+				new_die.faces.pick_random().effects.append(effect)
+		dice_options.append(new_die)
 
 	return dice_options
 
@@ -981,8 +1014,14 @@ func _on_reward_chosen(chosen_die: Die) -> void:
 	if (chosen_die == null):
 		player.add_gold(10)
 	else:
-		# Add the chosen die to the player's deck
-		player.add_to_game_bag([chosen_die])
+		if chosen_die.has_meta("is_upgrade_reward"):
+			var target_die = chosen_die.get_meta("upgrade_target")
+			# Apply the upgrade: Replace faces of target with chosen
+			target_die.faces = chosen_die.faces
+			print("Upgraded existing die via reward.")
+		else:
+			# Add the chosen die to the player's deck
+			player.add_to_game_bag([chosen_die])
 	
 	round_number += 1
 	reward_screen.visible = false
@@ -1011,6 +1050,9 @@ func _update_gold(gold: int):
 
 func _update_dice_bag(count: int):
 	dice_bag_label.text = str(count)
+
+func _update_total_dice_count(count: int):
+	dice_bag_button.text = "Dice Bag: %d" % count
 
 func _update_dice_discard(count: int):
 	dice_discard_label.text = str(count)
@@ -1236,3 +1278,15 @@ func _refresh_player_abilities_ui():
 		child.queue_free()
 	for ability in player.abilities:
 		_add_player_ability(ability)
+
+func _on_dice_bag_button_pressed():
+	for child in dice_bag_grid.get_children():
+		child.queue_free()
+		
+	for die in player._game_dice_bag:
+		var display = preload("res://scenes/screens/rewards_die_display.tscn").instantiate()
+		dice_bag_grid.add_child(display)
+		display.set_die(die, true)
+		display.scale = Vector2.ONE
+		
+	dice_bag_screen.visible = true

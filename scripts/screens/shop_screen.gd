@@ -165,7 +165,8 @@ func _show_dice_selection(title: String):
 	for die in player._game_dice_bag:
 		var btn = preload("res://scenes/screens/rewards_die_display.tscn").instantiate()
 		selection_grid.add_child(btn)
-		btn.set_die(die)
+		btn.set_die(die, true)
+		btn.scale = Vector2.ONE
 		btn.pressed.connect(_on_die_selected.bind(die))
 
 func _on_die_selected(die: Die):

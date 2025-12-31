@@ -4,6 +4,7 @@ class_name Player
 signal dice_bag_changed(new_amount)
 signal dice_discard_changed(new_amount)
 signal gold_changed(new_amount)
+signal total_dice_count_changed(new_amount)
 signal abilities_changed(new_ability)
 signal dice_drawn(drawn_dice)
 
@@ -42,6 +43,7 @@ func _ready():
 
 		add_to_game_bag([new_die])
 	print("added default dice bag of size: ", _game_dice_bag.size())
+	total_dice_count_changed.emit(_game_dice_bag.size())
 
 func _process(delta):
 	# Manually position the status display relative to the player's global position,
@@ -105,6 +107,7 @@ func reset_for_new_round():
 	
 func add_to_game_bag(dice_to_add: Array[Die]):
 	_game_dice_bag.append_array(dice_to_add)
+	total_dice_count_changed.emit(_game_dice_bag.size())
 
 func add_to_round_bag(dice_to_add: Array[Die]):
 	_round_dice_bag.append_array(dice_to_add)
@@ -232,6 +235,7 @@ func remove_die_from_bag(die: Die):
 		if _round_dice_bag.has(die):
 			_round_dice_bag.erase(die)
 		dice_bag_changed.emit(_round_dice_bag.size())
+		total_dice_count_changed.emit(_game_dice_bag.size())
 
 func upgrade_die(die: Die):
 	# Increase value of all faces by 1

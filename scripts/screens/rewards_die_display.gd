@@ -46,7 +46,7 @@ func _process(_delta):
 		average_label.visible = false
 
 
-func set_die(die_data: Die):
+func set_die(die_data: Die, force_grid: bool = false):
 	deselect()
 	
 	self.die = die_data
@@ -56,7 +56,7 @@ func set_die(die_data: Die):
 	for child in face_grid.get_children():
 		child.queue_free()
 
-	if die.result_value > 0:
+	if die.result_value > 0 and not force_grid:
 		# Standard display for rolled dice in hand
 		scale = Vector2(1, 1) # Reset scale for hand display
 		face_grid.columns = 1
@@ -113,17 +113,28 @@ func set_die(die_data: Die):
 					if not unique_effects.has(effect.name):
 						unique_effects.append(effect.name)
 						
-						var label = RichTextLabel.new()
-						label.bbcode_enabled = true
-						label.text = "[center][color=#%s]%s[/color][/center]" % [effect.highlight_color.to_html(), effect.name]
-						label.fit_content = true
-						label.autowrap_mode = TextServer.AUTOWRAP_OFF
-						label.mouse_filter = MOUSE_FILTER_PASS
-						label.scroll_active = false
-						label.add_theme_font_size_override("normal_font_size", 14)
+						var panel = PanelContainer.new()
+						var style = StyleBoxFlat.new()
+						style.bg_color = Color(0.15, 0.15, 0.15, 0.9)
+						style.border_width_bottom = 2
+						style.border_color = effect.highlight_color
+						style.content_margin_left = 6
+						style.content_margin_right = 6
+						style.content_margin_top = 2
+						style.content_margin_bottom = 2
+						panel.add_theme_stylebox_override("panel", style)
 						
-						label.tooltip_text = _clean_bbcode(effect.description.replace("{value}", "Face Value").replace("{value / 2}", "Face Value / 2"))
-						upgrades_list.add_child(label)
+						panel.mouse_filter = MOUSE_FILTER_PASS
+						panel.mouse_default_cursor_shape = Control.CURSOR_HELP
+						panel.tooltip_text = _clean_bbcode(effect.description.replace("{value}", "Face Value").replace("{value / 2}", "Face Value / 2"))
+						
+						var label = Label.new()
+						label.text = effect.name
+						label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+						label.add_theme_color_override("font_color", effect.highlight_color)
+						panel.add_child(label)
+						
+						upgrades_list.add_child(panel)
 		
 		upgrades_list.visible = not unique_effects.is_empty()
 
