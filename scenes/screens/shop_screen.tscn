@@ -24,7 +24,7 @@ grow_vertical = 2
 color = Color(0, 0, 0, 0.5)
 
 [node name="Panel" type="Panel" parent="."]
-custom_minimum_size = Vector2(900, 650)
+custom_minimum_size = Vector2(900, 600)
 layout_mode = 1
 anchors_preset = 8
 anchor_left = 0.5
@@ -32,9 +32,9 @@ anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
 offset_left = -450.0
-offset_top = -325.0
+offset_top = -300.0
 offset_right = 450.0
-offset_bottom = 325.0
+offset_bottom = 300.0
 grow_horizontal = 2
 grow_vertical = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_bg")
@@ -50,7 +50,7 @@ offset_left = 30.0
 offset_top = 30.0
 offset_right = -30.0
 offset_bottom = -30.0
-theme_override_constants/separation = 20
+theme_override_constants/separation = 10
 
 [node name="Header" type="HBoxContainer" parent="Panel/VBoxContainer"]
 layout_mode = 2
@@ -74,7 +74,7 @@ text = "Gold: 0"
 [node name="Options" type="VBoxContainer" parent="Panel/VBoxContainer"]
 layout_mode = 2
 size_flags_vertical = 3
-theme_override_constants/separation = 30
+theme_override_constants/separation = 15
 
 [node name="RemoveDieButton" type="Button" parent="Panel/VBoxContainer/Options"]
 custom_minimum_size = Vector2(0, 50)
@@ -105,7 +105,7 @@ theme_override_constants/separation = 20
 alignment = 1
 
 [node name="CloseButton" type="Button" parent="Panel/VBoxContainer"]
-custom_minimum_size = Vector2(200, 60)
+custom_minimum_size = Vector2(200, 50)
 layout_mode = 2
 size_flags_horizontal = 4
 text = "Leave Shop"

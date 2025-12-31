@@ -77,7 +77,7 @@ func _generate_shop_inventory():
 					var btn = Button.new()
 					btn.text = "%s (150g)" % ability.title
 					btn.tooltip_text = _clean_bbcode(ability.description)
-					btn.custom_minimum_size = Vector2(100, 60)
+					btn.custom_minimum_size = Vector2(100, 50)
 					btn.pressed.connect(_on_buy_ability_pressed.bind(ability, 150, btn))
 					_style_shop_button(btn)
 					abilities_container.add_child(btn)
@@ -115,7 +115,7 @@ func _generate_offer(existing_container: VBoxContainer = null):
 		die_display.mouse_filter = Control.MOUSE_FILTER_PASS
 		
 		var sep = HSeparator.new()
-		sep.custom_minimum_size.y = 20
+		sep.custom_minimum_size.y = 10
 		sep.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		var sep_style = StyleBoxLine.new()
 		sep_style.color = Color(1, 1, 1, 0.2)
