@@ -125,6 +125,7 @@ func player_turn() -> void:
 	# during a previous action, especially when transitioning between rounds.
 	is_resolving_action = false
 
+	await player.trigger_start_of_turn_statuses()
 	# Decrement duration of statuses at the start of the turn.
 	await player.tick_down_statuses()
 
@@ -302,6 +303,9 @@ func enemy_turn() -> void:
 						if enemy.next_action.action_name == "Shrink Ray":
 							player.apply_duration_status("shrunk", 1)
 							print("Player has been shrunk!")
+						elif enemy.next_action.action_name == "Wing Buffet":
+							enemy.apply_duration_status("glance_blows", 1)
+							print("%s gains Glance Blows!" % enemy.name)
 						
 						if enemy.has_status("Raging"):
 							var recoil = ceili(enemy.next_action_value / 2.0)

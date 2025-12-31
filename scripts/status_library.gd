@@ -105,6 +105,20 @@ func _define_statuses():
 		-1,
 		1
 	)
+	statuses["burning"] = StatusEffect.new(
+		"Burning",
+		true,
+		"Take(s) X damage at the start of every turn. Healing removes charges instead of restoring HP.",
+		load("res://assets/ai/status_icons/burn.svg"),
+		-1,
+		0
+	)
+	statuses["glance_blows"] = StatusEffect.new(
+		"Glance Blows",
+		false,
+		"Takes half damage from attacks.",
+		load("res://assets/ai/status_icons/glance_blows.svg")
+	)
 
 func get_status(id: String) -> StatusEffect:
 	if statuses.has(id):

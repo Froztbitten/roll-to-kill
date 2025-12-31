@@ -1,0 +1,42 @@
+<svg width="64px" height="64px" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="shieldMetalGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#CFD8DC;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#90A4AE;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#607D8B;stop-opacity:1" />
+    </linearGradient>
+
+    <linearGradient id="attackGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#FF5722;stop-opacity:1" /> <stop offset="100%" style="stop-color:#FFC107;stop-opacity:1" /> </linearGradient>
+
+    <filter id="sparkGlow">
+      <feGaussianBlur stdDeviation="0.8" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <circle cx="32" cy="32" r="30" fill="#ECEFF1" stroke="#B0BEC5" stroke-width="2"/>
+
+  <g transform="translate(0, 2)">
+    <path d="M32 6 C 32 6, 12 12, 12 32 C 12 46, 32 56, 32 56 C 32 56, 52 46, 52 32 C 52 12, 32 6, 32 6 Z" fill="url(#shieldMetalGrad)" stroke="#546E7A" stroke-width="2"/>
+    <path d="M32 12 L32 50" stroke="#546E7A" stroke-width="1.5" opacity="0.4"/>
+    <path d="M18 28 L46 28" stroke="#546E7A" stroke-width="1.5" opacity="0.4"/>
+  </g>
+
+  <g filter="url(#sparkGlow)">
+    <path d="M8 10 L24 26" stroke="url(#attackGrad)" stroke-width="4" stroke-linecap="round" opacity="0.7"/>
+    
+    <circle cx="26" cy="28" r="5" fill="#FFEB3B" opacity="0.9"/>
+    
+    <path d="M26 28 Q 36 34, 56 26" stroke="url(#attackGrad)" stroke-width="3" fill="none" stroke-linecap="round" marker-end="url(#arrowhead)"/>
+    
+    <g stroke="#FFC107" stroke-width="2" stroke-linecap="round">
+      <path d="M28 26 L34 20" />
+      <path d="M30 30 L38 32" />
+      <path d="M24 32 L22 38" />
+    </g>
+  </g>
+</svg>

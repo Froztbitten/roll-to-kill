@@ -205,15 +205,9 @@ func shrink_die(original_die: Die) -> Die:
 
 func heal(amount: int):
 	# Player's heal ability is less effective, healing for half the value.
-	var old_hp = hp
-	var old_block = block
 	var heal_amount = ceili(amount / 2.0)
-	hp = min(hp + heal_amount, max_hp)
-	if health_bar.has_method("update_with_animation"):
-		health_bar.update_with_animation(old_hp, hp, old_block, block, max_hp)
-	else:
-		update_health_display()
-	print("%s healed for %d (raw) -> %d (actual), has %d HP left." % [name, amount, heal_amount, hp])
+	print("%s healing effectiveness reduced: %d -> %d" % [name, amount, heal_amount])
+	super.heal(heal_amount)
 
 func _on_statuses_changed(current_statuses: Dictionary):
 	if status_display:
@@ -228,22 +222,22 @@ func die() -> void:
 		if defeat_screen:
 			defeat_screen.visible = true
 
-func remove_die_from_bag(die: Die):
-	if _game_dice_bag.has(die):
-		_game_dice_bag.erase(die)
+func remove_die_from_bag(die_to_remove: Die):
+	if _game_dice_bag.has(die_to_remove):
+		_game_dice_bag.erase(die_to_remove)
 		# Also remove from round bag if present
-		if _round_dice_bag.has(die):
-			_round_dice_bag.erase(die)
+		if _round_dice_bag.has(die_to_remove):
+			_round_dice_bag.erase(die_to_remove)
 		dice_bag_changed.emit(_round_dice_bag.size())
 		total_dice_count_changed.emit(_game_dice_bag.size())
 
-func upgrade_die(die: Die):
+func upgrade_die(die_to_upgrade: Die):
 	# Increase value of all faces by 1
-	for face in die.faces:
+	for face in die_to_upgrade.faces:
 		face.value += 1
 	# Update metadata to track upgrade count
-	var current_upgrades = die.get_meta("upgrade_count", 0)
-	die.set_meta("upgrade_count", current_upgrades + 1)
+	var current_upgrades = die_to_upgrade.get_meta("upgrade_count", 0)
+	die_to_upgrade.set_meta("upgrade_count", current_upgrades + 1)
 
 func apply_effect_to_random_dice(effect: DieFaceEffect, count: int = 3):
 	# Pick random dice from game bag
@@ -251,6 +245,6 @@ func apply_effect_to_random_dice(effect: DieFaceEffect, count: int = 3):
 	candidates.shuffle()
 	
 	for i in range(min(count, candidates.size())):
-		var die = candidates[i]
-		var face = die.faces.pick_random()
+		var die_candidate = candidates[i]
+		var face = die_candidate.faces.pick_random()
 		face.effects.append(effect)

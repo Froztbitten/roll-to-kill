@@ -15,6 +15,7 @@ const STATUS_MAIN_CHARACTER = "Main Character Energy"
 const STATUS_ECHOING_IMPACT = "Echoing Impact"
 const STATUS_BLEEDING = "Bleeding"
 const STATUS_BURNING = "Burning"
+const STATUS_GLANCE_BLOWS = "Glance Blows"
 const STATUS_SHRUNK = "Shrunk"
 
 var statuses: Dictionary = {} # {StatusEffect: duration}
@@ -58,6 +59,10 @@ func take_damage(damage: int, play_recoil: bool = true, attacker: Character = nu
 		damage_to_take -= blocked_damage
 		block -= blocked_damage
 		print("%s blocked %d damage." % [name, blocked_damage])
+	
+	if has_status(STATUS_GLANCE_BLOWS):
+		damage_to_take = ceili(damage_to_take / 2.0)
+		print("%s's Glance Blows reduced damage to %d." % [name, damage_to_take])
 	
 	await _apply_damage(damage_to_take, "damage", old_block, play_recoil, attacker, is_attack_action)
 
@@ -120,6 +125,22 @@ func _apply_damage(amount: int, type: String, old_block_value: int, play_recoil:
 				await EffectLogic.trigger_riposte(riposte_charges, self, attacker)
 
 func heal(amount: int):
+	var burn_effect = StatusLibrary.get_status("burning")
+	if statuses.has(burn_effect):
+		var burn_charges = statuses[burn_effect]
+		var amount_to_remove = min(burn_charges, amount)
+		
+		statuses[burn_effect] -= amount_to_remove
+		amount -= amount_to_remove
+		print("%s used %d healing to remove Burning charges. Remaining Burning: %d" % [name, amount_to_remove, statuses[burn_effect]])
+		
+		if statuses[burn_effect] <= 0:
+			remove_status("burning")
+		else:
+			statuses_changed.emit(statuses)
+	
+	if amount <= 0: return
+
 	var old_hp = hp
 	var old_block = block
 	hp = min(hp + amount, max_hp)
