@@ -30,6 +30,8 @@ func _ready():
 	var map_screen = get_node_or_null("../MapScreen")
 	if map_screen:
 		map_screen.node_selected.connect(_on_map_node_selected)
+	
+	get_viewport().size_changed.connect(_on_viewport_size_changed)
 
 func _on_map_node_selected(node_data):
 	if node_data.type == "shop":
@@ -42,6 +44,7 @@ func open():
 	visible = true
 	_update_ui()
 	_generate_shop_inventory()
+	_on_viewport_size_changed()
 
 func _update_ui():
 	gold_label.text = "Gold: %d" % player.gold
@@ -173,6 +176,7 @@ func _show_dice_selection(title: String):
 		btn.set_die(die, true)
 		btn.scale = Vector2.ONE
 		btn.pressed.connect(_on_die_selected.bind(die))
+	_on_viewport_size_changed()
 
 func _on_die_selected(die: Die):
 	if current_mode == "remove":
@@ -190,6 +194,7 @@ func _on_die_selected(die: Die):
 			
 			_update_ui()
 			selection_overlay.visible = false
+			_on_viewport_size_changed()
 			
 	elif current_mode == "upgrade":
 		var upgrades = die.get_meta("upgrade_count", 0)
@@ -217,6 +222,7 @@ func _on_buy_specific_upgrade_pressed(die: Die, face, effect: DieFaceEffect, cos
 		
 		die_display.set_die(die)
 		die_display.scale = Vector2.ONE
+		_on_viewport_size_changed()
 
 func _on_buy_ability_pressed(ability, cost, button):
 	if player.gold >= cost:
@@ -295,3 +301,17 @@ func _style_shop_button(btn: Button):
 	var pressed_style = style.duplicate()
 	pressed_style.bg_color = Color(0.1, 0.1, 0.15, 1.0)
 	btn.add_theme_stylebox_override("pressed", pressed_style)
+
+func _on_viewport_size_changed():
+	var base_height = 648.0
+	var viewport_size = get_viewport().get_visible_rect().size
+	var scale_factor = viewport_size.y / base_height
+	
+	for offer_vbox in effects_container.get_children():
+		for child in offer_vbox.get_children():
+			if child.has_method("update_scale"):
+				child.update_scale(scale_factor)
+	
+	for child in selection_grid.get_children():
+		if child.has_method("update_scale"):
+			child.update_scale(scale_factor)
