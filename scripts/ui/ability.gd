@@ -2,10 +2,11 @@ extends PanelContainer
 class_name AbilityUI
 
 @onready var title_label: Label = $VBoxContainer/Header/Title
-@onready var description_label: RichTextLabel = $VBoxContainer/HBoxContainer/Description
+@onready var description_label: RichTextLabel = $VBoxContainer/DescriptionWrapper/Description
 @onready var icon_texture: TextureRect = $VBoxContainer/Header/Icon
-@onready var dice_slots_container: HBoxContainer = $VBoxContainer/HBoxContainer/DiceSlots
+@onready var dice_slots_container: HBoxContainer = $VBoxContainer/Header/DiceSlots
 @onready var cooldown_label: Label = $VBoxContainer/Header/CooldownLabel
+@onready var description_wrapper: Control = $VBoxContainer/DescriptionWrapper
 
 const DIE_SLOT_SCENE = preload("res://scenes/ui/die_slot.tscn")
 
@@ -16,6 +17,8 @@ var active_stylebox: StyleBoxFlat
 
 var is_consumed_this_turn := false
 var current_cooldown: int = 0
+var tween: Tween
+var hide_timer: Timer
 
 signal die_returned_from_slot(die_display)
 signal ability_activated(ability_ui)
@@ -30,6 +33,33 @@ func _ready():
 		active_stylebox.border_color = Color.GOLD
 	else:
 		push_error("Could not find 'panel' stylebox for AbilityUI. Theming will not work correctly.")
+
+	# Setup hover animation
+	mouse_entered.connect(_on_any_mouse_entered)
+	mouse_exited.connect(_on_any_mouse_exited)
+	
+	# Set mouse filter to IGNORE for all child nodes that shouldn't block hover.
+	# This ensures the main AbilityUI panel captures hover events for the entire area,
+	# except for the interactive DieSlots.
+	$VBoxContainer.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	$VBoxContainer/Header.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	icon_texture.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	title_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	dice_slots_container.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	cooldown_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	description_wrapper.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	description_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	$VBoxContainer/Header/Spacer.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	
+	# Timer to delay hiding the description, to handle mouse moving between elements.
+	hide_timer = Timer.new()
+	hide_timer.wait_time = 0.05
+	hide_timer.one_shot = true
+	add_child(hide_timer)
+	hide_timer.timeout.connect(_contract_description)
+	
+	# Hide description initially
+	description_wrapper.custom_minimum_size.y = 0
 
 func initialize(data: AbilityData, p_player: Player):
 	self.ability_data = data
@@ -54,10 +84,12 @@ func initialize(data: AbilityData, p_player: Player):
 			dice_slots_container.add_child(slot)
 			slot.die_placed.connect(_on_die_placed)
 			slot.die_removed.connect(_on_die_removed)
+			slot.mouse_entered.connect(_on_any_mouse_entered)
+			slot.mouse_exited.connect(_on_any_mouse_exited)
 		else:
 			push_error("Failed to instantiate DieSlotUI. Check that 'die_slot.tscn' has the 'DieSlotUI' script attached to its root node.")
 
-func _on_die_placed(_die_display, _die_data: Die):
+func _on_die_placed(die_display, die_data: Die):
 	# This function is called when a die is successfully placed in a slot.
 	# You can add logic here to check if all slots are filled and then activate the ability.
 	_check_if_all_slots_filled()
@@ -142,6 +174,9 @@ func reset_for_new_turn() -> Array[Die]:
 	return dice_to_discard
 
 func update_scale(factor: float):
+	var base_width = 250.0
+	custom_minimum_size.x = base_width * factor
+
 	# Scale slots
 	for slot in dice_slots_container.get_children():
 		if slot.has_method("update_scale"):
@@ -151,3 +186,24 @@ func update_scale(factor: float):
 	var base_icon_size = 40.0
 	if icon_texture:
 		icon_texture.custom_minimum_size = Vector2(base_icon_size, base_icon_size) * factor
+
+func _on_any_mouse_entered():
+	hide_timer.stop()
+	_expand_description()
+
+func _on_any_mouse_exited():
+	hide_timer.start()
+
+func _expand_description():
+	if tween: tween.kill()
+	tween = create_tween().set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
+	# Calculate target height based on content
+	var target_height = description_label.get_content_height() + 10 # Add padding
+	
+	tween.tween_property(description_wrapper, "custom_minimum_size:y", target_height, 0.2)
+
+func _contract_description():
+	if tween: tween.kill()
+	tween = create_tween().set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
+	
+	tween.tween_property(description_wrapper, "custom_minimum_size:y", 0.0, 0.2)

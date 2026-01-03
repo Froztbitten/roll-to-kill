@@ -47,6 +47,18 @@ vertical_alignment = 1
 layout_mode = 2
 size_flags_horizontal = 3
 
+[node name="DiceSlots" type="HBoxContainer" parent="VBoxContainer/Header"]
+layout_mode = 2
+size_flags_vertical = 4
+theme_override_constants/separation = 5
+alignment = 1
+
+[node name="DieSlotUI" parent="VBoxContainer/Header/DiceSlots" instance=ExtResource("2_smjc0")]
+layout_mode = 2
+
+[node name="DieSlotUI2" parent="VBoxContainer/Header/DiceSlots" instance=ExtResource("2_smjc0")]
+layout_mode = 2
+
 [node name="CooldownLabel" type="Label" parent="VBoxContainer/Header"]
 visible = false
 layout_mode = 2
@@ -54,30 +66,16 @@ theme_override_font_sizes/font_size = 20
 text = "1"
 vertical_alignment = 1
 
-[node name="HBoxContainer" type="HBoxContainer" parent="VBoxContainer"]
+[node name="DescriptionWrapper" type="Control" parent="VBoxContainer"]
+clip_contents = true
 layout_mode = 2
-size_flags_vertical = 0
-theme_override_constants/separation = 4
 
-[node name="Description" type="RichTextLabel" parent="VBoxContainer/HBoxContainer"]
-custom_minimum_size = Vector2(150, 0)
-layout_mode = 2
-size_flags_horizontal = 3
-size_flags_vertical = 0
+[node name="Description" type="RichTextLabel" parent="VBoxContainer/DescriptionWrapper"]
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
 bbcode_enabled = true
 text = "Deal [color=yellow]X[/color] damage for each die."
 fit_content = true
 scroll_active = false
 horizontal_alignment = 1
-
-[node name="DiceSlots" type="HBoxContainer" parent="VBoxContainer/HBoxContainer"]
-layout_mode = 2
-size_flags_vertical = 4
-theme_override_constants/separation = 5
-alignment = 1
-
-[node name="DieSlotUI" parent="VBoxContainer/HBoxContainer/DiceSlots" instance=ExtResource("2_smjc0")]
-layout_mode = 2
-
-[node name="DieSlotUI2" parent="VBoxContainer/HBoxContainer/DiceSlots" instance=ExtResource("2_smjc0")]
-layout_mode = 2

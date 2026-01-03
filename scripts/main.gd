@@ -28,6 +28,7 @@ static var debug_mode: bool = false
 @onready var dice_bag_screen = $UI/DiceBagScreen
 @onready var dice_bag_grid = $UI/DiceBagScreen/Panel/VBoxContainer/ScrollContainer/GridContainer
 @onready var dice_bag_close_button = $UI/DiceBagScreen/Panel/VBoxContainer/CloseButton
+var steam_manager
 
 enum Turn {PLAYER, ENEMY}
 
@@ -74,6 +75,12 @@ var even_odd_message_label: Label
 var even_odd_buttons_container: HBoxContainer
 var even_odd_accumulated_results: Array = []
 
+# --- Multiplayer Variables ---
+var game_state
+var remote_players: Dictionary = {} # steam_id: Player node
+var remote_dice_pools: Dictionary = {} # steam_id: DicePool node
+var player_turn_ended_status: Dictionary = {} # steam_id: bool
+
 func _ready() -> void:
 	# Set process modes to allow the MainGame script to handle input while the game is paused.
 	process_mode = Node.PROCESS_MODE_ALWAYS
@@ -81,6 +88,9 @@ func _ready() -> void:
 	enemy_container.process_mode = Node.PROCESS_MODE_PAUSABLE
 	dice_pool_ui.process_mode = Node.PROCESS_MODE_PAUSABLE
 	abilities_ui.process_mode = Node.PROCESS_MODE_PAUSABLE
+
+	if get_tree().root.has_node("SteamManager"):
+		steam_manager = get_tree().root.get_node("SteamManager")
 
 	if debug_mode:
 		print("--- DEBUG / GODMODE ACTIVE ---")
@@ -105,6 +115,11 @@ func _ready() -> void:
 	dice_pool_ui.drag_started.connect(_on_die_drag_started)
 	dice_pool_ui.die_value_changed.connect(_on_die_value_changed)
 	reward_screen.reward_chosen.connect(_on_reward_chosen)
+
+	# Multiplayer Setup
+	if get_tree().root.has_node("GameState"):
+		game_state = get_tree().root.get_node("GameState")
+		_setup_multiplayer_game()
 	
 	debug_menu.encounter_selected.connect(_on_debug_menu_encounter_selected)
 	debug_menu.close_requested.connect(func(): debug_menu.visible = false)
@@ -132,8 +147,14 @@ func _ready() -> void:
 	if debug_mode:
 		await start_new_round()
 	else:
-		map_screen.generate_new_map()
-		map_screen.visible = true
+		# In multiplayer, map generation is deferred until the seed is synced.
+		if not (game_state and game_state.is_multiplayer):
+			map_screen.generate_new_map()
+			map_screen.visible = true
+
+func _process(delta):
+	# The new steam manager uses signals, so we connect to it in _setup_multiplayer_game
+	pass
 
 func _add_player_ability(new_ability: AbilityData):
 	# Instantiate and display a UI element for each ability the player has
@@ -150,6 +171,9 @@ func _add_player_ability(new_ability: AbilityData):
 		ability_ui_instance.update_scale(scale_factor)
 
 func player_turn() -> void:
+	# Reset turn flags
+	player_turn_ended_status.clear()
+	
 	# Failsafe: Reset the action lock at the start of the player's turn.
 	# This prevents the player from being locked out if the flag gets stuck
 	# during a previous action, especially when transitioning between rounds.
@@ -173,66 +197,52 @@ func player_turn() -> void:
 	dice_pool_ui.add_dice_instantly(held_dice)
 	
 	# Draw and roll new dice
+	# Diverge RNG for player rolls so they are unique per player
+	if game_state and game_state.is_multiplayer:
+		seed(Time.get_ticks_usec() + steam_manager.get_my_id())
+
 	var new_dice: Array[Die] = player.draw_hand()
 	for die: Die in new_dice:
 		die.roll()
 	
 	# Animate the new dice into the pool
 	await dice_pool_ui.animate_add_dice(new_dice, dice_bag_icon.get_global_rect().get_center())
+	
+	if game_state and game_state.is_multiplayer:
+		_send_dice_to_all_remotes(new_dice)
+	
 	current_incoming_damage = 0
 	var active_enemies = get_active_enemies()
-	# Have all living enemies declare their intents for the turn
-	for enemy: Enemy in active_enemies:
-		# Reset enemy block at the start of the player's turn
+	
+	# Reset enemy block at the start of the player's turn for everyone
+	for enemy in active_enemies:
 		enemy.block = 0
-		# Immediately update the health bar to show the shield has been removed.
 		enemy.update_health_display()
 
-		enemy.declare_intent(active_enemies)
-		if enemy.next_action and (enemy.next_action.action_type == EnemyAction.ActionType.ATTACK or \
-			enemy.next_action.action_type == EnemyAction.ActionType.PIERCING_ATTACK or \
-			(enemy.next_action.action_type == EnemyAction.ActionType.DEBUFF and enemy.next_action_value > 0)):
-			current_incoming_damage += enemy.next_action_value
-	
-	# Proactively apply shields that are meant to be active for the player's turn
-	for enemy: Enemy in active_enemies:
-		enemy.clear_provided_shields()
-		if enemy.next_action:
-			if enemy.next_action.action_name == "Wing Buffet":
-				enemy.apply_duration_status("glance_blows", 1)
-				# Ensure it expires at the end of the round (enemy turn) by removing it from the "new" list
-				var gb_status = StatusLibrary.get_status("glance_blows")
-				if enemy._new_statuses_this_turn.has(gb_status):
-					enemy._new_statuses_this_turn.erase(gb_status)
-				print("%s gains Glance Blows!" % enemy.name)
-
-			if enemy.next_action.action_type == EnemyAction.ActionType.SHIELD:
-				enemy.add_block(enemy.next_action_value)
-			elif enemy.next_action.action_type == EnemyAction.ActionType.SUPPORT_SHIELD:
-				if enemy.enemy_data.enemy_name == "Shield Generator":
-					# Special case: Shield Generator shields all tinkerers.
-					var shield_amount = enemy.next_action_value
-					var tinkerers = active_enemies.filter(func(e): return e.enemy_data.enemy_name == "Gnomish Tinkerer")
-					for tinkerer in tinkerers:
-						tinkerer.add_block(shield_amount)
-						enemy.register_provided_shield(tinkerer, shield_amount)
-						print("%s shields %s for %d" % [enemy.name, tinkerer.name, shield_amount])
-				elif enemy.enemy_data.enemy_name == "White Knight":
-					var femme_fatales = active_enemies.filter(func(e): return e.enemy_data.enemy_name == "Femme Fatale")
-					if not femme_fatales.is_empty():
-						var target = femme_fatales[0]
-						target.add_block(enemy.next_action_value)
-						enemy.register_provided_shield(target, enemy.next_action_value)
-						print("%s shields %s for %d" % [enemy.name, target.name, enemy.next_action_value])
-				else:
-					# Default behavior: Shield self and one random ally.
-					enemy.add_block(enemy.next_action_value)
-					var other_enemies = active_enemies.filter(func(e): return e != enemy)
-					if not other_enemies.is_empty():
-						var random_ally = other_enemies.pick_random()
-						random_ally.add_block(enemy.next_action_value)
-						enemy.register_provided_shield(random_ally, enemy.next_action_value)
-						print("%s shields self and %s for %d" % [enemy.name, random_ally.name, enemy.next_action_value])
+	if game_state and game_state.is_multiplayer:
+		if steam_manager.is_host:
+			var intents_data = []
+			for i in range(active_enemies.size()):
+				var enemy = active_enemies[i]
+				enemy.declare_intent(active_enemies)
+				
+				if enemy.next_action:
+					intents_data.append({
+						"index": i,
+						"action_name": enemy.next_action.action_name,
+						"value": enemy.next_action_value
+					})
+			
+			steam_manager.send_p2p_packet_to_all({"type": "sync_enemy_intents", "intents": intents_data})
+			_process_enemy_intents(active_enemies)
+		else:
+			# Client waits for packet to process intents
+			pass
+	else:
+		# Single player
+		for enemy in active_enemies:
+			enemy.declare_intent(active_enemies)
+		_process_enemy_intents(active_enemies)
 
 	player.update_health_display(current_incoming_damage)
 
@@ -243,8 +253,17 @@ func _on_end_turn_button_pressed():
 		# Discard all dice that are left in the hand this turn.
 		player.discard(dice_pool_ui.get_current_dice())
 		print("Player block: " + str(player.block))
-		next_turn()
-		await enemy_turn()
+		
+		if game_state and game_state.is_multiplayer:
+			var my_id = steam_manager.get_my_id()
+			player_turn_ended_status[my_id] = true
+			end_turn_button.disabled = true
+			end_turn_button.text = "Waiting..."
+			steam_manager.send_p2p_packet_to_all({"type": "end_turn", "from_id": my_id})
+			_check_all_turns_ended()
+		else:
+			next_turn()
+			await enemy_turn()
 
 func _tick_ability_cooldowns():
 	for ability_ui: AbilityUI in abilities_ui.get_children():
@@ -287,6 +306,7 @@ func _on_ability_activated(ability_ui: AbilityUI):
 		
 		var die_display = slotted_dice_displays[0]
 		var die_value = die_display.die.result_value
+		var die_list_for_packet: Array[Die] = [die_display.die] # Store for packet before animation
 		var damage = die_value * 2
 		
 		var enemies = get_active_enemies()
@@ -309,6 +329,8 @@ func _on_ability_activated(ability_ui: AbilityUI):
 
 			# Apply die face effects to the target
 			await _apply_all_die_effects(die_display.die, target, damage)
+			
+			_broadcast_player_action(die_list_for_packet, target, damage, 0, "Roulette")
 	elif ability_data.title == "Explosive Shot":
 		if slotted_dice_displays.is_empty(): return
 		
@@ -336,6 +358,10 @@ func _on_ability_activated(ability_ui: AbilityUI):
 
 func enemy_turn() -> void:
 	end_turn_button.disabled = true
+	end_turn_button.text = "Enemy Turn"
+	# Only the host processes the enemy turn
+	if game_state and game_state.is_multiplayer and not steam_manager.is_host:
+		return # Client waits for host to sync enemy actions
 
 	var active_enemies = get_active_enemies()
 
@@ -381,10 +407,17 @@ func enemy_turn() -> void:
 						enemy.update_health_display()
 
 					EnemyAction.ActionType.SPAWN_MINIONS:
+						var spawned_nodes: Array[Enemy] = []
 						if enemy.enemy_data.enemy_name == "Evil Dice Tower":
-							_spawn_boss_minions(3)
+							spawned_nodes = _spawn_boss_minions(3)
 						elif enemy.enemy_data.enemy_name == "Gnomish Tinkerer":
-							_spawn_gnomish_invention()
+							spawned_nodes = _spawn_gnomish_invention()
+						
+						if game_state and game_state.is_multiplayer and steam_manager.is_host and not spawned_nodes.is_empty():
+							var paths = []
+							for node in spawned_nodes:
+								paths.append(node.enemy_data.resource_path)
+							steam_manager.send_p2p_packet_to_all({"type": "spawn_minions", "paths": paths})
 
 					EnemyAction.ActionType.BUFF:
 						# Apply advantage to all allies (including self) for 2 rounds.
@@ -426,6 +459,10 @@ func enemy_turn() -> void:
 										player.apply_effect(effect, value, enemy)
 
 					EnemyAction.ActionType.FLEE:
+						if game_state and game_state.is_multiplayer and steam_manager.is_host:
+							var enemy_idx = active_enemies.find(enemy)
+							if enemy_idx != -1:
+								steam_manager.send_p2p_packet_to_all({"type": "enemy_fled", "index": enemy_idx})
 						enemy.die()
 
 				if enemy.next_action.self_destructs:
@@ -436,24 +473,32 @@ func enemy_turn() -> void:
 			# Tick down statuses at the end of this enemy's turn
 			if not enemy._is_dead:
 				await enemy.tick_down_statuses()
-		next_turn()
-		await player_turn()
+		
+		if game_state and game_state.is_multiplayer:
+			if steam_manager.is_host:
+				_broadcast_enemy_turn_results()
+			next_turn()
+			await player_turn()
+		else:
+			next_turn()
+			await player_turn()
 
-func _spawn_boss_minions(count: int):
+func _spawn_boss_minions(count: int) -> Array[Enemy]:
 	var current_enemy_count = get_active_enemies().size()
 	var max_to_spawn = 6 - current_enemy_count
 	if max_to_spawn <= 0:
 		print("Cannot spawn more minions, enemy limit of 6 reached.")
-		return
+		return []
 
 	if enemy_spawner.minion_pool.is_empty():
 		push_warning("Minion pool is empty!")
-		return
+		return []
 
 	var available_minions = enemy_spawner.minion_pool.duplicate()
 	available_minions.shuffle()
 
 	var minions_to_spawn = []
+	var spawned_enemies: Array[Enemy] = []
 	var num_to_spawn = min(count, max_to_spawn)
 	for i in range(min(num_to_spawn, available_minions.size())):
 		minions_to_spawn.append(available_minions[i])
@@ -465,17 +510,19 @@ func _spawn_boss_minions(count: int):
 		new_enemy.died.connect(_on_enemy_died)
 		new_enemy.exploded.connect(_on_enemy_exploded)
 		new_enemy.gold_dropped.connect(_on_enemy_gold_dropped.bind(new_enemy))
+		spawned_enemies.append(new_enemy)
 	
 	enemy_container.call_deferred("arrange_enemies")
+	return spawned_enemies
 
-func _spawn_gnomish_invention():
+func _spawn_gnomish_invention() -> Array[Enemy]:
 	if get_active_enemies().size() >= 6:
 		print("Cannot spawn invention, enemy limit of 6 reached.")
-		return
+		return []
 
 	if enemy_spawner.invention_pool.is_empty():
 		push_warning("Gnomish invention pool is empty! Cannot spawn.")
-		return
+		return []
 
 	var invention_data: EnemyData = enemy_spawner.invention_pool.pick_random()
 	var new_enemy: Enemy = enemy_spawner.ENEMY_UI.instantiate()
@@ -488,6 +535,7 @@ func _spawn_gnomish_invention():
 	# Defer arrangement to prevent physics race conditions.
 	enemy_container.call_deferred("arrange_enemies")
 	print("Eureka! A %s has been summoned!" % invention_data.enemy_name)
+	return [new_enemy]
 
 func _on_die_clicked(die_display):
 	# If the clicked die is already selected, deselect it. Otherwise, select it.
@@ -636,6 +684,9 @@ func _on_character_clicked(character: Character) -> void:
 						continue
 					_process_die_face_effect(effect, die.result_value, enemy_target, die)
 
+	# Broadcast action to multiplayer peers
+	_broadcast_player_action(dice_to_discard, character, total_roll if not is_targeting_player else 0, total_roll if is_targeting_player else 0)
+
 	player.discard(dice_to_discard)
 	is_resolving_action = false
 
@@ -647,6 +698,7 @@ func _resolve_targeted_ability(target: Character):
 	var slotted_dice = active_targeting_ability.get_slotted_dice_displays()
 	var die_display = slotted_dice[0]
 	var damage = die_display.die.result_value
+	var dice_list_for_packet: Array[Die] = [die_display.die]
 	
 	if ability_data.title == "Explosive Shot":
 		var enemies = get_active_enemies()
@@ -683,6 +735,8 @@ func _resolve_targeted_ability(target: Character):
 
 		# Apply die face effects to the main target
 		await _apply_all_die_effects(die_display.die, target, damage)
+		
+		_broadcast_player_action(dice_list_for_packet, target, damage, 0, "Explosive Shot")
 		
 	elif ability_data.title == "Higher Lower":
 		_start_higher_lower(target, die_display)
@@ -879,26 +933,28 @@ func _end_higher_lower():
 	player.update_health_display(net_damage)
 
 func _animate_higher_lower_damage_sequence():
+	# Get scale factor for UI scaling
+	var scale_factor = 1.0
+	if is_instance_valid(player):
+		scale_factor = player.current_scale_factor
+
 	# Create a visual die for animation
 	var anim_die = DIE_DISPLAY_SCENE.instantiate()
 	$UI.add_child(anim_die)
 	# Set initial state
 	anim_die.set_die(higher_lower_die)
-	anim_die.pivot_offset = anim_die.size / 2
-	anim_die.scale = Vector2(0.6, 0.6)
+	anim_die.pivot_offset = anim_die.size / 2.0
+	anim_die.scale = Vector2(0.6, 0.6) * scale_factor
 	
 	# Start position: Center of screen (where UI was)
 	var start_pos = get_viewport_rect().size / 2
-	anim_die.global_position = start_pos - (anim_die.size / 2)
+	anim_die.global_position = start_pos - (anim_die.size * anim_die.scale / 2.0)
 	
-	var target_pos = higher_lower_target.global_position
 	# Adjust for center of target
-	var sprite = higher_lower_target.get_node_or_null("Sprite2D")
-	if sprite:
-		if sprite is Control:
-			target_pos = sprite.get_global_rect().get_center()
-		elif sprite is Node2D:
-			target_pos = sprite.global_position
+	var target_pos = higher_lower_target.global_position # Fallback
+	var sprite = higher_lower_target.get_node_or_null("Visuals/Sprite2D")
+	if sprite and sprite is Control:
+		target_pos = sprite.get_global_rect().get_center()
 	
 	for i in range(higher_lower_accumulated_results.size()):
 		if higher_lower_target._is_dead:
@@ -913,15 +969,16 @@ func _animate_higher_lower_damage_sequence():
 		anim_die.set_die(higher_lower_die)
 		
 		var tween = create_tween()
+		var end_pos = target_pos - (anim_die.size * anim_die.scale / 2.0)
 		
 		if i == 0:
 			# First hit: Fly from center to target
-			tween.tween_property(anim_die, "global_position", target_pos - (anim_die.size / 2), 0.4).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN)
+			tween.tween_property(anim_die, "global_position", end_pos, 0.4).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN)
 		else:
 			# Subsequent hits: Bounce up and down
-			var bounce_height = 100.0
-			var up_pos = target_pos - Vector2(0, bounce_height) - (anim_die.size / 2)
-			var down_pos = target_pos - (anim_die.size / 2)
+			var bounce_height = 100.0 * scale_factor
+			var up_pos = target_pos - Vector2(0, bounce_height) - (anim_die.size * anim_die.scale / 2.0)
+			var down_pos = end_pos
 			
 			tween.tween_property(anim_die, "global_position", up_pos, 0.2).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
 			tween.tween_property(anim_die, "global_position", down_pos, 0.2).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
@@ -936,6 +993,13 @@ func _animate_higher_lower_damage_sequence():
 	anim_die.queue_free()
 
 func _start_even_odd(target: Character, source_display: DieDisplay):
+	# This function is very similar to _start_higher_lower.
+	# In a future refactor, these could be combined into a single "minigame" system.
+	# For now, we keep them separate for clarity.
+	if even_odd_ui and even_odd_ui.visible:
+		# Prevent starting a new game while one is in progress
+		return
+
 	even_odd_target = target
 	even_odd_die = source_display.die
 	even_odd_accumulated_results.clear()
@@ -1072,26 +1136,28 @@ func _end_even_odd():
 	player.update_health_display(net_damage)
 
 func _animate_even_odd_damage_sequence():
+	# Get scale factor for UI scaling
+	var scale_factor = 1.0
+	if is_instance_valid(player):
+		scale_factor = player.current_scale_factor
+
 	# Create a visual die for animation
 	var anim_die = DIE_DISPLAY_SCENE.instantiate()
 	$UI.add_child(anim_die)
 	# Set initial state
 	anim_die.set_die(even_odd_die)
-	anim_die.pivot_offset = anim_die.size / 2
-	anim_die.scale = Vector2(0.6, 0.6)
+	anim_die.pivot_offset = anim_die.size / 2.0
+	anim_die.scale = Vector2(0.6, 0.6) * scale_factor
 	
 	# Start position: Center of screen (where UI was)
 	var start_pos = get_viewport_rect().size / 2
-	anim_die.global_position = start_pos - (anim_die.size / 2)
+	anim_die.global_position = start_pos - (anim_die.size * anim_die.scale / 2.0)
 	
-	var target_pos = even_odd_target.global_position
 	# Adjust for center of target
-	var sprite = even_odd_target.get_node_or_null("Sprite2D")
-	if sprite:
-		if sprite is Control:
-			target_pos = sprite.get_global_rect().get_center()
-		elif sprite is Node2D:
-			target_pos = sprite.global_position
+	var target_pos = even_odd_target.global_position # Fallback
+	var sprite = even_odd_target.get_node_or_null("Visuals/Sprite2D")
+	if sprite and sprite is Control:
+		target_pos = sprite.get_global_rect().get_center()
 	
 	for i in range(even_odd_accumulated_results.size()):
 		if even_odd_target._is_dead:
@@ -1106,15 +1172,16 @@ func _animate_even_odd_damage_sequence():
 		anim_die.set_die(even_odd_die)
 		
 		var tween = create_tween()
+		var end_pos = target_pos - (anim_die.size * anim_die.scale / 2.0)
 		
 		if i == 0:
 			# First hit: Fly from center to target
-			tween.tween_property(anim_die, "global_position", target_pos - (anim_die.size / 2), 0.4).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN)
+			tween.tween_property(anim_die, "global_position", end_pos, 0.4).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN)
 		else:
 			# Subsequent hits: Bounce up and down
-			var bounce_height = 100.0
-			var up_pos = target_pos - Vector2(0, bounce_height) - (anim_die.size / 2)
-			var down_pos = target_pos - (anim_die.size / 2)
+			var bounce_height = 100.0 * scale_factor
+			var up_pos = target_pos - Vector2(0, bounce_height) - (anim_die.size * anim_die.scale / 2.0)
+			var down_pos = end_pos
 			
 			tween.tween_property(anim_die, "global_position", up_pos, 0.2).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
 			tween.tween_property(anim_die, "global_position", down_pos, 0.2).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
@@ -1179,8 +1246,12 @@ func _animate_dice_to_target(dice_displays: Array[DieDisplay], target: Character
 
 	# Step 2: Now that we have the data, clear the original dice from the hand.
 	for die_display in dice_displays:
-		dice_pool_ui.remove_die(die_display)
-		die_display.queue_free()
+		if die_display.dice_pool:
+			die_display.dice_pool.remove_die(die_display)
+			die_display.queue_free()
+		else:
+			# Fallback if not attached to a pool (e.g. temp display)
+			die_display.queue_free()
 
 	# Step 3: Add the animation nodes to the scene and start their tweens.
 	for i in range(animation_data.size()):
@@ -1211,7 +1282,7 @@ func _animate_dice_to_target(dice_displays: Array[DieDisplay], target: Character
 		tweens.append(tween)
 		
 		# Get the visual center of the target character's sprite for a more accurate end position.
-		var sprite_node: Node = target.get_node("Sprite2D")
+		var sprite_node: Node = target.get_node("Visuals/Sprite2D")
 		var end_pos: Vector2
 		if sprite_node is Control: # TextureRect is a Control node
 			end_pos = (sprite_node as Control).get_global_rect().get_center()
@@ -1243,6 +1314,17 @@ func _animate_dice_to_target(dice_displays: Array[DieDisplay], target: Character
 		await tweens.back().finished
 
 func _on_map_node_selected(node_data):
+	# Multiplayer Sync Logic
+	if game_state and game_state.is_multiplayer:
+		if steam_manager.is_host:
+			# Host generates a seed for the encounter to ensure enemies match on both sides
+			var encounter_seed = randi()
+			seed(encounter_seed)
+			steam_manager.send_p2p_packet_to_all({"type": "enter_encounter", "layer": node_data.layer, "index": node_data.index, "seed": encounter_seed})
+		else:
+			# Client should not trigger this via UI (input disabled), but if called via code, proceed.
+			pass
+
 	map_screen.visible = false
 	
 	player.reset_for_new_round()
@@ -1714,10 +1796,35 @@ func _on_viewport_size_changed():
 	if dice_discard_label:
 		dice_discard_label.add_theme_font_size_override("font_size", int(16 * scale_factor))
 
-	if is_instance_valid(player):
+	# Scale Dice Bag Screen
+	if dice_bag_screen:
+		var panel = dice_bag_screen.get_node_or_null("Panel")
+		if panel:
+			panel.custom_minimum_size = Vector2(800, 500) * scale_factor
+			
+			var label = panel.get_node_or_null("VBoxContainer/Label")
+			if label:
+				label.add_theme_font_size_override("font_size", int(32 * scale_factor))
+				
+			var close_btn = panel.get_node_or_null("VBoxContainer/CloseButton")
+			if close_btn:
+				close_btn.custom_minimum_size = Vector2(200, 50) * scale_factor
+
+	if dice_bag_grid:
+		dice_bag_grid.add_theme_constant_override("h_separation", int(20 * scale_factor))
+		dice_bag_grid.add_theme_constant_override("v_separation", int(20 * scale_factor))
+		for child in dice_bag_grid.get_children():
+			if child.has_method("update_scale"):
+				child.update_scale(scale_factor)
+
+	player.update_scale(scale_factor)
+	if game_state and game_state.is_multiplayer:
+		for p in remote_players.values():
+			p.update_scale(scale_factor)
+		_reposition_players()
+	elif is_instance_valid(player):
 		player.position.x = viewport_size.x * 0.25
 		player.position.y = viewport_size.y * 0.5
-		player.update_scale(scale_factor)
 		player.update_resting_state()
 
 	if is_instance_valid(enemy_container):
@@ -1739,6 +1846,15 @@ func _on_viewport_size_changed():
 		dice_pool_ui.update_scale(scale_factor)
 
 	if is_instance_valid(abilities_ui):
+		# Adjust offsets to prevent overlap with the scaled top bar and bottom dice pool
+		var base_width = 250.0
+		var base_left_margin = 20.0
+		abilities_ui.offset_left = base_left_margin
+		abilities_ui.offset_right = base_left_margin + (base_width * scale_factor)
+
+		var top_bar_height = 70.0 * scale_factor
+		abilities_ui.offset_top = top_bar_height
+		abilities_ui.offset_bottom = -150.0 * scale_factor
 		for ability in abilities_ui.get_children():
 			if ability.has_method("update_scale"):
 				ability.update_scale(scale_factor)
@@ -1837,3 +1953,382 @@ func _on_dice_bag_button_pressed():
 		display.scale = Vector2.ONE
 		
 	dice_bag_screen.visible = true
+
+# --- Multiplayer Logic ---
+
+func _setup_multiplayer_game():
+	if not game_state or not game_state.is_multiplayer:
+		return
+
+	steam_manager.p2p_packet_received.connect(_handle_p2p_packet)
+
+	var my_id = steam_manager.get_my_id()
+	player.name_label.text = steam_manager.get_friend_name(my_id)
+	var remote_ids = game_state.player_steam_ids.filter(func(id): return id != my_id)
+
+	# Create remote player nodes and UI
+	for i in range(remote_ids.size()):
+		var remote_id = remote_ids[i]
+		
+		# Create player node
+		var remote_p_node = preload("res://scenes/characters/player.tscn").instantiate()
+		remote_p_node.name = "RemotePlayer_%d" % remote_id
+		add_child(remote_p_node)
+		remote_players[remote_id] = remote_p_node
+		remote_p_node.name_label.text = steam_manager.get_friend_name(remote_id)
+		
+		# Create dice pool UI
+		var remote_dp_ui = preload("res://scenes/ui/dice_pool.tscn").instantiate()
+		remote_dp_ui.is_read_only = true
+		remote_dp_ui.name = "RemoteDicePool_%d" % remote_id
+		$UI.add_child(remote_dp_ui)
+		remote_dice_pools[remote_id] = remote_dp_ui
+		
+		# Position the remote dice pool
+		var pool_width = 400
+		var pool_height = 80
+		remote_dp_ui.set_anchors_preset(Control.PRESET_CENTER_TOP)
+		remote_dp_ui.offset_top = 60 + (i * (pool_height + 10))
+		remote_dp_ui.offset_left = -pool_width / 2
+		remote_dp_ui.offset_right = pool_width / 2
+		remote_dp_ui.offset_bottom = remote_dp_ui.offset_top + pool_height
+		remote_dp_ui.scale = Vector2(0.7, 0.7)
+
+	# Host initializes the game map
+	if steam_manager.is_host:
+		var game_seed = randi()
+		seed(game_seed)
+		steam_manager.send_p2p_packet_to_all({"type": "game_start_sync", "seed": game_seed})
+		map_screen.generate_new_map()
+		map_screen.visible = true
+	else:
+		map_screen.set_input_enabled(false) # Client cannot pick nodes
+
+	# Reposition players
+	_reposition_players()
+
+func _reposition_players():
+	# This is a simple horizontal layout. Can be improved.
+	var all_player_nodes = [player] + remote_players.values()
+	var count = all_player_nodes.size()
+	var total_width = get_viewport_rect().size.x * 0.4
+	var start_x = get_viewport_rect().size.x * 0.05
+	var step_x = total_width / (count + 1)
+	
+	for i in range(count):
+		all_player_nodes[i].position.x = start_x + (step_x * (i + 1))
+		all_player_nodes[i].position.y = get_viewport_rect().size.y * 0.5
+		all_player_nodes[i].update_resting_state()
+
+func _send_dice_to_all_remotes(dice: Array[Die]):
+	var dice_values = []
+	for d in dice:
+		dice_values.append({"sides": d.sides, "value": d.result_value})
+	steam_manager.send_p2p_packet_to_all({"type": "sync_dice", "dice": dice_values})
+
+func _handle_p2p_packet(packet: Dictionary, from_id: int):
+	match packet.type:
+		"game_start_sync":
+			seed(packet.seed)
+			map_screen.generate_new_map()
+			map_screen.visible = true
+			map_screen.set_input_enabled(false)
+			
+		"enter_encounter":
+			seed(packet.seed)
+			# Find the node the host selected
+			var node = map_screen.get_node_by_indices(packet.layer, packet.index)
+			if node:
+				# Manually trigger selection on client
+				_on_map_node_selected(node)
+		
+		"enemy_turn_sync":
+			_handle_enemy_turn_sync(packet)
+		
+		"spawn_minions":
+			_handle_remote_spawn(packet.paths)
+			
+		"enemy_fled":
+			var enemies = get_active_enemies()
+			if packet.index >= 0 and packet.index < enemies.size():
+				var enemy_to_flee = enemies[packet.index]
+				enemy_to_flee.die()
+		
+		"sync_enemy_intents":
+			var active_enemies = get_active_enemies()
+			for item in packet.intents:
+				if item.index < active_enemies.size():
+					var enemy = active_enemies[item.index]
+					enemy.set_remote_intent(item.action_name, item.value)
+			_process_enemy_intents(active_enemies)
+		
+		"player_action":
+			_handle_remote_player_action(packet)
+
+		"sync_dice":
+			if remote_dice_pools.has(from_id):
+				var pool = remote_dice_pools[from_id]
+				pool.clear_pool()
+				var remote_dice: Array[Die] = []
+				for d_data in packet.dice:
+					var d = Die.new(d_data.sides)
+					d.result_value = d_data.value
+					if d.faces.size() >= d.result_value:
+						d.result_face = d.faces[d.result_value - 1]
+					remote_dice.append(d)
+				pool.add_dice_instantly(remote_dice)
+			
+		"end_turn":
+			player_turn_ended_status[from_id] = true
+			if remote_dice_pools.has(from_id):
+				remote_dice_pools[from_id].modulate = Color(0.5, 0.5, 0.5) 
+			_check_all_turns_ended()
+			
+		"enemy_turn_complete":
+			pass # Deprecated, handled by enemy_turn_sync
+
+func _check_all_turns_ended():
+	if not game_state or not game_state.is_multiplayer: return
+	
+	for player_id in game_state.player_steam_ids:
+		if not player_turn_ended_status.has(player_id) or not player_turn_ended_status[player_id]:
+			return # Not everyone has ended their turn
+	
+	# All players have ended their turn
+	print("All players have ended their turn.")
+	for pool in remote_dice_pools.values():
+		pool.modulate = Color.WHITE
+	
+	if is_instance_valid(end_turn_button):
+		end_turn_button.text = "End Turn"
+	
+	next_turn()
+	await enemy_turn()
+
+func _process_enemy_intents(active_enemies: Array):
+	current_incoming_damage = 0
+	for enemy in active_enemies:
+		if enemy.next_action and (enemy.next_action.action_type == EnemyAction.ActionType.ATTACK or \
+			enemy.next_action.action_type == EnemyAction.ActionType.PIERCING_ATTACK or \
+			(enemy.next_action.action_type == EnemyAction.ActionType.DEBUFF and enemy.next_action_value > 0)):
+			current_incoming_damage += enemy.next_action_value
+	
+	# Proactively apply shields that are meant to be active for the player's turn
+	for enemy: Enemy in active_enemies:
+		enemy.clear_provided_shields()
+		if enemy.next_action:
+			if enemy.next_action.action_name == "Wing Buffet":
+				enemy.apply_duration_status("glance_blows", 1)
+				# Ensure it expires at the end of the round (enemy turn) by removing it from the "new" list
+				var gb_status = StatusLibrary.get_status("glance_blows")
+				if enemy._new_statuses_this_turn.has(gb_status):
+					enemy._new_statuses_this_turn.erase(gb_status)
+				print("%s gains Glance Blows!" % enemy.name)
+
+			if enemy.next_action.action_type == EnemyAction.ActionType.SHIELD:
+				enemy.add_block(enemy.next_action_value)
+			elif enemy.next_action.action_type == EnemyAction.ActionType.SUPPORT_SHIELD:
+				if enemy.enemy_data.enemy_name == "Shield Generator":
+					# Special case: Shield Generator shields all tinkerers.
+					var shield_amount = enemy.next_action_value
+					var tinkerers = active_enemies.filter(func(e): return e.enemy_data.enemy_name == "Gnomish Tinkerer")
+					for tinkerer in tinkerers:
+						tinkerer.add_block(shield_amount)
+						enemy.register_provided_shield(tinkerer, shield_amount)
+						print("%s shields %s for %d" % [enemy.name, tinkerer.name, shield_amount])
+				elif enemy.enemy_data.enemy_name == "White Knight":
+					var femme_fatales = active_enemies.filter(func(e): return e.enemy_data.enemy_name == "Femme Fatale")
+					if not femme_fatales.is_empty():
+						var target = femme_fatales[0]
+						target.add_block(enemy.next_action_value)
+						enemy.register_provided_shield(target, enemy.next_action_value)
+						print("%s shields %s for %d" % [enemy.name, target.name, enemy.next_action_value])
+				else:
+					# Default behavior: Shield self and one random ally.
+					enemy.add_block(enemy.next_action_value)
+					var other_enemies = active_enemies.filter(func(e): return e != enemy)
+					if not other_enemies.is_empty():
+						var random_ally = other_enemies.pick_random()
+						random_ally.add_block(enemy.next_action_value)
+						enemy.register_provided_shield(random_ally, enemy.next_action_value)
+						print("%s shields self and %s for %d" % [enemy.name, random_ally.name, enemy.next_action_value])
+	
+	player.update_health_display(current_incoming_damage)
+
+func _handle_remote_spawn(paths: Array):
+	if not (game_state and game_state.is_multiplayer and not steam_manager.is_host):
+		return # Only clients should process this
+	
+	for path in paths:
+		var enemy_data = load(path)
+		if enemy_data:
+			var new_enemy: Enemy = enemy_spawner.ENEMY_UI.instantiate()
+			new_enemy.enemy_data = enemy_data
+			enemy_container.add_child(new_enemy)
+			new_enemy.died.connect(_on_enemy_died)
+			new_enemy.exploded.connect(_on_enemy_exploded)
+			new_enemy.gold_dropped.connect(_on_enemy_gold_dropped.bind(new_enemy))
+	
+	enemy_container.call_deferred("arrange_enemies")
+
+func _broadcast_enemy_turn_results():
+	if not (game_state and game_state.is_multiplayer and steam_manager.is_host):
+		return
+
+	var player_states = []
+	var all_players = [player] + remote_players.values()
+	var all_player_ids = [steam_manager.get_my_id()] + remote_players.keys()
+
+	for i in range(all_players.size()):
+		var p = all_players[i]
+		var p_id = all_player_ids[i]
+		var status_data = {}
+		for effect in p.statuses:
+			status_data[effect.status_name] = p.statuses[effect]
+
+		player_states.append({ "id": p_id, "hp": p.hp, "block": p.block, "statuses": status_data })
+
+	var enemy_states = []
+	var enemies = get_active_enemies()
+	for i in range(enemies.size()):
+		var e = enemies[i]
+		var status_data = {}
+		for effect in e.statuses:
+			status_data[effect.status_name] = e.statuses[effect]
+		
+		enemy_states.append({ "index": i, "hp": e.hp, "block": e.block, "statuses": status_data })
+	
+	var packet = { "type": "enemy_turn_sync", "players": player_states, "enemies": enemy_states }
+	steam_manager.send_p2p_packet_to_all(packet)
+
+func _handle_enemy_turn_sync(packet):
+	# Apply player states
+	for p_state in packet.players:
+		var p_id = p_state.id
+		var target_player = null
+		if p_id == steam_manager.get_my_id():
+			target_player = player
+		elif remote_players.has(p_id):
+			target_player = remote_players[p_id]
+		
+		if target_player:
+			target_player.hp = p_state.hp
+			target_player.block = p_state.block
+			
+			var new_statuses = {}
+			for status_name in p_state.statuses:
+				var effect = StatusLibrary.get_status(status_name.to_lower())
+				if effect: new_statuses[effect] = p_state.statuses[status_name]
+			target_player.statuses = new_statuses
+			
+			target_player.update_health_display()
+			target_player.statuses_changed.emit(target_player.statuses)
+
+	# Apply enemy states
+	var enemies = get_active_enemies()
+	for e_state in packet.enemies:
+		var e_idx = e_state.index
+		if e_idx >= 0 and e_idx < enemies.size():
+			var target_enemy = enemies[e_idx]
+			target_enemy.hp = e_state.hp
+			target_enemy.block = e_state.block
+			
+			var new_statuses = {}
+			for status_name in e_state.statuses:
+				var effect = StatusLibrary.get_status(status_name.to_lower())
+				if effect: new_statuses[effect] = e_state.statuses[status_name]
+			target_enemy.statuses = new_statuses
+			
+			target_enemy.update_health_display()
+			target_enemy.statuses_changed.emit(target_enemy.statuses)
+	
+	# Now that state is synced, client can start their turn
+	if not steam_manager.is_host:
+		next_turn()
+		await player_turn()
+
+func _broadcast_player_action(dice_list: Array[Die], target: Character, damage: int, block: int, ability_name: String = ""):
+	if not (game_state and game_state.is_multiplayer): return
+	
+	var dice_data = []
+	for d in dice_list:
+		dice_data.append({"sides": d.sides, "value": d.result_value})
+	
+	var target_idx = -1
+	var is_enemy = false
+	
+	if target is Enemy:
+		is_enemy = true
+		# Find index in container to ensure sync
+		var all_children = enemy_container.get_children()
+		target_idx = all_children.find(target)
+	
+	var packet = {
+		"type": "player_action",
+		"from_id": steam_manager.get_my_id(),
+		"dice_data": dice_data,
+		"target_index": target_idx,
+		"is_enemy": is_enemy,
+		"damage": damage,
+		"block": block,
+		"ability": ability_name
+	}
+	steam_manager.send_p2p_packet_to_all(packet)
+
+func _handle_remote_player_action(packet):
+	var from_id = packet.from_id
+	if not remote_players.has(from_id): return
+	
+	var r_player = remote_players[from_id]
+	var r_pool = remote_dice_pools[from_id]
+	
+	# 1. Identify Target
+	var target = null
+	if packet.is_enemy:
+		var children = enemy_container.get_children()
+		if packet.target_index >= 0 and packet.target_index < children.size():
+			target = children[packet.target_index]
+	else:
+		target = r_player # Self target (buff/block)
+	
+	if not target: return
+
+	# 2. Identify Dice in Remote Pool
+	var dice_displays_to_animate: Array[DieDisplay] = []
+	
+	# We look for dice in the pool that match the sides/value sent.
+	var pool_children = r_pool.dice_pool_display.duplicate()
+	
+	for d_data in packet.dice_data:
+		var found_disp = null
+		for disp in pool_children:
+			if disp.die.sides == d_data.sides and disp.die.result_value == d_data.value:
+				found_disp = disp
+				break
+		
+		if found_disp:
+			dice_displays_to_animate.append(found_disp)
+			pool_children.erase(found_disp)
+			# Note: _animate_dice_to_target will handle removal from pool
+		else:
+			# If not found (e.g. ability slot desync), create a temporary one for visual
+			var temp_die = Die.new(d_data.sides)
+			temp_die.result_value = d_data.value
+			if temp_die.faces.size() >= temp_die.result_value:
+				temp_die.result_face = temp_die.faces[temp_die.result_value - 1]
+			
+			var temp_disp = DIE_DISPLAY_SCENE.instantiate()
+			temp_disp.set_die(temp_die)
+			temp_disp.global_position = r_pool.global_position + r_pool.size / 2
+			$UI.add_child(temp_disp)
+			dice_displays_to_animate.append(temp_disp)
+
+	# 3. Animate
+	await _animate_dice_to_target(dice_displays_to_animate, target)
+	
+	# 4. Apply Results
+	if packet.damage > 0:
+		await target.take_damage(packet.damage, true, r_player, true)
+	
+	if packet.block > 0 and target == r_player:
+		target.add_block(packet.block)

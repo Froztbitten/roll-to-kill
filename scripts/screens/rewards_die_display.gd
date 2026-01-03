@@ -27,12 +27,13 @@ func _ready():
 	add_theme_stylebox_override("hover", new_style)
 	add_theme_stylebox_override("pressed", new_style)
 
+	face_grid.set_anchors_preset(Control.PRESET_TOP_WIDE)
+
 	# Create a container to display the list of upgrades on the die.
 	upgrades_list = VBoxContainer.new()
 	upgrades_list.name = "UpgradesList"
 	upgrades_list.mouse_filter = MOUSE_FILTER_IGNORE # Let clicks pass through to the button.
 	upgrades_list.set_anchors_preset(Control.PRESET_TOP_WIDE)
-	upgrades_list.position.y = 45 # Position it below the face grid.
 	add_child(upgrades_list)
 
 func _process(_delta):
@@ -121,13 +122,13 @@ func set_die(die_data: Die, force_grid: bool = false, is_upgrade_reward: bool = 
 				for cell_idx in range(face_grid.get_child_count()):
 					var cell = face_grid.get_child(cell_idx)
 					if cell.get_node("Label").text == str(face_value):
-						var panel_style = cell.get_theme_stylebox("panel").duplicate() as StyleBoxFlat
-						panel_style.border_color = Color(effect_color)
-						panel_style.border_width_left = 3
-						panel_style.border_width_top = 3
-						panel_style.border_width_right = 3
-						panel_style.border_width_bottom = 3
-						cell.add_theme_stylebox_override("panel", panel_style)
+						var style = cell.get_theme_stylebox("panel").duplicate() as StyleBoxFlat
+						style.border_color = Color(effect_color)
+						style.border_width_left = 3
+						style.border_width_top = 3
+						style.border_width_right = 3
+						style.border_width_bottom = 3
+						cell.add_theme_stylebox_override("panel", style)
 						break
 						
 				var panel = PanelContainer.new()
@@ -184,6 +185,7 @@ func set_die(die_data: Die, force_grid: bool = false, is_upgrade_reward: bool = 
 
 	_apply_scale()
 	visible = true
+	call_deferred("_update_layout")
 
 func select():
 	is_selected = true
@@ -202,7 +204,7 @@ func _on_mouse_exited():
 		var first_cell_label = face_grid.get_child(0).get_node("Label") as Label
 		first_cell_label.text = original_grid_text
 
-func _clean_bbcode(_text: String) -> String:
+func _clean_bbcode(text: String) -> String:
 	var regex = RegEx.new()
 	regex.compile("\\[.*?\\]")
 	return regex.sub(text, "", true)
@@ -248,6 +250,16 @@ func _apply_scale():
 			label.add_theme_font_size_override("font_size", int(48 * current_scale_factor))
 		else:
 			label.add_theme_font_size_override("font_size", int(14 * current_scale_factor))
+			
+	call_deferred("_update_layout")
+
+func _update_layout():
+	# Position the grid at the top with a small margin
+	face_grid.position.y = 5 * current_scale_factor
+	
+	# If the upgrades list is visible, position it below the grid
+	if upgrades_list.visible:
+		upgrades_list.position.y = face_grid.position.y + face_grid.get_minimum_size().y + (5 * current_scale_factor)
 
 func update_scale(factor: float):
 	current_scale_factor = factor
