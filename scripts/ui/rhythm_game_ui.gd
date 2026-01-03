@@ -34,7 +34,7 @@ func start_game():
 	# Generate 3 beats at random intervals
 	var total_delay = 0.0
 	for i in range(beats_to_hit):
-		var beat_delay = randf_range(0.2, 0.8) # Random time between beats
+		var beat_delay = randf_range(0.1, 0.8) # Random time between beats
 		total_delay += beat_delay
 		_spawn_beat(total_delay)
 	
