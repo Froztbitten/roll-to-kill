@@ -6,6 +6,6 @@
 [resource]
 script = ExtResource("1_script")
 title = "Rhythm Game"
-description = "Target an enemy to start a rhythm game. Deal [color=yellow]X[/color] damage. Each successful beat adds [color=yellow]+50%[/color] damage, up to +150%."
+description = "Target an enemy to start a rhythm game. For each successful hit, deal [color=yellow]X/3[/color] damage. Hit all 6 beats to deal a total of [color=yellow]200%[/color] damage."
 icon = ExtResource("2_icon")
 cooldown_duration = 2

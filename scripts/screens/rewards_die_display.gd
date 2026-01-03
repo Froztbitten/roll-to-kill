@@ -18,6 +18,12 @@ var upgrades_list: VBoxContainer
 var current_scale_factor: float = 1.0
 var current_base_size: Vector2 = Vector2(120, 120)
 
+var _tooltip_panel: PanelContainer
+var _tooltip_label: Label
+var _tooltip_timer: Timer
+var _tooltip_tween: Tween
+var _hovered_control: Control
+
 func _ready():
 	# 1. Create a new stylebox
 	var new_style = StyleBoxFlat.new()
@@ -33,8 +39,31 @@ func _ready():
 	upgrades_list = VBoxContainer.new()
 	upgrades_list.name = "UpgradesList"
 	upgrades_list.mouse_filter = MOUSE_FILTER_IGNORE # Let clicks pass through to the button.
-	upgrades_list.set_anchors_preset(Control.PRESET_TOP_WIDE)
 	add_child(upgrades_list)
+	face_grid.resized.connect(_update_layout)
+	upgrades_list.resized.connect(_update_layout)
+
+	# --- Custom Tooltip Setup ---
+	_tooltip_panel = PanelContainer.new()
+	var tooltip_style = StyleBoxFlat.new()
+	tooltip_style.bg_color = Color(0, 0, 0, 0.8)
+	tooltip_style.content_margin_left = 8
+	tooltip_style.content_margin_top = 4
+	tooltip_style.content_margin_right = 8
+	tooltip_style.content_margin_bottom = 4
+	_tooltip_panel.add_theme_stylebox_override("panel", tooltip_style)
+	_tooltip_label = Label.new()
+	_tooltip_panel.add_child(_tooltip_label)
+	_tooltip_panel.visible = false
+	_tooltip_panel.set_as_top_level(true)
+	_tooltip_panel.mouse_filter = MOUSE_FILTER_IGNORE
+	add_child(_tooltip_panel)
+
+	_tooltip_timer = Timer.new()
+	_tooltip_timer.wait_time = 0.1
+	_tooltip_timer.one_shot = true
+	_tooltip_timer.timeout.connect(_show_tooltip)
+	add_child(_tooltip_timer)
 
 func _process(_delta):
 	# On every frame, check if the mouse is over this control and if ALT is pressed.
@@ -75,7 +104,7 @@ func set_die(die_data: Die, force_grid: bool = false, is_upgrade_reward: bool = 
 		original_grid_text = str(die.result_value)
 	else:
 		# Larger display for unrolled dice on the reward screen
-		current_base_size = Vector2(120, 120)
+		current_base_size = Vector2(100, 100)
 		
 		# Set columns to achieve the desired number of rows
 		match die.sides:
@@ -122,13 +151,13 @@ func set_die(die_data: Die, force_grid: bool = false, is_upgrade_reward: bool = 
 				for cell_idx in range(face_grid.get_child_count()):
 					var cell = face_grid.get_child(cell_idx)
 					if cell.get_node("Label").text == str(face_value):
-						var panel_style = cell.get_theme_stylebox("panel").duplicate() as StyleBoxFlat
-						panel_style.border_color = Color(effect_color)
-						panel_style.border_width_left = 3
-						panel_style.border_width_top = 3
-						panel_style.border_width_right = 3
-						panel_style.border_width_bottom = 3
-						cell.add_theme_stylebox_override("panel", panel_style)
+						var style = cell.get_theme_stylebox("panel").duplicate() as StyleBoxFlat
+						style.border_color = Color(effect_color)
+						style.border_width_left = 3
+						style.border_width_top = 3
+						style.border_width_right = 3
+						style.border_width_bottom = 3
+						cell.add_theme_stylebox_override("panel", style)
 						break
 						
 				var panel = PanelContainer.new()
@@ -141,17 +170,20 @@ func set_die(die_data: Die, force_grid: bool = false, is_upgrade_reward: bool = 
 				style.content_margin_top = 2
 				style.content_margin_bottom = 2
 				panel.add_theme_stylebox_override("panel", style)
+				panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 				
 				panel.mouse_filter = MOUSE_FILTER_PASS
 				panel.mouse_default_cursor_shape = Control.CURSOR_HELP
 				# Need to get the actual effect description from EffectLibrary
 				var actual_effect = EffectLibrary.get_effect_by_name(effect_name)
 				if actual_effect:
-					panel.tooltip_text = _clean_bbcode(actual_effect.description.replace("{value}", str(face_value)).replace("{value / 2}", str(ceili(face_value / 2.0))))
+					var tooltip_text = _clean_bbcode(actual_effect.description.replace("{value}", str(face_value)).replace("{value / 2}", str(ceili(face_value / 2.0))))
+					panel.mouse_entered.connect(_on_control_hover_entered.bind(panel, tooltip_text))
 				
 				var label = Label.new()
 				label.text = "Face %d: %s" % [face_value, effect_name]
 				label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+				label.autowrap_mode = TextServer.AUTOWRAP_WORD
 				label.add_theme_color_override("font_color", Color(effect_color))
 				panel.add_child(label)
 				upgrades_list.add_child(panel)
@@ -204,10 +236,10 @@ func _on_mouse_exited():
 		var first_cell_label = face_grid.get_child(0).get_node("Label") as Label
 		first_cell_label.text = original_grid_text
 
-func _clean_bbcode(bbcode_text: String) -> String:
+func _clean_bbcode(text: String) -> String:
 	var regex = RegEx.new()
 	regex.compile("\\[.*?\\]")
-	return regex.sub(bbcode_text, "", true)
+	return regex.sub(text, "", true)
 
 func _add_effect_panel_to_list(parent_container: VBoxContainer, effect: DieFaceEffect, face_value_placeholder: String):
 	var panel = PanelContainer.new()
@@ -219,6 +251,7 @@ func _add_effect_panel_to_list(parent_container: VBoxContainer, effect: DieFaceE
 	style.content_margin_right = 6
 	style.content_margin_top = 2
 	style.content_margin_bottom = 2
+	panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	panel.add_theme_stylebox_override("panel", style)
 	
 	panel.mouse_filter = MOUSE_FILTER_PASS
@@ -227,11 +260,13 @@ func _add_effect_panel_to_list(parent_container: VBoxContainer, effect: DieFaceE
 	var tooltip_desc = effect.description
 	tooltip_desc = tooltip_desc.replace("{value}", face_value_placeholder)
 	tooltip_desc = tooltip_desc.replace("{value / 2}", face_value_placeholder + " / 2")
-	panel.tooltip_text = _clean_bbcode(tooltip_desc)
+	var tooltip_text = _clean_bbcode(tooltip_desc)
+	panel.mouse_entered.connect(_on_control_hover_entered.bind(panel, tooltip_text))
 	
 	var label = Label.new()
 	label.text = effect.name
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	label.autowrap_mode = TextServer.AUTOWRAP_WORD
 	label.add_theme_color_override("font_color", effect.highlight_color)
 	panel.add_child(label)
 	
@@ -240,7 +275,7 @@ func _add_effect_panel_to_list(parent_container: VBoxContainer, effect: DieFaceE
 func _apply_scale():
 	custom_minimum_size = current_base_size * current_scale_factor
 	
-	var cell_base_size = 20.0
+	var cell_base_size = 16.0
 	var scaled_cell_size = cell_base_size * current_scale_factor
 	
 	for cell in face_grid.get_children():
@@ -258,9 +293,60 @@ func _update_layout():
 	face_grid.position.y = 5 * current_scale_factor
 	
 	# If the upgrades list is visible, position it below the grid
+	var content_bottom = face_grid.position.y + face_grid.get_minimum_size().y
 	if upgrades_list.visible:
-		upgrades_list.position.y = face_grid.position.y + face_grid.get_minimum_size().y + (5 * current_scale_factor)
+		upgrades_list.position.y = content_bottom + (5 * current_scale_factor)
+		upgrades_list.size.x = size.x
+		content_bottom = upgrades_list.position.y + upgrades_list.get_minimum_size().y
+
+	custom_minimum_size.y = content_bottom + (5 * current_scale_factor)
 
 func update_scale(factor: float):
 	current_scale_factor = factor
 	_apply_scale()
+
+# --- Custom Tooltip Handlers ---
+
+func _on_control_hover_entered(control: Control, text: String):
+	_tooltip_timer.stop()
+	_hide_tooltip(false)
+	_hovered_control = control
+	_tooltip_label.text = text
+	_tooltip_timer.start()
+	if not control.is_connected("mouse_exited", _on_control_hover_exited):
+		control.mouse_exited.connect(_on_control_hover_exited)
+
+func _on_control_hover_exited():
+	_tooltip_timer.stop()
+	_hovered_control = null
+	_hide_tooltip()
+
+func _show_tooltip():
+	if not is_instance_valid(_hovered_control): return
+	if _tooltip_tween and _tooltip_tween.is_running(): _tooltip_tween.kill()
+	_tooltip_tween = create_tween().set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_SINE)
+	
+	var viewport_rect = get_viewport().get_visible_rect()
+	var tooltip_size = _tooltip_panel.get_minimum_size()
+	var mouse_pos = get_global_mouse_position()
+	
+	var tooltip_pos = mouse_pos + Vector2(15, 15)
+	
+	if tooltip_pos.x + tooltip_size.x > viewport_rect.end.x:
+		tooltip_pos.x = mouse_pos.x - tooltip_size.x - 15
+	if tooltip_pos.y + tooltip_size.y > viewport_rect.end.y:
+		tooltip_pos.y = mouse_pos.y - tooltip_size.y - 15
+		
+	_tooltip_panel.global_position = tooltip_pos
+	_tooltip_panel.modulate.a = 0.0
+	_tooltip_panel.visible = true
+	_tooltip_tween.tween_property(_tooltip_panel, "modulate:a", 1.0, 0.2)
+
+func _hide_tooltip(animated: bool = true):
+	if _tooltip_tween and _tooltip_tween.is_running(): _tooltip_tween.kill()
+	if animated and _tooltip_panel.visible:
+		_tooltip_tween = create_tween().set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_SINE)
+		_tooltip_tween.tween_property(_tooltip_panel, "modulate:a", 0.0, 0.1)
+		_tooltip_tween.tween_callback(func(): if is_instance_valid(_tooltip_panel): _tooltip_panel.visible = false)
+	else:
+		_tooltip_panel.visible = false

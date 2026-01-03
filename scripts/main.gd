@@ -419,7 +419,6 @@ func _on_ability_activated(ability_ui: AbilityUI):
 
 func enemy_turn() -> void:
 	end_turn_button.disabled = true
-	end_turn_button.text = "Enemy Turn"
 	# Only the host processes the enemy turn
 	if game_state and game_state.is_multiplayer and not steam_manager.is_host:
 		return # Client waits for host to sync enemy actions
@@ -1796,7 +1795,19 @@ func _update_selected_value_label():
 			current_selection_total += die_display.die.result_value
 	
 	if current_selection_total > 0:
-		selected_value_label.text = "Selected: " + str(current_selection_total)
+		selected_value_label.text = str(current_selection_total)
+		
+		var scale_factor = 1.0
+		if is_instance_valid(player):
+			scale_factor = player.current_scale_factor
+			
+		var t = inverse_lerp(1.0, 30.0, float(current_selection_total))
+		t = clamp(t, 0.0, 1.0)
+		
+		selected_value_label.add_theme_font_size_override("font_size", int(lerp(48.0, 96.0, t) * scale_factor))
+		selected_value_label.add_theme_color_override("font_color", Color.WHITE.lerp(Color.RED, t))
+		selected_value_label.add_theme_color_override("font_outline_color", Color.BLACK)
+		selected_value_label.add_theme_constant_override("outline_size", int(4 * scale_factor))
 	else:
 		selected_value_label.text = ""
 
@@ -1923,6 +1934,9 @@ func _on_viewport_size_changed():
 		for child in dice_bag_grid.get_children():
 			if child.has_method("update_scale"):
 				child.update_scale(scale_factor)
+		
+		if dice_bag_screen.visible:
+			call_deferred("_recalculate_dice_bag_columns")
 
 	player.update_scale(scale_factor)
 	if game_state and game_state.is_multiplayer:
@@ -1951,6 +1965,12 @@ func _on_viewport_size_changed():
 
 	if is_instance_valid(dice_pool_ui):
 		dice_pool_ui.update_scale(scale_factor)
+		
+		# Scale position to avoid overlap with End Turn button
+		var pool_base_bottom = -60.0
+		var pool_base_height = 100.0
+		dice_pool_ui.offset_bottom = pool_base_bottom * scale_factor
+		dice_pool_ui.offset_top = (pool_base_bottom - pool_base_height) * scale_factor
 
 	if is_instance_valid(abilities_ui):
 		# Adjust offsets to prevent overlap with the scaled top bar and bottom dice pool
@@ -1965,6 +1985,28 @@ func _on_viewport_size_changed():
 		for ability in abilities_ui.get_children():
 			if ability.has_method("update_scale"):
 				ability.update_scale(scale_factor)
+
+	if is_instance_valid(end_turn_button):
+		var base_width = 100.0
+		var button_base_height = 30.0
+		var base_bottom_margin = 20.0
+		
+		var scaled_width = base_width * scale_factor
+		var scaled_height = button_base_height * scale_factor
+		var scaled_bottom_margin = base_bottom_margin * scale_factor
+		
+		end_turn_button.offset_left = -scaled_width / 2.0
+		end_turn_button.offset_right = scaled_width / 2.0
+		end_turn_button.offset_bottom = -scaled_bottom_margin
+		end_turn_button.offset_top = -scaled_bottom_margin - scaled_height
+		
+		end_turn_button.add_theme_font_size_override("font_size", int(16 * scale_factor))
+
+	if is_instance_valid(selected_value_label):
+		var label_base_bottom = -200.0
+		var label_base_height = 50.0
+		selected_value_label.offset_bottom = label_base_bottom * scale_factor
+		selected_value_label.offset_top = (label_base_bottom - label_base_height) * scale_factor
 
 func _on_debug_change_encounter_pressed():
 	_toggle_pause_menu()
@@ -2069,6 +2111,10 @@ func _show_dice_list_screen(dice_list: Array[Die], title: String):
 		
 	dice_bag_screen_title.text = title
 	dice_bag_screen.visible = true
+	_on_viewport_size_changed()
+	
+	# Defer column calculation to ensure container sizes are correct.
+	call_deferred("_recalculate_dice_bag_columns")
 
 func _on_dice_bag_hover_entered():
 	_animate_icon_scale(dice_bag_icon, 1.2)
@@ -2102,6 +2148,27 @@ func _on_map_button_hover_entered():
 
 func _on_map_button_hover_exited():
 	_animate_icon_scale(map_button, 1.0)
+
+func _recalculate_dice_bag_columns():
+	if not is_instance_valid(dice_bag_grid) or not dice_bag_grid is GridContainer:
+		return
+
+	var scroll_container = dice_bag_grid.get_parent() as ScrollContainer
+	if not is_instance_valid(scroll_container):
+		return
+
+	var available_width = scroll_container.size.x
+	if available_width == 0:
+		return
+
+	var scale_factor = get_viewport().get_visible_rect().size.y / 648.0
+	var item_base_width = 100.0 # from rewards_die_display.gd
+	var h_sep = dice_bag_grid.get_theme_constant("h_separation")
+	var item_width = (item_base_width * scale_factor) + h_sep
+	
+	if item_width > 0:
+		var new_columns = floor(available_width / item_width)
+		dice_bag_grid.columns = max(1, new_columns)
 
 # --- Custom Tooltip Handlers ---
 

@@ -164,9 +164,9 @@ anchor_top = 1.0
 anchor_right = 0.5
 anchor_bottom = 1.0
 offset_left = -49.0
-offset_top = -181.0
+offset_top = -250.0
 offset_right = 51.0
-offset_bottom = -129.0
+offset_bottom = -200.0
 grow_horizontal = 2
 grow_vertical = 0
 horizontal_alignment = 1
@@ -246,13 +246,14 @@ horizontal_alignment = 1
 [node name="ScrollContainer" type="ScrollContainer" parent="UI/DiceBagScreen/Panel/VBoxContainer"]
 layout_mode = 2
 size_flags_vertical = 3
+horizontal_scroll_mode = 0
 
 [node name="GridContainer" type="GridContainer" parent="UI/DiceBagScreen/Panel/VBoxContainer/ScrollContainer"]
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_constants/h_separation = 20
 theme_override_constants/v_separation = 20
-columns = 6
+columns = 1
 
 [node name="CloseButton" type="Button" parent="UI/DiceBagScreen/Panel/VBoxContainer"]
 custom_minimum_size = Vector2(200, 50)

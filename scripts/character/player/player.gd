@@ -33,10 +33,14 @@ func _ready():
 	# Define the initial deck
 	var starting_deck_sides = [4, 4, 6, 6, 6, 8, 8, 10, 12]
 	
+	# Avoid cyclic dependency by loading MainGame script dynamically
+	var main_game_script = load("res://scripts/main.gd")
+	var is_debug = main_game_script and main_game_script.debug_mode
+	
 	for side_count in starting_deck_sides:
 		var new_die = Die.new(side_count)
 
-		if MainGame.debug_mode:
+		if is_debug:
 			# Testing: Apply a random effect to every face
 			for face in new_die.faces:
 				var effect = EffectLibrary.get_random_effect_for_die(side_count, 3)
@@ -223,7 +227,10 @@ func die() -> void:
 	if _is_dead: return
 	await super.die()
 	
-	if _is_dead and not MainGame.debug_mode:
+	var main_game_script = load("res://scripts/main.gd")
+	var is_debug = main_game_script and main_game_script.debug_mode
+	
+	if _is_dead and not is_debug:
 		var defeat_screen = get_node_or_null("../UI/DefeatScreen")
 		if defeat_screen:
 			defeat_screen.visible = true

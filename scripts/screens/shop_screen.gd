@@ -205,6 +205,8 @@ func _show_dice_selection(title: String):
 		btn.set_die(die, true)
 		btn.scale = Vector2.ONE
 		btn.pressed.connect(_on_die_selected.bind(die))
+	
+	call_deferred("_recalculate_selection_grid_columns")
 	_on_viewport_size_changed()
 
 func _on_die_selected(die: Die):
@@ -344,6 +346,9 @@ func _on_viewport_size_changed():
 	for child in selection_grid.get_children():
 		if child.has_method("update_scale"):
 			child.update_scale(scale_factor)
+	
+	if selection_overlay.visible:
+		call_deferred("_recalculate_selection_grid_columns")
 
 # --- Custom Tooltip Handlers ---
 
@@ -390,3 +395,24 @@ func _hide_tooltip(animated: bool = true):
 		_tooltip_tween.tween_callback(func(): if is_instance_valid(_tooltip_panel): _tooltip_panel.visible = false)
 	else:
 		_tooltip_panel.visible = false
+
+func _recalculate_selection_grid_columns():
+	if not is_instance_valid(selection_grid) or not selection_grid is GridContainer:
+		return
+
+	var scroll_container = selection_grid.get_parent() as ScrollContainer
+	if not is_instance_valid(scroll_container):
+		return
+
+	var available_width = scroll_container.size.x
+	if available_width == 0:
+		return
+
+	var scale_factor = get_viewport().get_visible_rect().size.y / 648.0
+	var item_base_width = 100.0 # from rewards_die_display.gd
+	var h_sep = selection_grid.get_theme_constant("h_separation")
+	var item_width = (item_base_width * scale_factor) + h_sep
+	
+	if item_width > 0:
+		var new_columns = floor(available_width / item_width)
+		selection_grid.columns = max(1, new_columns)
