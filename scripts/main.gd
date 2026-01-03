@@ -1723,10 +1723,11 @@ func _on_viewport_size_changed():
 	if is_instance_valid(enemy_container):
 		var top_bar_height = 55.0 * scale_factor
 		var available_height = viewport_size.y - top_bar_height
+		var available_width = viewport_size.x * 0.5 # Use half the screen width for enemies
 		
 		enemy_container.position.x = viewport_size.x * 0.75
 		enemy_container.position.y = top_bar_height + (available_height / 2.0)
-		enemy_container.spawn_area_height = available_height
+		enemy_container.spawn_area_width = available_width
 		
 		for enemy in enemy_container.get_children():
 			if enemy is Enemy:

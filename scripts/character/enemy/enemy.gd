@@ -139,12 +139,11 @@ func _on_statuses_changed(current_statuses: Dictionary):
 
 func _center_intent_display():
 	if not is_inside_tree() or not intent_display: return
-	# This function positions the intent display to the left of the sprite.
-	# The position is relative to the "Visuals" node.
-	var sprite_rect = sprite.get_rect()
+	# Position intent above the sprite.
+	# Sprite center X is 31. Sprite top is -70.
 	var intent_rect = intent_display.get_rect()
-	intent_display.position.x = sprite.position.x - intent_rect.size.x - 20
-	intent_display.position.y = sprite.position.y + (sprite_rect.size.y / 2.0) - (intent_rect.size.y / 2.0)
+	intent_display.position.x = 31.0 - (intent_rect.size.x / 2.0)
+	intent_display.position.y = -70.0 - intent_rect.size.y - 10.0
 
 func register_provided_shield(target: Character, amount: int):
 	_provided_shields.append({"target": target, "amount": amount})
@@ -157,10 +156,10 @@ func update_scale(factor: float):
 	_center_intent_display()
 
 func _on_info_container_resized():
-	# Sprite is 140x140, centered at (31, 0)
-	# Place info container to the right of the sprite
-	info_container.position.x = 31.0 + 70.0 + 10.0 # Center + Half Width + Padding
-	info_container.position.y = -info_container.size.y / 2.0
+	# Sprite is 140x140, centered at (31, 0). Bottom is 70.
+	# Place info container below the sprite
+	info_container.position.x = 31.0 - (info_container.size.x / 2.0)
+	info_container.position.y = 70.0 + 10.0
 
 func die() -> void:
 	# Override the Character's die() function to add special on-death effects.
