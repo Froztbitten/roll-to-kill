@@ -28,6 +28,7 @@ static var debug_mode: bool = false
 @onready var dice_bag_screen = $UI/DiceBagScreen
 @onready var dice_bag_grid = $UI/DiceBagScreen/Panel/VBoxContainer/ScrollContainer/GridContainer
 @onready var dice_bag_close_button = $UI/DiceBagScreen/Panel/VBoxContainer/CloseButton
+@onready var steam_manager = $SteamManager
 
 enum Turn {PLAYER, ENEMY}
 
@@ -74,6 +75,12 @@ var even_odd_message_label: Label
 var even_odd_buttons_container: HBoxContainer
 var even_odd_accumulated_results: Array = []
 
+# --- Multiplayer Variables ---
+var game_state
+var remote_players: Dictionary = {} # steam_id: Player node
+var remote_dice_pools: Dictionary = {} # steam_id: DicePool node
+var player_turn_ended_status: Dictionary = {} # steam_id: bool
+
 func _ready() -> void:
 	# Set process modes to allow the MainGame script to handle input while the game is paused.
 	process_mode = Node.PROCESS_MODE_ALWAYS
@@ -105,6 +112,11 @@ func _ready() -> void:
 	dice_pool_ui.drag_started.connect(_on_die_drag_started)
 	dice_pool_ui.die_value_changed.connect(_on_die_value_changed)
 	reward_screen.reward_chosen.connect(_on_reward_chosen)
+
+	# Multiplayer Setup
+	if get_tree().root.has_node("GameState"):
+		game_state = get_tree().root.get_node("GameState")
+		_setup_multiplayer_game()
 	
 	debug_menu.encounter_selected.connect(_on_debug_menu_encounter_selected)
 	debug_menu.close_requested.connect(func(): debug_menu.visible = false)
@@ -135,6 +147,10 @@ func _ready() -> void:
 		map_screen.generate_new_map()
 		map_screen.visible = true
 
+func _process(delta):
+	# The new steam manager uses signals, so we connect to it in _setup_multiplayer_game
+	pass
+
 func _add_player_ability(new_ability: AbilityData):
 	# Instantiate and display a UI element for each ability the player has
 	var ability_ui_instance: AbilityUI = ABILITY_UI_SCENE.instantiate() as AbilityUI
@@ -150,6 +166,9 @@ func _add_player_ability(new_ability: AbilityData):
 		ability_ui_instance.update_scale(scale_factor)
 
 func player_turn() -> void:
+	# Reset turn flags
+	player_turn_ended_status.clear()
+	
 	# Failsafe: Reset the action lock at the start of the player's turn.
 	# This prevents the player from being locked out if the flag gets stuck
 	# during a previous action, especially when transitioning between rounds.
@@ -179,6 +198,10 @@ func player_turn() -> void:
 	
 	# Animate the new dice into the pool
 	await dice_pool_ui.animate_add_dice(new_dice, dice_bag_icon.get_global_rect().get_center())
+	
+	if game_state and game_state.is_multiplayer:
+		_send_dice_to_all_remotes(new_dice)
+	
 	current_incoming_damage = 0
 	var active_enemies = get_active_enemies()
 	# Have all living enemies declare their intents for the turn
@@ -243,8 +266,17 @@ func _on_end_turn_button_pressed():
 		# Discard all dice that are left in the hand this turn.
 		player.discard(dice_pool_ui.get_current_dice())
 		print("Player block: " + str(player.block))
-		next_turn()
-		await enemy_turn()
+		
+		if game_state and game_state.is_multiplayer:
+			var my_id = Steam.getSteamID()
+			player_turn_ended_status[my_id] = true
+			end_turn_button.disabled = true
+			end_turn_button.text = "Waiting..."
+			steam_manager.send_p2p_packet_to_all({"type": "end_turn", "from_id": my_id})
+			_check_all_turns_ended()
+		else:
+			next_turn()
+			await enemy_turn()
 
 func _tick_ability_cooldowns():
 	for ability_ui: AbilityUI in abilities_ui.get_children():
@@ -336,6 +368,10 @@ func _on_ability_activated(ability_ui: AbilityUI):
 
 func enemy_turn() -> void:
 	end_turn_button.disabled = true
+	end_turn_button.text = "Enemy Turn"
+	# Only the host processes the enemy turn
+	if game_state and game_state.is_multiplayer and not steam_manager.is_host:
+		return # Client waits for host to sync enemy actions
 
 	var active_enemies = get_active_enemies()
 
@@ -436,8 +472,14 @@ func enemy_turn() -> void:
 			# Tick down statuses at the end of this enemy's turn
 			if not enemy._is_dead:
 				await enemy.tick_down_statuses()
-		next_turn()
-		await player_turn()
+		
+		if game_state and game_state.is_multiplayer:
+			steam_manager.send_p2p_packet({"type": "enemy_turn_complete"})
+			next_turn()
+			await player_turn()
+		else:
+			next_turn()
+			await player_turn()
 
 func _spawn_boss_minions(count: int):
 	var current_enemy_count = get_active_enemies().size()
@@ -1837,3 +1879,108 @@ func _on_dice_bag_button_pressed():
 		display.scale = Vector2.ONE
 		
 	dice_bag_screen.visible = true
+
+# --- Multiplayer Logic ---
+
+func _setup_multiplayer_game():
+	if not game_state or not game_state.is_multiplayer:
+		return
+
+	steam_manager.p2p_packet_received.connect(_handle_p2p_packet)
+
+	var my_id = Steam.getSteamID()
+	var remote_ids = game_state.player_steam_ids.filter(func(id): return id != my_id)
+
+	# Create remote player nodes and UI
+	for i in range(remote_ids.size()):
+		var remote_id = remote_ids[i]
+		
+		# Create player node
+		var remote_p_node = preload("res://scenes/characters/player.tscn").instantiate()
+		remote_p_node.script = null # It's just a visual puppet
+		remote_p_node.name = "RemotePlayer_%d" % remote_id
+		add_child(remote_p_node)
+		remote_players[remote_id] = remote_p_node
+		
+		# Create dice pool UI
+		var remote_dp_ui = preload("res://scenes/ui/dice_pool.tscn").instantiate()
+		remote_dp_ui.is_read_only = true
+		remote_dp_ui.name = "RemoteDicePool_%d" % remote_id
+		$UI.add_child(remote_dp_ui)
+		remote_dice_pools[remote_id] = remote_dp_ui
+		
+		# Position the remote dice pool
+		var pool_width = 400
+		var pool_height = 80
+		remote_dp_ui.set_anchors_preset(Control.PRESET_CENTER_TOP)
+		remote_dp_ui.offset_top = 60 + (i * (pool_height + 10))
+		remote_dp_ui.offset_left = -pool_width / 2
+		remote_dp_ui.offset_right = pool_width / 2
+		remote_dp_ui.offset_bottom = remote_dp_ui.offset_top + pool_height
+		remote_dp_ui.scale = Vector2(0.7, 0.7)
+
+	# Reposition players
+	_reposition_players()
+
+func _reposition_players():
+	# This is a simple horizontal layout. Can be improved.
+	var all_player_nodes = [player] + remote_players.values()
+	var count = all_player_nodes.size()
+	var total_width = get_viewport_rect().size.x * 0.4
+	var start_x = get_viewport_rect().size.x * 0.05
+	var step_x = total_width / (count + 1)
+	
+	for i in range(count):
+		all_player_nodes[i].position.x = start_x + (step_x * (i + 1))
+		all_player_nodes[i].position.y = get_viewport_rect().size.y * 0.5
+		all_player_nodes[i].update_resting_state()
+
+func _send_dice_to_all_remotes(dice: Array[Die]):
+	var dice_values = []
+	for d in dice:
+		dice_values.append({"sides": d.sides, "value": d.result_value})
+	steam_manager.send_p2p_packet_to_all({"type": "sync_dice", "dice": dice_values})
+
+func _handle_p2p_packet(packet: Dictionary, from_id: int):
+	match packet.type:
+		"sync_dice":
+			if remote_dice_pools.has(from_id):
+				var pool = remote_dice_pools[from_id]
+				pool.clear_pool()
+				var remote_dice: Array[Die] = []
+				for d_data in packet.dice:
+					var d = Die.new(d_data.sides)
+					d.result_value = d_data.value
+					if d.faces.size() >= d.result_value:
+						d.result_face = d.faces[d.result_value - 1]
+					remote_dice.append(d)
+				pool.add_dice_instantly(remote_dice)
+			
+		"end_turn":
+			player_turn_ended_status[from_id] = true
+			if remote_dice_pools.has(from_id):
+				remote_dice_pools[from_id].modulate = Color(0.5, 0.5, 0.5) 
+			_check_all_turns_ended()
+			
+		"enemy_turn_complete":
+			# Client receives this from Host when enemy turn is done
+			next_turn()
+			await player_turn()
+
+func _check_all_turns_ended():
+	if not game_state or not game_state.is_multiplayer: return
+	
+	for player_id in game_state.player_steam_ids:
+		if not player_turn_ended_status.has(player_id) or not player_turn_ended_status[player_id]:
+			return # Not everyone has ended their turn
+	
+	# All players have ended their turn
+	print("All players have ended their turn.")
+	for pool in remote_dice_pools.values():
+		pool.modulate = Color.WHITE
+	
+	if is_instance_valid(end_turn_button):
+		end_turn_button.text = "End Turn"
+	
+	next_turn()
+	await enemy_turn()

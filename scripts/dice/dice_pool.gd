@@ -11,6 +11,7 @@ const DIE_DISPLAY_SCENE = preload("res://scenes/dice/die_display.tscn")
 var dice_pool_display: Array[DieDisplay] = []
 var player: Player
 var current_scale_factor: float = 1.0
+var is_read_only: bool = false
 
 func clear_pool():
 	for child in get_children():
@@ -26,9 +27,14 @@ func _add_die_to_pool(die_data: Die, invisible: bool) -> DieDisplay:
 	add_child(die_display)
 	die_display.player = player
 	die_display.dice_pool = self
-	die_display.die_clicked.connect(func(display): emit_signal("die_clicked", display))
-	die_display.die_value_changed.connect(func(display): emit_signal("die_value_changed", display))
-	die_display.drag_started.connect(func(display): emit_signal("drag_started", display))
+	
+	if not is_read_only:
+		die_display.die_clicked.connect(func(display): emit_signal("die_clicked", display))
+		die_display.die_value_changed.connect(func(display): emit_signal("die_value_changed", display))
+		die_display.drag_started.connect(func(display): emit_signal("drag_started", display))
+	else:
+		die_display.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		
 	die_display.set_die(die_data)
 	if invisible:
 		die_display.modulate.a = 0.0
