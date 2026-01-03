@@ -18,7 +18,6 @@
 [ext_resource type="Script" uid="uid://kby8d4xma06b" path="res://scripts/character/enemy/enemies.gd" id="14_jkv2x"]
 [ext_resource type="PackedScene" path="res://scenes/screens/debug_menu.tscn" id="15_debug"]
 [ext_resource type="PackedScene" path="res://scenes/screens/campfire_screen.tscn" id="16_campfire"]
-[ext_resource type="Script" path="res://scripts/steam_manager.gd" id="17_steam"]
 
 [node name="Main" type="Node2D" node_paths=PackedStringArray("player")]
 script = ExtResource("1_v4h7v")
@@ -257,8 +256,5 @@ stretch_mode = 5
 layout_mode = 2
 text = "0"
 vertical_alignment = 1
-
-[node name="SteamManager" type="Node" parent="."]
-script = ExtResource("17_steam")
 
 [connection signal="pressed" from="UI/EndTurnButton" to="." method="_on_end_turn_button_pressed"]

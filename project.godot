@@ -20,17 +20,9 @@ config/main_scene="res://scenes/main.tscn"
 Utils="*res://scripts/utils.gd"
 EffectLibrary="*res://scripts/effect_library.gd"
 StatusLibrary="*res://scripts/status_library.gd"
-GameState="*res://scripts/game_state.gd"
 
 [rendering]
 
 renderer/rendering_method="gl_compatibility"
 renderer/rendering_method.mobile="gl_compatibility"
 textures/vram_compression/import_etc2_astc=true
-
-[steam]
-
-initialization/app_id=0
-initialization/initialize_on_startup=false
-initialization/embed_callbacks=false
-multiplayer_peer/max_channels=4

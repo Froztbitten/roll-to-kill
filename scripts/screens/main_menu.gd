@@ -6,10 +6,6 @@ func _on_start_button_pressed():
 	get_tree().root.set_meta("force_shop_encounter", false)
 	get_tree().change_scene_to_file("res://scenes/game.tscn")
 
-func _on_multiplayer_button_pressed():
-	# Transition to the new lobby scene
-	get_tree().change_scene_to_file("res://scenes/screens/lobby_screen.tscn")
-
 func _on_debug_button_pressed():
 	# Enable debug mode and start game
 	MainGame.debug_mode = true
