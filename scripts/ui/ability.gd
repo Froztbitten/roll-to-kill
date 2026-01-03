@@ -57,7 +57,7 @@ func initialize(data: AbilityData, p_player: Player):
 		else:
 			push_error("Failed to instantiate DieSlotUI. Check that 'die_slot.tscn' has the 'DieSlotUI' script attached to its root node.")
 
-func _on_die_placed(die_display, die_data: Die):
+func _on_die_placed(_die_display, _die_data: Die):
 	# This function is called when a die is successfully placed in a slot.
 	# You can add logic here to check if all slots are filled and then activate the ability.
 	_check_if_all_slots_filled()
@@ -140,3 +140,14 @@ func reset_for_new_turn() -> Array[Die]:
 				slot.mouse_filter = MOUSE_FILTER_STOP
 				
 	return dice_to_discard
+
+func update_scale(factor: float):
+	# Scale slots
+	for slot in dice_slots_container.get_children():
+		if slot.has_method("update_scale"):
+			slot.update_scale(factor)
+	
+	# Scale icon
+	var base_icon_size = 40.0
+	if icon_texture:
+		icon_texture.custom_minimum_size = Vector2(base_icon_size, base_icon_size) * factor

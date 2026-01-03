@@ -2,7 +2,7 @@
 
 [ext_resource type="Script" uid="uid://djeev1jhalfah" path="res://scripts/character/enemy/enemy_action.gd" id="1_action"]
 [ext_resource type="Script" uid="uid://dv6r7tro15lnf" path="res://scripts/character/enemy/enemy_data.gd" id="3_data"]
-[ext_resource type="Texture2D" uid="uid://coeewhwbotx83" path="res://assets/ai/characters/wick_walk.jpg" id="4_sprite"]
+[ext_resource type="Texture2D" uid="uid://bx0u24u2lfmjv" path="res://assets/ai/characters/wick_walk.png" id="3_ru73q"]
 
 [sub_resource type="Resource" id="action_damned"]
 script = ExtResource("1_action")
@@ -14,7 +14,7 @@ self_destructs = true
 [resource]
 script = ExtResource("3_data")
 enemy_name = "Wick-walk"
-sprite_texture = ExtResource("4_sprite")
+sprite_texture = ExtResource("3_ru73q")
 minimum_hp = 0
 gold_dice_sides = 0
 hp_dice_sides = 4

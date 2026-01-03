@@ -1,6 +1,6 @@
-[gd_resource type="Resource" script_class="AbilityData" load_steps=3 format=3 uid="uid://higher_lower_ability"]
+[gd_resource type="Resource" script_class="AbilityData" load_steps=3 format=3 uid="uid://bhtid7qd63ed4"]
 
-[ext_resource type="Texture2D" uid="uid://higher_lower_icon" path="res://assets/ai/ability_icons/higher_lower_icon.svg" id="1_icon"]
+[ext_resource type="Texture2D" uid="uid://bkeybytdj2yc4" path="res://assets/ai/ability_icons/higher_lower_icon.svg" id="1_icon"]
 [ext_resource type="Script" uid="uid://uw8x16ewdua0" path="res://scripts/character/player/ability_data.gd" id="2_script"]
 
 [resource]
@@ -8,6 +8,3 @@ script = ExtResource("2_script")
 title = "Higher Lower"
 description = "Target an enemy. Guess if the next roll will be Higher or Lower. If correct, deal damage and repeat."
 icon = ExtResource("1_icon")
-dice_slots = 1
-discard_dice_on_reset = true
-cooldown_duration = 1

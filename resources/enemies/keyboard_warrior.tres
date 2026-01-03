@@ -1,7 +1,7 @@
 [gd_resource type="Resource" script_class="EnemyData" load_steps=6 format=3 uid="uid://fltcag5u4y6d"]
 
 [ext_resource type="Script" uid="uid://djeev1jhalfah" path="res://scripts/character/enemy/enemy_action.gd" id="1_action"]
-[ext_resource type="Texture2D" uid="uid://dkbi1u8ox88qj" path="res://assets/ai/characters/keyboard_warrior.jpg" id="3_cj5mh"]
+[ext_resource type="Texture2D" uid="uid://bvc73ewu1nlcy" path="res://assets/ai/characters/keyboard_warrior.png" id="3_cj5mh"]
 [ext_resource type="Script" uid="uid://dv6r7tro15lnf" path="res://scripts/character/enemy/enemy_data.gd" id="3_data"]
 
 [sub_resource type="Resource" id="action_vibe_killer"]

@@ -6,7 +6,7 @@
 [ext_resource type="PackedScene" uid="uid://b7c8eae0f1g2" path="res://scenes/ui/status_effect_display.tscn" id="4_status"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_76oj4"]
-size = Vector2(92, 76)
+size = Vector2(128, 128)
 
 [node name="Player" type="CharacterBody2D"]
 script = ExtResource("1_5x0h4")
@@ -17,28 +17,20 @@ script = ExtResource("1_5x0h4")
 position = Vector2(0, -20)
 texture = ExtResource("1_prhyt")
 
-[node name="NameLabel" type="Label" parent="Visuals"]
+[node name="InfoContainer" type="VBoxContainer" parent="Visuals"]
 offset_left = -50.0
-offset_top = -105.0
+offset_top = -150.0
 offset_right = 50.0
-offset_bottom = -82.0
-theme_override_font_sizes/font_size = 18
-text = "Player"
-horizontal_alignment = 1
-vertical_alignment = 1
+offset_bottom = -70.0
 
-[node name="HealthBar" parent="Visuals" instance=ExtResource("3_2x3j7")]
-offset_left = -50.0
-offset_top = -80.0
-offset_right = 50.0
-offset_bottom = -53.0
+[node name="HealthBar" parent="Visuals/InfoContainer" instance=ExtResource("3_2x3j7")]
+layout_mode = 2
+custom_minimum_size = Vector2(100, 27)
 
-[node name="StatusCanvas" type="CanvasLayer" parent="."]
-layer = 2
+[node name="StatusEffectDisplay" parent="Visuals/InfoContainer" instance=ExtResource("4_status")]
+layout_mode = 2
 
-[node name="StatusEffectDisplay" parent="StatusCanvas" instance=ExtResource("4_status")]
-anchors_preset = 0
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="."]
-position = Vector2(1, -11)
+position = Vector2(0, -20)
 shape = SubResource("RectangleShape2D_76oj4")

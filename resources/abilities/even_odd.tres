@@ -1,6 +1,6 @@
-[gd_resource type="Resource" script_class="AbilityData" load_steps=3 format=3 uid="uid://even_odd_ability"]
+[gd_resource type="Resource" script_class="AbilityData" load_steps=3 format=3 uid="uid://cogvx2b5c4uo1"]
 
-[ext_resource type="Texture2D" uid="uid://even_odd_icon" path="res://assets/ai/ability_icons/even_odd_icon.svg" id="1_icon"]
+[ext_resource type="Texture2D" uid="uid://c50d6njh5c84i" path="res://assets/ai/ability_icons/even_odd_icon.svg" id="1_icon"]
 [ext_resource type="Script" uid="uid://uw8x16ewdua0" path="res://scripts/character/player/ability_data.gd" id="2_script"]
 
 [resource]
@@ -8,6 +8,3 @@ script = ExtResource("2_script")
 title = "Even Odd"
 description = "Target an enemy. Guess if the next roll will be Even or Odd. If correct, deal damage and repeat."
 icon = ExtResource("1_icon")
-dice_slots = 1
-discard_dice_on_reset = true
-cooldown_duration = 1

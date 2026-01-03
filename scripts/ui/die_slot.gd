@@ -6,27 +6,31 @@ signal die_removed(die_display)
 
 var player: Player = null
 var current_die_display: Control = null
+var current_scale_factor: float = 1.0
+
+func _ready():
+	resized.connect(_on_resized)
+
+func _on_resized():
+	if current_die_display:
+		# Ensure the die display is centered
+		current_die_display.size = current_die_display.custom_minimum_size
+		current_die_display.position = (size - current_die_display.size) / 2.0
 
 # Checks if the dragged data can be dropped here.
-func _can_drop_data(at_position: Vector2, data: Variant) -> bool:
+func _can_drop_data(_at_position: Vector2, data: Variant) -> bool:
 	if player and player.has_status("Silence"):
 		print("Player is Silenced and cannot use abilities!")
 		return false
 
 	# We only accept drops if the slot is empty and the data is from a DieDisplay.
 	if current_die_display == null and data is Dictionary and data.has("die_data"):
-		var die_data: Die = data.die_data
-		
-		# --- VALIDATION LOGIC ---
-		# This is where you can define the rules for this slot based on the
-		# ability it belongs to. For now, we accept any die.
-		# Example: return die_data.result_value >= 4
 		return true
 			
 	return false
 
 # Handles the actual drop.
-func _drop_data(at_position: Vector2, data: Variant):
+func _drop_data(_at_position: Vector2, data: Variant):
 	var die_display_node: DieDisplay = data.source_display
 
 	# Tell the source pool to remove the die. This handles scene tree removal and signals.
@@ -35,8 +39,15 @@ func _drop_data(at_position: Vector2, data: Variant):
 
 	# Now, reparent the die to this slot.
 	add_child(die_display_node)
-	die_display_node.position = size / 2 - die_display_node.size / 2 # Center it
+	die_display_node.set_anchors_preset(Control.PRESET_TOP_LEFT)
+	die_display_node.scale = Vector2.ONE
 	die_display_node.main_display.visible = true # Ensure it's visible
+	if die_display_node.has_method("update_scale"):
+		die_display_node.update_scale(current_scale_factor * 0.8)
+	
+	# Center it after scaling
+	die_display_node.size = die_display_node.custom_minimum_size
+	die_display_node.position = (size - die_display_node.size) / 2.0
 	
 	current_die_display = die_display_node
 	current_die_display.set_mouse_filter(MOUSE_FILTER_IGNORE) # Prevent dragging from the slot
@@ -56,3 +67,13 @@ func _gui_input(event: InputEvent):
 			die_to_return.set_mouse_filter(Control.MOUSE_FILTER_STOP)
 			emit_signal("die_removed", die_to_return)
 			get_viewport().set_input_as_handled()
+
+func update_scale(factor: float):
+	current_scale_factor = factor
+	var base_size = 40.0
+	custom_minimum_size = Vector2(base_size, base_size) * factor
+	
+	if current_die_display and current_die_display.has_method("update_scale"):
+		current_die_display.update_scale(factor * 0.8)
+		current_die_display.size = current_die_display.custom_minimum_size
+		current_die_display.position = (size - current_die_display.size) / 2.0

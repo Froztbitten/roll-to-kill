@@ -15,6 +15,8 @@ var original_grid_text: String # Used for the Alt-hover average display
 var is_selected = false
 var average_roll = 0
 var upgrades_list: VBoxContainer
+var current_scale_factor: float = 1.0
+var current_base_size: Vector2 = Vector2(120, 120)
 
 func _ready():
 	# 1. Create a new stylebox
@@ -60,8 +62,7 @@ func set_die(die_data: Die, force_grid: bool = false, is_upgrade_reward: bool = 
 
 	if die.result_value > 0 and not force_grid:
 		# Standard display for rolled dice in hand
-		scale = Vector2.ONE
-		custom_minimum_size = Vector2(80, 80)
+		current_base_size = Vector2(80, 80)
 		face_grid.columns = 1
 		
 		var cell = DieGridCell.instantiate()
@@ -73,8 +74,7 @@ func set_die(die_data: Die, force_grid: bool = false, is_upgrade_reward: bool = 
 		original_grid_text = str(die.result_value)
 	else:
 		# Larger display for unrolled dice on the reward screen
-		scale = Vector2.ONE
-		custom_minimum_size = Vector2(120, 120)
+		current_base_size = Vector2(120, 120)
 		
 		# Set columns to achieve the desired number of rows
 		match die.sides:
@@ -121,13 +121,13 @@ func set_die(die_data: Die, force_grid: bool = false, is_upgrade_reward: bool = 
 				for cell_idx in range(face_grid.get_child_count()):
 					var cell = face_grid.get_child(cell_idx)
 					if cell.get_node("Label").text == str(face_value):
-						var style = cell.get_theme_stylebox("panel").duplicate() as StyleBoxFlat
-						style.border_color = Color(effect_color)
-						style.border_width_left = 3
-						style.border_width_top = 3
-						style.border_width_right = 3
-						style.border_width_bottom = 3
-						cell.add_theme_stylebox_override("panel", style)
+						var panel_style = cell.get_theme_stylebox("panel").duplicate() as StyleBoxFlat
+						panel_style.border_color = Color(effect_color)
+						panel_style.border_width_left = 3
+						panel_style.border_width_top = 3
+						panel_style.border_width_right = 3
+						panel_style.border_width_bottom = 3
+						cell.add_theme_stylebox_override("panel", panel_style)
 						break
 						
 				var panel = PanelContainer.new()
@@ -182,6 +182,7 @@ func set_die(die_data: Die, force_grid: bool = false, is_upgrade_reward: bool = 
 	
 	average_roll = (float(die.sides) + 1.0) / 2.0
 
+	_apply_scale()
 	visible = true
 
 func select():
@@ -201,7 +202,7 @@ func _on_mouse_exited():
 		var first_cell_label = face_grid.get_child(0).get_node("Label") as Label
 		first_cell_label.text = original_grid_text
 
-func _clean_bbcode(text: String) -> String:
+func _clean_bbcode(_text: String) -> String:
 	var regex = RegEx.new()
 	regex.compile("\\[.*?\\]")
 	return regex.sub(text, "", true)
@@ -234,6 +235,20 @@ func _add_effect_panel_to_list(parent_container: VBoxContainer, effect: DieFaceE
 	
 	parent_container.add_child(panel)
 
+func _apply_scale():
+	custom_minimum_size = current_base_size * current_scale_factor
+	
+	var cell_base_size = 20.0
+	var scaled_cell_size = cell_base_size * current_scale_factor
+	
+	for cell in face_grid.get_children():
+		cell.custom_minimum_size = Vector2(scaled_cell_size, scaled_cell_size)
+		var label = cell.get_node("Label")
+		if face_grid.columns == 1 and face_grid.get_child_count() == 1:
+			label.add_theme_font_size_override("font_size", int(48 * current_scale_factor))
+		else:
+			label.add_theme_font_size_override("font_size", int(14 * current_scale_factor))
+
 func update_scale(factor: float):
-	var base_size = 120.0
-	custom_minimum_size = Vector2(base_size, base_size) * factor
+	current_scale_factor = factor
+	_apply_scale()

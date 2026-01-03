@@ -12,12 +12,38 @@ func arrange_enemies():
 	if count == 0:
 		return
 
+	# Determine the target scale factor. New enemies default to 1.0.
+	# We look for any existing enemy that has been scaled to the viewport to find the correct factor.
+	var scale_factor = 1.0
+	for enemy in enemies:
+		if not is_equal_approx(enemy.current_scale_factor, 1.0):
+			scale_factor = enemy.current_scale_factor
+			break
+
 	# Calculate vertical spacing to center enemies within the spawn_area_height
 	var step_y = spawn_area_height / (count + 1)
 	var start_y = -spawn_area_height / 2.0
+
+	# Calculate crowding to prevent overlap
+	# Base sprite is 140px + ~50px for UI above it = ~190px visual height
+	var enemy_visual_height = 190.0 * scale_factor
+	var crowd_scale = 1.0
+	
+	if enemy_visual_height > step_y:
+		crowd_scale = step_y / enemy_visual_height
+		# Clamp to a minimum reasonable size
+		crowd_scale = max(crowd_scale, 0.4)
 	
 	for i in range(count):
 		var enemy = enemies[i]
+		
+		# Ensure the enemy is scaled to the screen size first (fixes newly spawned minions)
+		if not is_equal_approx(enemy.current_scale_factor, scale_factor):
+			enemy.update_scale(scale_factor)
+		
+		# Apply crowd scale to the enemy node itself
+		enemy.scale = Vector2.ONE * crowd_scale
+		
 		# Calculate the target Y position relative to this container's origin
 		var new_y = start_y + (step_y * (i + 1))
 		# Position the enemy. X is 0 because it's centered on this container.

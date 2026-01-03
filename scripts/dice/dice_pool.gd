@@ -10,6 +10,7 @@ const DIE_DISPLAY_SCENE = preload("res://scenes/dice/die_display.tscn")
 
 var dice_pool_display: Array[DieDisplay] = []
 var player: Player
+var current_scale_factor: float = 1.0
 
 func clear_pool():
 	for child in get_children():
@@ -31,6 +32,7 @@ func _add_die_to_pool(die_data: Die, invisible: bool) -> DieDisplay:
 	die_display.set_die(die_data)
 	if invisible:
 		die_display.modulate.a = 0.0
+	die_display.update_scale(current_scale_factor)
 	dice_pool_display.append(die_display)
 	return die_display
 
@@ -101,4 +103,12 @@ func add_die_display(die_display: DieDisplay):
 	add_child(die_display)
 	if not dice_pool_display.has(die_display):
 		dice_pool_display.append(die_display)
+	if die_display.has_method("update_scale"):
+		die_display.update_scale(current_scale_factor)
 	layout_changed.emit()
+
+func update_scale(factor: float):
+	current_scale_factor = factor
+	for die_display in dice_pool_display:
+		if is_instance_valid(die_display):
+			die_display.update_scale(factor)

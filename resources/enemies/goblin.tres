@@ -1,8 +1,8 @@
 [gd_resource type="Resource" script_class="EnemyData" load_steps=6 format=3 uid="uid://du7ewmwn0eh7n"]
 
 [ext_resource type="Script" uid="uid://djeev1jhalfah" path="res://scripts/character/enemy/enemy_action.gd" id="1_eoums"]
+[ext_resource type="Texture2D" uid="uid://bky1c5q8wvh51" path="res://assets/ai/characters/goblin.png" id="3_bxi3o"]
 [ext_resource type="Script" uid="uid://dv6r7tro15lnf" path="res://scripts/character/enemy/enemy_data.gd" id="3_qxlb2"]
-[ext_resource type="Texture2D" uid="uid://drtfuqayos327" path="res://assets/ai/characters/goblin.jpg" id="4_8263n"]
 
 [sub_resource type="Resource" id="Resource_u32se"]
 script = ExtResource("1_eoums")
@@ -21,7 +21,7 @@ metadata/_custom_type_script = "uid://djeev1jhalfah"
 [resource]
 script = ExtResource("3_qxlb2")
 enemy_name = "Goblin"
-sprite_texture = ExtResource("4_8263n")
+sprite_texture = ExtResource("3_bxi3o")
 minimum_hp = 6
 gold_dice = 1
 gold_dice_sides = 8

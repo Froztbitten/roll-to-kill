@@ -15,12 +15,14 @@ var _has_triggered_death_logic := false
 
 @onready var intent_display: Control = $Visuals/EnemyIntentDisplay
 @onready var sprite: TextureRect = $Visuals/Sprite2D
-@onready var status_display: HBoxContainer = $StatusCanvas/StatusEffectDisplay
+@onready var status_display: HBoxContainer = $Visuals/InfoContainer/StatusEffectDisplay
+@onready var info_container: VBoxContainer = $Visuals/InfoContainer
 
 func _ready():
 	super._ready()
 	# Hide the intent display by default to prevent showing stale data on spawn.
 	intent_display.visible = false
+	info_container.resized.connect(_on_info_container_resized)
 	statuses_changed.connect(_on_statuses_changed)
 	if not enemy_data:
 		# Disable the enemy if it has no data, to prevent crashes.
@@ -31,16 +33,22 @@ func _ready():
 
 	setup()
 
-func _process(delta):
-	# Manually position the status display relative to the enemy's global position,
-	# since it's on a separate CanvasLayer.
-	if is_instance_valid(status_display):
-		status_display.global_position = global_position + (Vector2(-19, -5) * current_scale_factor)
+func _process(_delta):
+	pass
 
 func setup():
 	"""Initializes the enemy's stats and appearance from its EnemyData resource."""
 	name_label.text = enemy_data.enemy_name
 	sprite.texture = enemy_data.sprite_texture
+	
+	# Enforce consistent sprite size and centering
+	sprite.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	sprite.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	sprite.size = Vector2(140, 140)
+	sprite.position = Vector2(31 - sprite.size.x / 2, -sprite.size.y / 2)
+	
+	# Force update position
+	_on_info_container_resized()
 	
 	var rolled_hp = 0
 	for i in range(enemy_data.hp_dice_count):
@@ -147,6 +155,12 @@ func clear_provided_shields():
 func update_scale(factor: float):
 	super.update_scale(factor)
 	_center_intent_display()
+
+func _on_info_container_resized():
+	# Sprite is 140x140, centered at (31, 0)
+	# Place info container to the right of the sprite
+	info_container.position.x = 31.0 + 70.0 + 10.0 # Center + Half Width + Padding
+	info_container.position.y = -info_container.size.y / 2.0
 
 func die() -> void:
 	# Override the Character's die() function to add special on-death effects.

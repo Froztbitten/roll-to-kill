@@ -142,6 +142,12 @@ func _add_player_ability(new_ability: AbilityData):
 	ability_ui_instance.die_returned_from_slot.connect(_on_die_returned_to_pool)
 	ability_ui_instance.ability_activated.connect(_on_ability_activated)
 	ability_ui_instance.initialize(new_ability, player)
+	
+	# Apply current scale to the new ability UI
+	var viewport_size = get_viewport().get_visible_rect().size
+	var scale_factor = viewport_size.y / 648.0
+	if ability_ui_instance.has_method("update_scale"):
+		ability_ui_instance.update_scale(scale_factor)
 
 func player_turn() -> void:
 	# Failsafe: Reset the action lock at the start of the player's turn.
@@ -1030,7 +1036,6 @@ func _on_even_odd_guess(guess_type: String):
 	for btn in even_odd_buttons_container.get_children():
 		if btn is Button: btn.disabled = true
 	
-	var old_val = even_odd_die.result_value
 	even_odd_die.roll()
 	var new_val = even_odd_die.result_value
 	
@@ -1688,6 +1693,27 @@ func _on_viewport_size_changed():
 	var viewport_size = get_viewport().get_visible_rect().size
 	var scale_factor = viewport_size.y / base_height
 
+	# Scale Top Bar elements
+	var gold_icon = $UI/GameInfo/TopBar/GoldContainer/GoldIcon
+	if gold_icon:
+		gold_icon.custom_minimum_size = Vector2(50, 50) * scale_factor
+
+	if dice_bag_button:
+		# Base width 150
+		dice_bag_button.custom_minimum_size.x = 150 * scale_factor
+
+	# Scale Round Info (Dice Bag and Discard Pile)
+	if dice_bag_icon:
+		dice_bag_icon.custom_minimum_size = Vector2(50, 50) * scale_factor
+	if dice_bag_label:
+		dice_bag_label.add_theme_font_size_override("font_size", int(16 * scale_factor))
+	
+	var dice_discard_icon = $UI/RoundInfo/DiceDiscard/DiceDiscardIcon
+	if dice_discard_icon:
+		dice_discard_icon.custom_minimum_size = Vector2(50, 50) * scale_factor
+	if dice_discard_label:
+		dice_discard_label.add_theme_font_size_override("font_size", int(16 * scale_factor))
+
 	if is_instance_valid(player):
 		player.position.x = viewport_size.x * 0.25
 		player.position.y = viewport_size.y * 0.5
@@ -1695,14 +1721,26 @@ func _on_viewport_size_changed():
 		player.update_resting_state()
 
 	if is_instance_valid(enemy_container):
+		var top_bar_height = 55.0 * scale_factor
+		var available_height = viewport_size.y - top_bar_height
+		
 		enemy_container.position.x = viewport_size.x * 0.75
-		enemy_container.position.y = viewport_size.y * 0.5
-		enemy_container.spawn_area_height = 500.0 * scale_factor
+		enemy_container.position.y = top_bar_height + (available_height / 2.0)
+		enemy_container.spawn_area_height = available_height
+		
 		for enemy in enemy_container.get_children():
 			if enemy is Enemy:
 				enemy.update_scale(scale_factor)
 		# Re-arrange enemies to update their resting positions relative to the new container position.
 		enemy_container.arrange_enemies()
+
+	if is_instance_valid(dice_pool_ui):
+		dice_pool_ui.update_scale(scale_factor)
+
+	if is_instance_valid(abilities_ui):
+		for ability in abilities_ui.get_children():
+			if ability.has_method("update_scale"):
+				ability.update_scale(scale_factor)
 
 func _on_debug_change_encounter_pressed():
 	_toggle_pause_menu()

@@ -1,7 +1,7 @@
 [gd_resource type="Resource" script_class="EnemyData" load_steps=7 format=3 uid="uid://b2cv5v5icd0fu"]
 
 [ext_resource type="Script" uid="uid://djeev1jhalfah" path="res://scripts/character/enemy/enemy_action.gd" id="1_action"]
-[ext_resource type="Texture2D" uid="uid://5fgnfdqiwubs" path="res://assets/ai/characters/white_knight.jpg" id="3_6io7g"]
+[ext_resource type="Texture2D" uid="uid://dj4i2eipee563" path="res://assets/ai/characters/white_knight.png" id="3_6io7g"]
 [ext_resource type="Script" uid="uid://dv6r7tro15lnf" path="res://scripts/character/enemy/enemy_data.gd" id="3_data"]
 
 [sub_resource type="Resource" id="action_defend_milady"]

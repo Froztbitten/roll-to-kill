@@ -28,13 +28,21 @@ var _recoil_tween: Tween
 var _damage_sound: AudioStream
 var audio_player: AudioStreamPlayer
 var _death_sound: AudioStream
+var _initial_collision_pos: Vector2
+var _initial_collision_scale: Vector2 = Vector2.ONE
 
-@onready var health_bar = $Visuals/HealthBar
-@onready var name_label: Label = $Visuals/NameLabel
+@onready var health_bar = $Visuals/InfoContainer/HealthBar
+@onready var name_label: Label = $Visuals/InfoContainer.get_node_or_null("NameLabel")
 
 func _ready():
 	_resting_position = position
 	_resting_rotation = rotation
+	
+	var collision_shape = get_node_or_null("CollisionShape2D")
+	if collision_shape:
+		_initial_collision_pos = collision_shape.position
+		_initial_collision_scale = collision_shape.scale
+	
 	update_health_display()
 	
 	# Load the sound and create an audio player for damage effects.
@@ -368,3 +376,8 @@ func update_scale(factor: float):
 	var visuals = get_node_or_null("Visuals")
 	if visuals:
 		visuals.scale = Vector2.ONE * factor
+	
+	var collision_shape = get_node_or_null("CollisionShape2D")
+	if collision_shape:
+		collision_shape.scale = _initial_collision_scale * factor
+		collision_shape.position = _initial_collision_pos * factor

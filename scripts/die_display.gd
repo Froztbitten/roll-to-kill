@@ -22,6 +22,7 @@ var die: Die:
 
 var dice_pool = null
 var player: Player = null
+var current_scale_factor: float = 1.0
 
 func _ready():
 	# To prevent all dice from sharing the same glow state, we need to make
@@ -34,6 +35,11 @@ func _ready():
 	effect_tooltip.set_as_top_level(true)
 	effect_tooltip.visible = false
 	hover_timer.timeout.connect(_on_hover_timer_timeout)
+	resized.connect(_on_resized)
+	face_grid.z_index = 100
+	face_grid.set_as_top_level(true)
+	face_grid.add_theme_stylebox_override("panel", StyleBoxEmpty.new())
+	set_process(false)
 
 func set_die(value: Die):
 	die = value
@@ -80,10 +86,14 @@ func update_display():
 		20: grid_container.columns = 5
 		_: grid_container.columns = 4
 
+	var cell_base_size = 20.0
+
 	for face in die.faces:
 		var cell = DieGridCell.instantiate()
+		cell.custom_minimum_size = Vector2(cell_base_size, cell_base_size)
 		var label = cell.get_node("Label")
 		label.text = str(face.value)
+		label.add_theme_font_size_override("font_size", 14)
 		
 		# Add a black outline to the grid cell labels for readability
 		label.add_theme_color_override("font_outline_color", Color.BLACK)
@@ -117,6 +127,9 @@ func update_display():
 			style.border_width_bottom = 3
 
 		grid_container.add_child(cell)
+	
+	if face_grid.visible:
+		_update_face_grid_position()
 
 func select(animated: bool = true):
 	# Visually indicate that the die is selected (e.g., make it brighter)
@@ -156,6 +169,7 @@ func _on_hover_timer_timeout():
 			effect_tooltip.visible = true
 
 func _on_mouse_entered():
+	_update_face_grid_position()
 	face_grid.visible = true
 	if not effect_name_label.text.is_empty():
 		effect_name_label.visible = true
@@ -186,15 +200,18 @@ func _gui_input(event: InputEvent):
 
 func _notification(what):
 	if what == NOTIFICATION_MOUSE_ENTER:
+		_update_face_grid_position()
 		face_grid.visible = true
 		if not effect_name_label.text.is_empty():
 			effect_name_label.visible = true
 		hover_timer.start()
+		set_process(true)
 	elif what == NOTIFICATION_MOUSE_EXIT:
 		face_grid.visible = false
 		effect_name_label.visible = false
 		hover_timer.stop()
 		effect_tooltip.visible = false
+		set_process(false)
 	elif what == NOTIFICATION_DRAG_END:
 		# If the drag ended and this die display was not successfully dropped
 		# (i.e., it was not reparented), make it visible again.
@@ -202,7 +219,7 @@ func _notification(what):
 			main_display.visible = true
 
 # Called when a drag is initiated on this control.
-func _get_drag_data(at_position: Vector2):
+func _get_drag_data(_at_position: Vector2):
 	# A die can only be dragged from the dice pool, not from an ability slot.
 	if not get_parent() is DicePool:
 		return null
@@ -230,3 +247,62 @@ func _clean_bbcode(text: String) -> String:
 	var regex = RegEx.new()
 	regex.compile("\\[.*?\\]")
 	return regex.sub(text, "", true)
+
+func _update_face_grid_position():
+	face_grid.scale = Vector2.ONE
+	face_grid.pivot_offset = Vector2.ZERO
+	
+	# Separation should be fixed at -1 because borders are fixed at 1px (StyleBoxFlat borders don't scale)
+	grid_container.add_theme_constant_override("h_separation", -1)
+	grid_container.add_theme_constant_override("v_separation", -1)
+	
+	var cell_base_size = 20.0
+	var scaled_cell_size = cell_base_size * current_scale_factor
+	
+	for cell in grid_container.get_children():
+		cell.custom_minimum_size = Vector2(scaled_cell_size, scaled_cell_size)
+		var label = cell.get_node("Label")
+		if label:
+			label.add_theme_font_size_override("font_size", int(14 * current_scale_factor))
+
+	# Reset container min sizes to allow shrinking
+	grid_container.custom_minimum_size = Vector2.ZERO
+	grid_container.size = Vector2.ZERO
+	face_grid.custom_minimum_size = Vector2.ZERO
+	
+	# Ensure the grid has the correct size based on its content
+	face_grid.size = Vector2.ZERO
+	var target_size = face_grid.get_minimum_size()
+	face_grid.size = target_size
+	
+	# Calculate position relative to the die
+	# Use the icon texture's global rect to ensure we are positioning relative to the visual die,
+	# not the container which might be larger (e.g. due to layout stretching).
+	var visual_rect = icon_texture.get_global_rect()
+	var die_top_center = Vector2(visual_rect.position.x + visual_rect.size.x / 2.0, visual_rect.position.y)
+	
+	var gap = 10.0 * current_scale_factor
+	
+	# For dice in the pool, we want the grid to sit tight against the die visual.
+	if dice_pool != null:
+		gap = 0.0
+	
+	var grid_pos_x = die_top_center.x - (target_size.x / 2.0)
+	var grid_pos_y = die_top_center.y - gap - target_size.y
+	
+	face_grid.global_position = Vector2(grid_pos_x, grid_pos_y)
+
+func update_scale(factor: float):
+	current_scale_factor = factor
+	var base_size = 50.0
+	custom_minimum_size = Vector2(base_size, base_size) * factor
+	if face_grid.visible:
+		_update_face_grid_position()
+
+func _on_resized():
+	if face_grid.visible:
+		_update_face_grid_position()
+
+func _process(_delta):
+	if face_grid.visible:
+		_update_face_grid_position()

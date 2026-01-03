@@ -17,7 +17,8 @@ var _held_dice: Array[Die] = []
 var gold: int = 50
 var die_removal_cost: int = 75
 var _shield_sound: AudioStream
-@onready var status_display: HBoxContainer = $StatusCanvas/StatusEffectDisplay
+@onready var status_display: HBoxContainer = $Visuals/InfoContainer/StatusEffectDisplay
+@onready var info_container: VBoxContainer = $Visuals/InfoContainer
 
 var dice_pool_size = 4
 
@@ -26,6 +27,8 @@ func _ready():
 	super._ready()
 	_shield_sound = load("res://assets/ai/sounds/shield.wav")
 	statuses_changed.connect(_on_statuses_changed)
+	info_container.resized.connect(_on_info_container_resized)
+	_on_info_container_resized()
 	
 	# Define the initial deck
 	var starting_deck_sides = [4, 4, 6, 6, 6, 8, 8, 10, 12]
@@ -45,11 +48,8 @@ func _ready():
 	print("added default dice bag of size: ", _game_dice_bag.size())
 	total_dice_count_changed.emit(_game_dice_bag.size())
 
-func _process(delta):
-	# Manually position the status display relative to the player's global position,
-	# since it's on a separate CanvasLayer.
-	if is_instance_valid(status_display):
-		status_display.global_position = global_position + (Vector2(-50, -50) * current_scale_factor)
+func _process(_delta):
+	pass
 
 func _draw_from_bag(count: int) -> Array[Die]:
 	var drawn_dice: Array[Die] = []
@@ -212,6 +212,12 @@ func heal(amount: int):
 func _on_statuses_changed(current_statuses: Dictionary):
 	if status_display:
 		status_display.update_display(current_statuses)
+
+func _on_info_container_resized():
+	# Player sprite is centered at (0, -20), height 128 (half 64). Bottom is at 44.
+	# Place info container below the sprite
+	info_container.position.x = -(info_container.size.x / 2.0)
+	info_container.position.y = 44.0 + 10.0 # Bottom + Padding
 
 func die() -> void:
 	if _is_dead: return

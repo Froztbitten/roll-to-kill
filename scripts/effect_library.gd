@@ -69,9 +69,9 @@ func get_random_effect_for_die(sides: int, tier_limit: int = 1) -> DieFaceEffect
 			return duplicated_effect
 	return null
 
-func get_effect_by_name(name: String) -> DieFaceEffect:
+func get_effect_by_name(effect_name: String) -> DieFaceEffect:
 	for sides in effects_by_die_size.keys():
 		for effect in effects_by_die_size[sides]:
-			if effect.name == name:
+			if effect.name == effect_name:
 				return effect
 	return null

@@ -1,8 +1,8 @@
 [gd_resource type="Resource" script_class="EnemyData" load_steps=5 format=3 uid="uid://cxo6jw31uuhvm"]
 
 [ext_resource type="Script" uid="uid://djeev1jhalfah" path="res://scripts/character/enemy/enemy_action.gd" id="1_action"]
+[ext_resource type="Texture2D" uid="uid://buxmcsv23mbyr" path="res://assets/ai/characters/shield_generator.png" id="3_d5ojt"]
 [ext_resource type="Script" uid="uid://dv6r7tro15lnf" path="res://scripts/character/enemy/enemy_data.gd" id="3_data"]
-[ext_resource type="Texture2D" uid="uid://gjopro0rowd8" path="res://assets/ai/characters/shield_generator.jpg" id="4_sprite"]
 
 [sub_resource type="Resource" id="action_shield"]
 script = ExtResource("1_action")
@@ -13,7 +13,7 @@ dice_count = 4
 [resource]
 script = ExtResource("3_data")
 enemy_name = "Shield Generator"
-sprite_texture = ExtResource("4_sprite")
+sprite_texture = ExtResource("3_d5ojt")
 minimum_hp = 10
 gold_dice_sides = 0
 hp_dice_count = 3
