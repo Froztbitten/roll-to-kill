@@ -13,10 +13,39 @@ signal leave_campfire
 var player: Player
 var selected_die: Die
 
+# --- Custom Tooltip Variables ---
+var _tooltip_panel: PanelContainer
+var _tooltip_label: Label
+var _tooltip_timer: Timer
+var _tooltip_tween: Tween
+var _hovered_control: Control
+
 func _ready():
 	visible = false
 	selection_overlay.visible = false
 	effect_selection_overlay.visible = false
+
+	# --- Custom Tooltip Setup ---
+	_tooltip_panel = PanelContainer.new()
+	var style = StyleBoxFlat.new()
+	style.bg_color = Color(0, 0, 0, 0.8)
+	style.content_margin_left = 8
+	style.content_margin_top = 4
+	style.content_margin_right = 8
+	style.content_margin_bottom = 4
+	_tooltip_panel.add_theme_stylebox_override("panel", style)
+	_tooltip_label = Label.new()
+	_tooltip_panel.add_child(_tooltip_label)
+	_tooltip_panel.visible = false
+	_tooltip_panel.set_as_top_level(true)
+	_tooltip_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(_tooltip_panel)
+
+	_tooltip_timer = Timer.new()
+	_tooltip_timer.wait_time = 0.1
+	_tooltip_timer.one_shot = true
+	_tooltip_timer.timeout.connect(_show_tooltip)
+	add_child(_tooltip_timer)
 
 func open():
 	player = get_node_or_null("../../Player")
@@ -80,7 +109,7 @@ func _show_effect_options(die: Die):
 	for effect in effects_to_offer:
 		var btn = Button.new()
 		btn.text = effect.name
-		btn.tooltip_text = _clean_bbcode(effect.description)
+		btn.mouse_entered.connect(_on_control_hover_entered.bind(btn, _clean_bbcode(effect.description)))
 		btn.custom_minimum_size = Vector2(0, 60)
 		btn.pressed.connect(_on_effect_chosen.bind(effect))
 		
@@ -128,3 +157,49 @@ func _clean_bbcode(text: String) -> String:
 	var regex = RegEx.new()
 	regex.compile("\\[.*?\\]")
 	return regex.sub(text, "", true)
+
+# --- Custom Tooltip Handlers ---
+
+func _on_control_hover_entered(control: Control, text: String):
+	_tooltip_timer.stop()
+	_hide_tooltip(false)
+	_hovered_control = control
+	_tooltip_label.text = text
+	_tooltip_timer.start()
+	if not control.is_connected("mouse_exited", _on_control_hover_exited):
+		control.mouse_exited.connect(_on_control_hover_exited)
+
+func _on_control_hover_exited():
+	_tooltip_timer.stop()
+	_hovered_control = null
+	_hide_tooltip()
+
+func _show_tooltip():
+	if not is_instance_valid(_hovered_control): return
+	if _tooltip_tween and _tooltip_tween.is_running(): _tooltip_tween.kill()
+	_tooltip_tween = create_tween().set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_SINE)
+	
+	var viewport_rect = get_viewport().get_visible_rect()
+	var tooltip_size = _tooltip_panel.get_minimum_size()
+	var mouse_pos = get_global_mouse_position()
+	
+	var tooltip_pos = mouse_pos + Vector2(15, 15)
+	
+	if tooltip_pos.x + tooltip_size.x > viewport_rect.end.x:
+		tooltip_pos.x = mouse_pos.x - tooltip_size.x - 15
+	if tooltip_pos.y + tooltip_size.y > viewport_rect.end.y:
+		tooltip_pos.y = mouse_pos.y - tooltip_size.y - 15
+		
+	_tooltip_panel.global_position = tooltip_pos
+	_tooltip_panel.modulate.a = 0.0
+	_tooltip_panel.visible = true
+	_tooltip_tween.tween_property(_tooltip_panel, "modulate:a", 1.0, 0.2)
+
+func _hide_tooltip(animated: bool = true):
+	if _tooltip_tween and _tooltip_tween.is_running(): _tooltip_tween.kill()
+	if animated and _tooltip_panel.visible:
+		_tooltip_tween = create_tween().set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_SINE)
+		_tooltip_tween.tween_property(_tooltip_panel, "modulate:a", 0.0, 0.1)
+		_tooltip_tween.tween_callback(func(): if is_instance_valid(_tooltip_panel): _tooltip_panel.visible = false)
+	else:
+		_tooltip_panel.visible = false

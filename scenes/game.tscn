@@ -1,4 +1,4 @@
-[gd_scene load_steps=19 format=3 uid="uid://bnpd5h2y0tnye"]
+[gd_scene load_steps=20 format=3 uid="uid://bnpd5h2y0tnye"]
 
 [ext_resource type="PackedScene" uid="uid://bvyv5m1pde7i7" path="res://scenes/characters/player.tscn" id="1_t2esq"]
 [ext_resource type="Script" uid="uid://bik3wojuaq330" path="res://scripts/main.gd" id="1_v4h7v"]
@@ -12,12 +12,15 @@
 [ext_resource type="PackedScene" path="res://scenes/screens/map_screen.tscn" id="9_map_screen"]
 [ext_resource type="Script" uid="uid://dh54ve13ordnt" path="res://scripts/enemy_spawner.gd" id="10_choun"]
 [ext_resource type="Texture2D" uid="uid://bjqx06qgqmopi" path="res://assets/ai/ui/dice_bag.svg" id="10_jbj1t"]
+[ext_resource type="Texture2D" uid="uid://dps01d7gqj3h" path="res://assets/ai/ui/dice_pile.png" id="11_dice_pile"]
 [ext_resource type="PackedScene" path="res://scenes/screens/shop_screen.tscn" id="10_shop_screen"]
 [ext_resource type="Texture2D" uid="uid://bd2c437hy5mh7" path="res://assets/ai/ui/discard_pile.svg" id="11_a8y0u"]
 [ext_resource type="PackedScene" uid="uid://cgljl8xduck7a" path="res://scenes/ui/enemies.tscn" id="12_a8y0u"]
 [ext_resource type="Script" uid="uid://kby8d4xma06b" path="res://scripts/character/enemy/enemies.gd" id="14_jkv2x"]
 [ext_resource type="PackedScene" path="res://scenes/screens/debug_menu.tscn" id="15_debug"]
 [ext_resource type="PackedScene" path="res://scenes/screens/campfire_screen.tscn" id="16_campfire"]
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_map"]
 
 [node name="Main" type="Node2D" node_paths=PackedStringArray("player")]
 script = ExtResource("1_v4h7v")
@@ -50,7 +53,6 @@ theme_override_constants/separation = 20
 [node name="GoldContainer" type="HBoxContainer" parent="UI/GameInfo/TopBar"]
 custom_minimum_size = Vector2(75, 0)
 layout_mode = 2
-size_flags_horizontal = 2
 size_flags_vertical = 4
 alignment = 1
 
@@ -67,11 +69,50 @@ stretch_mode = 4
 layout_mode = 2
 text = "0"
 
-[node name="DiceBagButton" type="Button" parent="UI/GameInfo/TopBar"]
-custom_minimum_size = Vector2(150, 0)
+[node name="Spacer" type="Control" parent="UI/GameInfo/TopBar"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="MapButton" type="Button" parent="UI/GameInfo/TopBar"]
+custom_minimum_size = Vector2(50, 50)
 layout_mode = 2
 size_flags_vertical = 4
-text = "Dice Bag: 0"
+flat = true
+icon_alignment = 1
+expand_icon = true
+theme_override_styles/normal = SubResource("StyleBoxEmpty_map")
+theme_override_styles/hover = SubResource("StyleBoxEmpty_map")
+theme_override_styles/pressed = SubResource("StyleBoxEmpty_map")
+theme_override_styles/disabled = SubResource("StyleBoxEmpty_map")
+theme_override_styles/focus = SubResource("StyleBoxEmpty_map")
+
+[node name="DiceBagButton" type="Button" parent="UI/GameInfo/TopBar"]
+custom_minimum_size = Vector2(50, 50)
+layout_mode = 2
+size_flags_vertical = 4
+icon = ExtResource("11_dice_pile")
+flat = true
+icon_alignment = 1
+expand_icon = true
+
+[node name="DiceCountLabel" type="Label" parent="UI/GameInfo/TopBar/DiceBagButton"]
+layout_mode = 1
+anchors_preset = 3
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -20.0
+offset_top = -20.0
+grow_horizontal = 0
+grow_vertical = 0
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 4
+text = "0"
+
+[node name="Padding" type="Control" parent="UI/GameInfo/TopBar"]
+custom_minimum_size = Vector2(20, 0)
+layout_mode = 2
 
 [node name="Abilities" parent="UI" instance=ExtResource("4_a8y0u")]
 anchors_preset = 9
@@ -229,32 +270,48 @@ offset_right = 188.0
 offset_bottom = -29.0
 grow_vertical = 0
 
-[node name="DiceBag" type="HBoxContainer" parent="UI/RoundInfo"]
+[node name="DiceBag" type="MarginContainer" parent="UI/RoundInfo"]
 layout_mode = 2
 
-[node name="DiceBagIcon" type="TextureRect" parent="UI/RoundInfo/DiceBag"]
+[node name="Content" type="HBoxContainer" parent="UI/RoundInfo/DiceBag"]
+layout_mode = 2
+
+[node name="DiceBagIcon" type="TextureRect" parent="UI/RoundInfo/DiceBag/Content"]
 layout_mode = 2
 texture = ExtResource("10_jbj1t")
 expand_mode = 3
 stretch_mode = 5
 
-[node name="DiceBagLabel" type="Label" parent="UI/RoundInfo/DiceBag"]
+[node name="DiceBagLabel" type="Label" parent="UI/RoundInfo/DiceBag/Content"]
 layout_mode = 2
 text = "10"
 vertical_alignment = 1
 
-[node name="DiceDiscard" type="HBoxContainer" parent="UI/RoundInfo"]
+[node name="Button" type="Button" parent="UI/RoundInfo/DiceBag"]
+layout_mode = 1
+flat = true
+
+[node name="DiceDiscard" type="MarginContainer" parent="UI/RoundInfo"]
 layout_mode = 2
 
-[node name="DiceDiscardIcon" type="TextureRect" parent="UI/RoundInfo/DiceDiscard"]
+[node name="Content" type="HBoxContainer" parent="UI/RoundInfo/DiceDiscard"]
+layout_mode = 2
+
+[node name="DiceDiscardIcon" type="TextureRect" parent="UI/RoundInfo/DiceDiscard/Content"]
 layout_mode = 2
 texture = ExtResource("11_a8y0u")
 expand_mode = 3
 stretch_mode = 5
 
-[node name="DiceDiscardLabel" type="Label" parent="UI/RoundInfo/DiceDiscard"]
+[node name="DiceDiscardLabel" type="Label" parent="UI/RoundInfo/DiceDiscard/Content"]
 layout_mode = 2
 text = "0"
 vertical_alignment = 1
 
+[node name="Button" type="Button" parent="UI/RoundInfo/DiceDiscard"]
+layout_mode = 1
+flat = true
+
 [connection signal="pressed" from="UI/EndTurnButton" to="." method="_on_end_turn_button_pressed"]
+[connection signal="pressed" from="UI/RoundInfo/DiceBag/Button" to="." method="_on_round_dice_bag_pressed"]
+[connection signal="pressed" from="UI/RoundInfo/DiceDiscard/Button" to="." method="_on_dice_discard_pressed"]

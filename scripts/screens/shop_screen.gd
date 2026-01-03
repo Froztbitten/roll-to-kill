@@ -13,13 +13,20 @@ extends Control
 var player: Player
 var current_mode = "" # "remove" or "upgrade"
 
+# --- Custom Tooltip Variables ---
+var _tooltip_panel: PanelContainer
+var _tooltip_label: Label
+var _tooltip_timer: Timer
+var _tooltip_tween: Tween
+var _hovered_control: Control
+
 func _ready():
 	visible = false
 	selection_overlay.visible = false
 	
 	# Set tooltips for static shop buttons
-	remove_die_button.tooltip_text = "Select a die to permanently remove from your bag."
-	upgrade_die_button.tooltip_text = "Select a die to increase the value of all its faces by 1.\nCost increases with each upgrade."
+	remove_die_button.mouse_entered.connect(_on_control_hover_entered.bind(remove_die_button, "Select a die to permanently remove from your bag."))
+	upgrade_die_button.mouse_entered.connect(_on_control_hover_entered.bind(upgrade_die_button, "Select a die to increase the value of all its faces by 1.\nCost increases with each upgrade."))
 	
 	# Style static buttons
 	_style_shop_button(remove_die_button)
@@ -32,6 +39,28 @@ func _ready():
 		map_screen.node_selected.connect(_on_map_node_selected)
 	
 	get_viewport().size_changed.connect(_on_viewport_size_changed)
+	
+	# --- Custom Tooltip Setup ---
+	_tooltip_panel = PanelContainer.new()
+	var style = StyleBoxFlat.new()
+	style.bg_color = Color(0, 0, 0, 0.8)
+	style.content_margin_left = 8
+	style.content_margin_top = 4
+	style.content_margin_right = 8
+	style.content_margin_bottom = 4
+	_tooltip_panel.add_theme_stylebox_override("panel", style)
+	_tooltip_label = Label.new()
+	_tooltip_panel.add_child(_tooltip_label)
+	_tooltip_panel.visible = false
+	_tooltip_panel.set_as_top_level(true)
+	_tooltip_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(_tooltip_panel)
+
+	_tooltip_timer = Timer.new()
+	_tooltip_timer.wait_time = 0.1
+	_tooltip_timer.one_shot = true
+	_tooltip_timer.timeout.connect(_show_tooltip)
+	add_child(_tooltip_timer)
 
 func _on_map_node_selected(node_data):
 	if node_data.type == "shop":
@@ -78,8 +107,8 @@ func _generate_shop_inventory():
 				var ability = load("res://resources/abilities/" + file_name) as AbilityData
 				if ability:
 					var btn = Button.new()
-					btn.text = "%s (150g)" % ability.title
-					btn.tooltip_text = _clean_bbcode(ability.description)
+					btn.text = "%s (150g)" % ability.title					
+					btn.mouse_entered.connect(_on_control_hover_entered.bind(btn, _clean_bbcode(ability.description)))
 					btn.custom_minimum_size = Vector2(100, 50)
 					btn.pressed.connect(_on_buy_ability_pressed.bind(ability, 150, btn))
 					_style_shop_button(btn)
@@ -273,8 +302,8 @@ func _add_effect_label(parent: Control, effect: DieFaceEffect, face_value: int):
 	
 	var tooltip_desc = effect.description
 	tooltip_desc = tooltip_desc.replace("{value}", str(face_value))
-	tooltip_desc = tooltip_desc.replace("{value / 2}", str(ceili(face_value / 2.0)))
-	panel.tooltip_text = _clean_bbcode(tooltip_desc)
+	tooltip_desc = tooltip_desc.replace("{value / 2}", str(ceili(face_value / 2.0)))	
+	panel.mouse_entered.connect(_on_control_hover_entered.bind(panel, _clean_bbcode(tooltip_desc)))
 	panel.mouse_default_cursor_shape = Control.CURSOR_HELP
 	
 	parent.add_child(panel)
@@ -315,3 +344,49 @@ func _on_viewport_size_changed():
 	for child in selection_grid.get_children():
 		if child.has_method("update_scale"):
 			child.update_scale(scale_factor)
+
+# --- Custom Tooltip Handlers ---
+
+func _on_control_hover_entered(control: Control, text: String):
+	_tooltip_timer.stop()
+	_hide_tooltip(false)
+	_hovered_control = control
+	_tooltip_label.text = text
+	_tooltip_timer.start()
+	if not control.is_connected("mouse_exited", _on_control_hover_exited):
+		control.mouse_exited.connect(_on_control_hover_exited)
+
+func _on_control_hover_exited():
+	_tooltip_timer.stop()
+	_hovered_control = null
+	_hide_tooltip()
+
+func _show_tooltip():
+	if not is_instance_valid(_hovered_control): return
+	if _tooltip_tween and _tooltip_tween.is_running(): _tooltip_tween.kill()
+	_tooltip_tween = create_tween().set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_SINE)
+	
+	var viewport_rect = get_viewport().get_visible_rect()
+	var tooltip_size = _tooltip_panel.get_minimum_size()
+	var mouse_pos = get_global_mouse_position()
+	
+	var tooltip_pos = mouse_pos + Vector2(15, 15)
+	
+	if tooltip_pos.x + tooltip_size.x > viewport_rect.end.x:
+		tooltip_pos.x = mouse_pos.x - tooltip_size.x - 15
+	if tooltip_pos.y + tooltip_size.y > viewport_rect.end.y:
+		tooltip_pos.y = mouse_pos.y - tooltip_size.y - 15
+		
+	_tooltip_panel.global_position = tooltip_pos
+	_tooltip_panel.modulate.a = 0.0
+	_tooltip_panel.visible = true
+	_tooltip_tween.tween_property(_tooltip_panel, "modulate:a", 1.0, 0.2)
+
+func _hide_tooltip(animated: bool = true):
+	if _tooltip_tween and _tooltip_tween.is_running(): _tooltip_tween.kill()
+	if animated and _tooltip_panel.visible:
+		_tooltip_tween = create_tween().set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_SINE)
+		_tooltip_tween.tween_property(_tooltip_panel, "modulate:a", 0.0, 0.1)
+		_tooltip_tween.tween_callback(func(): if is_instance_valid(_tooltip_panel): _tooltip_panel.visible = false)
+	else:
+		_tooltip_panel.visible = false

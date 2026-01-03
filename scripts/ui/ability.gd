@@ -89,7 +89,7 @@ func initialize(data: AbilityData, p_player: Player):
 		else:
 			push_error("Failed to instantiate DieSlotUI. Check that 'die_slot.tscn' has the 'DieSlotUI' script attached to its root node.")
 
-func _on_die_placed(die_display, die_data: Die):
+func _on_die_placed(_die_display, _die_data: Die):
 	# This function is called when a die is successfully placed in a slot.
 	# You can add logic here to check if all slots are filled and then activate the ability.
 	_check_if_all_slots_filled()

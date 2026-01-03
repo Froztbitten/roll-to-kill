@@ -1,0 +1,8 @@
+[gd_scene format=3]
+
+[node name="RhythmBeat" type="ColorRect"]
+custom_minimum_size = Vector2(20, 40)
+offset_right = 20.0
+offset_bottom = 40.0
+pivot_offset = Vector2(10, 20)
+color = Color(0.8, 0.3, 1, 1)

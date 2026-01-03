@@ -19,6 +19,7 @@ var die: Die:
 @onready var effect_tooltip: PanelContainer = $EffectTooltip
 @onready var tooltip_label: RichTextLabel = $EffectTooltip/DescriptionLabel
 @onready var hover_timer: Timer = $HoverTimer
+var tooltip_tween: Tween
 
 var dice_pool = null
 var player: Player = null
@@ -163,23 +164,27 @@ func _on_hover_timer_timeout():
 			description_text = description_text.replace("{value / 2}", str(ceili(die.result_value / 2.0)))
 			
 			tooltip_label.text = description_text
-			
+
+			# Wait a frame for the label to resize with the new text.
+			await get_tree().process_frame
+
 			# Position the tooltip to the right of the die display.
-			effect_tooltip.global_position = global_position + Vector2(size.x + 5, 0)
+			var tooltip_pos = global_position + Vector2(size.x + 5, 0)
+			var viewport_rect = get_viewport().get_visible_rect()
+			if tooltip_pos.x + effect_tooltip.size.x > viewport_rect.end.x:
+				tooltip_pos.x = global_position.x - effect_tooltip.size.x - 5
+			
+			effect_tooltip.global_position = tooltip_pos
+			
+			if tooltip_tween and tooltip_tween.is_running():
+				tooltip_tween.kill()
+			tooltip_tween = create_tween().set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_SINE)
+			effect_tooltip.modulate.a = 0.0
 			effect_tooltip.visible = true
+			tooltip_tween.tween_property(effect_tooltip, "modulate:a", 1.0, 0.2)
 
-func _on_mouse_entered():
-	_update_face_grid_position()
-	face_grid.visible = true
-	if not effect_name_label.text.is_empty():
-		effect_name_label.visible = true
-	hover_timer.start()
-
-func _on_mouse_exited():
-	face_grid.visible = false
-	effect_name_label.visible = false
-	hover_timer.stop()
-	effect_tooltip.visible = false
+func _on_mouse_entered(): pass # Deprecated, handled by _notification
+func _on_mouse_exited(): pass # Deprecated, handled by _notification
 
 func _gui_input(event: InputEvent):
 	if event is InputEventMouseButton:
@@ -210,7 +215,12 @@ func _notification(what):
 		face_grid.visible = false
 		effect_name_label.visible = false
 		hover_timer.stop()
-		effect_tooltip.visible = false
+		if tooltip_tween and tooltip_tween.is_running():
+			tooltip_tween.kill()
+		if effect_tooltip.visible:
+			tooltip_tween = create_tween().set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_SINE)
+			tooltip_tween.tween_property(effect_tooltip, "modulate:a", 0.0, 0.1)
+			tooltip_tween.tween_callback(func(): if is_instance_valid(effect_tooltip): effect_tooltip.visible = false)
 		set_process(false)
 	elif what == NOTIFICATION_DRAG_END:
 		# If the drag ended and this die display was not successfully dropped

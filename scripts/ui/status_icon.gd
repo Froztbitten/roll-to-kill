@@ -7,6 +7,7 @@ var status_value: int = 0
 @onready var hover_timer: Timer = $HoverTimer
 @onready var tooltip: PanelContainer = $Tooltip
 @onready var description_label: RichTextLabel = $Tooltip/DescriptionLabel
+var tooltip_tween: Tween
 
 func _ready():
 	# Make the tooltip render on top of other UI elements and ensure it's hidden at start.
@@ -27,7 +28,12 @@ func _on_mouse_entered():
 
 func _on_mouse_exited():
 	hover_timer.stop()
-	tooltip.visible = false
+	if tooltip_tween and tooltip_tween.is_running():
+		tooltip_tween.kill()
+	if tooltip.visible:
+		tooltip_tween = create_tween().set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_SINE)
+		tooltip_tween.tween_property(tooltip, "modulate:a", 0.0, 0.1)
+		tooltip_tween.tween_callback(func(): if is_instance_valid(tooltip): tooltip.visible = false)
 
 func _on_hover_timer_timeout():
 	if not status_effect:
@@ -43,6 +49,18 @@ func _on_hover_timer_timeout():
 	# Wait a frame for the label to resize with the new text, which resizes the container.
 	await get_tree().process_frame
 	
-	# Position the tooltip to be centered above the icon.
-	tooltip.global_position = global_position + Vector2(size.x / 2 - tooltip.size.x / 2, -tooltip.size.y - 5)
+	# Position the tooltip to be centered above the icon, but clamp to screen edges.
+	var viewport_rect = get_viewport().get_visible_rect()
+	var tooltip_size = tooltip.size
+	var icon_rect = get_global_rect()
+	
+	var tooltip_pos_x = icon_rect.position.x + (icon_rect.size.x / 2.0) - (tooltip_size.x / 2.0)
+	tooltip_pos_x = clamp(tooltip_pos_x, viewport_rect.position.x, viewport_rect.end.x - tooltip_size.x)
+	tooltip.global_position = Vector2(tooltip_pos_x, icon_rect.position.y - tooltip_size.y - 5)
+	
+	if tooltip_tween and tooltip_tween.is_running():
+		tooltip_tween.kill()
+	tooltip_tween = create_tween().set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_SINE)
+	tooltip.modulate.a = 0.0
 	tooltip.visible = true
+	tooltip_tween.tween_property(tooltip, "modulate:a", 1.0, 0.2)

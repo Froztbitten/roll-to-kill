@@ -131,5 +131,5 @@ fit_content = true
 autowrap_mode = 3
 
 [node name="HoverTimer" type="Timer" parent="."]
-wait_time = 0.5
+wait_time = 0.1
 one_shot = true

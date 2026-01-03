@@ -6,6 +6,7 @@ signal node_selected(node_data)
 @onready var map_container = $ScrollContainer/MapContainer
 @onready var scroll_container = $ScrollContainer
 @onready var player_icon = $ScrollContainer/MapContainer/PlayerIcon
+@onready var close_button = $CloseButton
 
 var map_layers = []
 var current_node = null
@@ -180,3 +181,7 @@ func _on_node_pressed(node):
 	current_node = node
 	update_visuals()
 	emit_signal("node_selected", node)
+
+func _on_close_button_pressed():
+	visible = false
+	close_button.visible = false

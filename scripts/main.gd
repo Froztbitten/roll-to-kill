@@ -11,9 +11,10 @@ static var debug_mode: bool = false
 @onready var selected_value_label: Label = $UI/SelectedValueLabel
 @onready var gold_label: Label = $UI/GameInfo/TopBar/GoldContainer/GoldLabel
 
-@onready var dice_bag_icon: TextureRect = $UI/RoundInfo/DiceBag/DiceBagIcon
-@onready var dice_bag_label: Label = $UI/RoundInfo/DiceBag/DiceBagLabel
-@onready var dice_discard_label: Label = $UI/RoundInfo/DiceDiscard/DiceDiscardLabel
+@onready var dice_bag_icon: TextureRect = $UI/RoundInfo/DiceBag/Content/DiceBagIcon
+@onready var dice_bag_label: Label = $UI/RoundInfo/DiceBag/Content/DiceBagLabel
+@onready var dice_discard_label: Label = $UI/RoundInfo/DiceDiscard/Content/DiceDiscardLabel
+@onready var dice_discard_icon: TextureRect = $UI/RoundInfo/DiceDiscard/Content/DiceDiscardIcon
 
 @onready var victory_screen = $UI/VictoryScreen
 @onready var defeat_screen = $UI/DefeatScreen
@@ -27,6 +28,9 @@ static var debug_mode: bool = false
 @onready var dice_bag_button = $UI/GameInfo/TopBar/DiceBagButton
 @onready var dice_bag_screen = $UI/DiceBagScreen
 @onready var dice_bag_grid = $UI/DiceBagScreen/Panel/VBoxContainer/ScrollContainer/GridContainer
+@onready var dice_bag_count_label: Label = $UI/GameInfo/TopBar/DiceBagButton/DiceCountLabel
+@onready var map_button: Button = $UI/GameInfo/TopBar/MapButton
+@onready var dice_bag_screen_title: Label = $UI/DiceBagScreen/Panel/VBoxContainer/Label
 @onready var dice_bag_close_button = $UI/DiceBagScreen/Panel/VBoxContainer/CloseButton
 var steam_manager
 
@@ -35,6 +39,7 @@ enum Turn {PLAYER, ENEMY}
 const ABILITY_UI_SCENE = preload("res://scenes/ui/ability.tscn")
 const DIE_DISPLAY_SCENE = preload("res://scenes/dice/die_display.tscn")
 const ARROW_SCENE = preload("res://scenes/ui/arrow.tscn")
+const RHYTHM_GAME_UI_SCENE = preload("res://scenes/ui/rhythm_game_ui.tscn")
 var selected_dice_display: Array[DieDisplay] = []
 var current_incoming_damage: int = 0
 var is_resolving_action := false
@@ -48,8 +53,8 @@ const BOSS_ROUND = 10
 var starting_abilities: Array[AbilityData] = [load("res://resources/abilities/heal.tres"), 
 	load("res://resources/abilities/sweep.tres"), load("res://resources/abilities/hold.tres"),
 	load("res://resources/abilities/roulette.tres"), load("res://resources/abilities/explosive_shot.tres"),
-	load("res://resources/abilities/higher_lower.tres"),
-	load("res://resources/abilities/even_odd.tres")]
+	load("res://resources/abilities/higher_lower.tres"), load("res://resources/abilities/even_odd.tres"),
+	load("res://resources/abilities/rhythm_game.tres")]
 
 var pause_menu_ui: Control
 var debug_ability_ui: Control
@@ -75,11 +80,23 @@ var even_odd_message_label: Label
 var even_odd_buttons_container: HBoxContainer
 var even_odd_accumulated_results: Array = []
 
+# --- Rhythm Game Ability Variables ---
+var rhythm_game_ui: Control
+var rhythm_game_target: Character
+var rhythm_game_die: Die
+
 # --- Multiplayer Variables ---
 var game_state
 var remote_players: Dictionary = {} # steam_id: Player node
 var remote_dice_pools: Dictionary = {} # steam_id: DicePool node
 var player_turn_ended_status: Dictionary = {} # steam_id: bool
+
+# --- Custom Tooltip Variables ---
+var _tooltip_panel: PanelContainer
+var _tooltip_label: Label
+var _tooltip_timer: Timer
+var _tooltip_tween: Tween
+var _hovered_control: Control
 
 func _ready() -> void:
 	# Set process modes to allow the MainGame script to handle input while the game is paused.
@@ -128,6 +145,22 @@ func _ready() -> void:
 	dice_bag_button.pressed.connect(_on_dice_bag_button_pressed)
 	dice_bag_close_button.pressed.connect(func(): dice_bag_screen.visible = false)
 
+	# Connect hover signals for round info icons
+	$UI/RoundInfo/DiceBag/Button.mouse_entered.connect(_on_dice_bag_hover_entered)
+	$UI/RoundInfo/DiceBag/Button.mouse_exited.connect(_on_dice_bag_hover_exited)
+	$UI/RoundInfo/DiceDiscard/Button.mouse_entered.connect(_on_dice_discard_hover_entered)
+	$UI/RoundInfo/DiceDiscard/Button.mouse_exited.connect(_on_dice_discard_hover_exited)
+	$UI/RoundInfo/DiceBag/Button.mouse_entered.connect(_on_control_hover_entered.bind($UI/RoundInfo/DiceBag/Button, "Draw Pile"))
+	$UI/RoundInfo/DiceDiscard/Button.mouse_entered.connect(_on_control_hover_entered.bind($UI/RoundInfo/DiceDiscard/Button, "Discard Pile"))
+	dice_bag_button.mouse_entered.connect(_on_control_hover_entered.bind(dice_bag_button, "Dice Bag"))
+	dice_bag_button.mouse_entered.connect(_on_dice_bag_button_hover_entered)
+	dice_bag_button.mouse_exited.connect(_on_dice_bag_button_hover_exited)
+	map_button.pressed.connect(_on_map_button_pressed)
+	map_button.mouse_entered.connect(_on_control_hover_entered.bind(map_button, "Map"))
+	map_button.mouse_entered.connect(_on_map_button_hover_entered)
+	map_button.mouse_exited.connect(_on_map_button_hover_exited)
+	map_button.icon = load("res://assets/ai/ui/map.png")
+
 	get_viewport().size_changed.connect(_on_viewport_size_changed)
 	call_deferred("_on_viewport_size_changed")
 
@@ -151,6 +184,28 @@ func _ready() -> void:
 		if not (game_state and game_state.is_multiplayer):
 			map_screen.generate_new_map()
 			map_screen.visible = true
+
+	# --- Custom Tooltip Setup ---
+	_tooltip_panel = PanelContainer.new()
+	var style = StyleBoxFlat.new()
+	style.bg_color = Color(0, 0, 0, 0.8)
+	style.content_margin_left = 8
+	style.content_margin_top = 4
+	style.content_margin_right = 8
+	style.content_margin_bottom = 4
+	_tooltip_panel.add_theme_stylebox_override("panel", style)
+	_tooltip_label = Label.new()
+	_tooltip_panel.add_child(_tooltip_label)
+	_tooltip_panel.visible = false
+	_tooltip_panel.set_as_top_level(true)
+	_tooltip_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	$UI.add_child(_tooltip_panel)
+
+	_tooltip_timer = Timer.new()
+	_tooltip_timer.wait_time = 0.1
+	_tooltip_timer.one_shot = true
+	_tooltip_timer.timeout.connect(_show_tooltip)
+	add_child(_tooltip_timer)
 
 func _process(delta):
 	# The new steam manager uses signals, so we connect to it in _setup_multiplayer_game
@@ -346,6 +401,12 @@ func _on_ability_activated(ability_ui: AbilityUI):
 		$UI.add_child(targeting_arrow)
 		targeting_arrow.set_source(ability_ui.dice_slots_container.get_child(0))
 	elif ability_data.title == "Even Odd":
+		if slotted_dice_displays.is_empty(): return
+		active_targeting_ability = ability_ui
+		targeting_arrow = ARROW_SCENE.instantiate()
+		$UI.add_child(targeting_arrow)
+		targeting_arrow.set_source(ability_ui.dice_slots_container.get_child(0))
+	elif ability_data.title == "Rhythm Game":
 		if slotted_dice_displays.is_empty(): return
 		active_targeting_ability = ability_ui
 		targeting_arrow = ARROW_SCENE.instantiate()
@@ -751,6 +812,12 @@ func _resolve_targeted_ability(target: Character):
 			targeting_arrow.queue_free()
 			targeting_arrow = null
 		return
+	elif ability_data.title == "Rhythm Game":
+		_start_rhythm_game(target, die_display)
+		if targeting_arrow:
+			targeting_arrow.queue_free()
+			targeting_arrow = null
+		return
 
 
 	# Cleanup
@@ -768,6 +835,9 @@ func _cancel_targeting():
 		targeting_arrow.queue_free()
 		targeting_arrow = null
 	
+	if rhythm_game_ui and is_instance_valid(rhythm_game_ui):
+		rhythm_game_ui.cancel_game()
+
 	if active_targeting_ability:
 		# Revert ability UI state since we are cancelling the activation
 		active_targeting_ability.is_consumed_this_turn = false
@@ -1195,6 +1265,35 @@ func _animate_even_odd_damage_sequence():
 		
 	anim_die.queue_free()
 
+func _start_rhythm_game(target: Character, source_display: DieDisplay):
+	if rhythm_game_ui and is_instance_valid(rhythm_game_ui):
+		rhythm_game_ui.cancel_game()
+
+	rhythm_game_target = target
+	rhythm_game_die = source_display.die
+	
+	rhythm_game_ui = RHYTHM_GAME_UI_SCENE.instantiate()
+	$UI.add_child(rhythm_game_ui)
+	rhythm_game_ui.game_finished.connect(_on_rhythm_game_finished)
+	rhythm_game_ui.start_game()
+
+func _on_rhythm_game_finished(successful_hits: int):
+	if not rhythm_game_target or rhythm_game_target._is_dead:
+		active_targeting_ability = null
+		return
+
+	var base_damage = rhythm_game_die.result_value
+	# Each hit is worth 1/3 of the die's value. 6 hits = 200% damage.
+	var total_damage = base_damage * (float(successful_hits) / 3.0)
+	
+	if total_damage > 0:
+		await rhythm_game_target.take_damage(total_damage, true, player, true)
+	
+	# Effects are applied based on the die's original value, regardless of rhythm game performance.
+	await _apply_all_die_effects(rhythm_game_die, rhythm_game_target, base_damage)
+	
+	active_targeting_ability = null
+
 func _apply_all_die_effects(die: Die, target: Character, value: int, force_face: Resource = null):
 	var face = force_face if force_face else die.result_face
 	
@@ -1617,7 +1716,8 @@ func _update_dice_bag(count: int):
 	dice_bag_label.text = str(count)
 
 func _update_total_dice_count(count: int):
-	dice_bag_button.text = "Dice Bag: %d" % count
+	if is_instance_valid(dice_bag_count_label):
+		dice_bag_count_label.text = str(count)
 
 func _update_dice_discard(count: int):
 	dice_discard_label.text = str(count)
@@ -1781,18 +1881,25 @@ func _on_viewport_size_changed():
 		gold_icon.custom_minimum_size = Vector2(50, 50) * scale_factor
 
 	if dice_bag_button:
-		# Base width 150
-		dice_bag_button.custom_minimum_size.x = 150 * scale_factor
+		var base_button_size = 50.0
+		dice_bag_button.custom_minimum_size = Vector2(base_button_size, base_button_size) * scale_factor
+		dice_bag_button.pivot_offset = dice_bag_button.custom_minimum_size / 2.0
+
+	if map_button:
+		var base_button_size = 60.0
+		map_button.custom_minimum_size = Vector2(base_button_size, base_button_size) * scale_factor
+		map_button.pivot_offset = map_button.custom_minimum_size / 2.0
 
 	# Scale Round Info (Dice Bag and Discard Pile)
 	if dice_bag_icon:
 		dice_bag_icon.custom_minimum_size = Vector2(50, 50) * scale_factor
+		dice_bag_icon.pivot_offset = dice_bag_icon.custom_minimum_size / 2.0
 	if dice_bag_label:
 		dice_bag_label.add_theme_font_size_override("font_size", int(16 * scale_factor))
 	
-	var dice_discard_icon = $UI/RoundInfo/DiceDiscard/DiceDiscardIcon
 	if dice_discard_icon:
 		dice_discard_icon.custom_minimum_size = Vector2(50, 50) * scale_factor
+		dice_discard_icon.pivot_offset = dice_discard_icon.custom_minimum_size / 2.0
 	if dice_discard_label:
 		dice_discard_label.add_theme_font_size_override("font_size", int(16 * scale_factor))
 
@@ -1941,18 +2048,110 @@ func _refresh_player_abilities_ui():
 		child.queue_free()
 	for ability in player.abilities:
 		_add_player_ability(ability)
-
+		
 func _on_dice_bag_button_pressed():
+	_show_dice_list_screen(player._game_dice_bag, "Your Dice Bag")
+
+func _on_round_dice_bag_pressed():
+	_show_dice_list_screen(player._round_dice_bag, "Draw Pile")
+
+func _on_dice_discard_pressed():
+	_show_dice_list_screen(player._dice_discard, "Discard Pile")
+
+func _show_dice_list_screen(dice_list: Array[Die], title: String):
 	for child in dice_bag_grid.get_children():
 		child.queue_free()
 		
-	for die in player._game_dice_bag:
+	for die in dice_list:
 		var display = preload("res://scenes/screens/rewards_die_display.tscn").instantiate()
 		dice_bag_grid.add_child(display)
 		display.set_die(die, true)
-		display.scale = Vector2.ONE
 		
+	dice_bag_screen_title.text = title
 	dice_bag_screen.visible = true
+
+func _on_dice_bag_hover_entered():
+	_animate_icon_scale(dice_bag_icon, 1.2)
+
+func _on_dice_bag_hover_exited():
+	_animate_icon_scale(dice_bag_icon, 1.0)
+
+func _on_dice_discard_hover_entered():
+	_animate_icon_scale(dice_discard_icon, 1.2)
+
+func _on_dice_discard_hover_exited():
+	_animate_icon_scale(dice_discard_icon, 1.0)
+
+func _animate_icon_scale(icon: Control, target_scale: float):
+	var tween = create_tween()
+	tween.tween_property(icon, "scale", Vector2.ONE * target_scale, 0.2).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+
+func _on_dice_bag_button_hover_entered():
+	_animate_icon_scale(dice_bag_button, 1.2)
+
+func _on_dice_bag_button_hover_exited():
+	_animate_icon_scale(dice_bag_button, 1.0)
+
+func _on_map_button_pressed():
+	map_screen.visible = true
+	if map_screen.has_node("CloseButton"):
+		map_screen.get_node("CloseButton").visible = true
+
+func _on_map_button_hover_entered():
+	_animate_icon_scale(map_button, 1.2)
+
+func _on_map_button_hover_exited():
+	_animate_icon_scale(map_button, 1.0)
+
+# --- Custom Tooltip Handlers ---
+
+func _on_control_hover_entered(control: Control, text: String):
+	# This generic handler can be connected to any control's mouse_entered signal.
+	# Use .bind(control, "Tooltip text") when connecting.
+	_tooltip_timer.stop() # Stop any pending hide
+	_hide_tooltip(false) # Instantly hide previous tooltip
+	_hovered_control = control
+	_tooltip_label.text = text
+	_tooltip_timer.start()
+	# Also connect the exited signal dynamically
+	if not control.is_connected("mouse_exited", _on_control_hover_exited):
+		control.mouse_exited.connect(_on_control_hover_exited)
+
+func _on_control_hover_exited():
+	_tooltip_timer.stop()
+	_hovered_control = null
+	_hide_tooltip()
+
+func _show_tooltip():
+	if not is_instance_valid(_hovered_control): return
+	
+	if _tooltip_tween and _tooltip_tween.is_running(): _tooltip_tween.kill()
+	_tooltip_tween = create_tween().set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_SINE)
+	
+	var viewport_rect = get_viewport().get_visible_rect()
+	var tooltip_size = _tooltip_panel.get_minimum_size()
+	var mouse_pos = get_global_mouse_position()
+	
+	var tooltip_pos = mouse_pos + Vector2(15, 15)
+	
+	if tooltip_pos.x + tooltip_size.x > viewport_rect.end.x:
+		tooltip_pos.x = mouse_pos.x - tooltip_size.x - 15
+	if tooltip_pos.y + tooltip_size.y > viewport_rect.end.y:
+		tooltip_pos.y = mouse_pos.y - tooltip_size.y - 15
+		
+	_tooltip_panel.global_position = tooltip_pos
+	_tooltip_panel.modulate.a = 0.0
+	_tooltip_panel.visible = true
+	_tooltip_tween.tween_property(_tooltip_panel, "modulate:a", 1.0, 0.2)
+
+func _hide_tooltip(animated: bool = true):
+	if _tooltip_tween and _tooltip_tween.is_running(): _tooltip_tween.kill()
+	if animated and _tooltip_panel.visible:
+		_tooltip_tween = create_tween().set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_SINE)
+		_tooltip_tween.tween_property(_tooltip_panel, "modulate:a", 0.0, 0.1)
+		_tooltip_tween.tween_callback(func(): if is_instance_valid(_tooltip_panel): _tooltip_panel.visible = false)
+	else:
+		_tooltip_panel.visible = false
 
 # --- Multiplayer Logic ---
 

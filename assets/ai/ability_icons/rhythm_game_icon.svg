@@ -1,0 +1,24 @@
+<svg width="64px" height="64px" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="rg-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#9C27B0;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#E1BEE7;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  <circle cx="32" cy="32" r="30" fill="#212121" stroke="#9C27B0" stroke-width="2"/>
+  
+  <!-- Beat track -->
+  <line x1="10" y1="32" x2="54" y2="32" stroke="#E1BEE7" stroke-width="3" stroke-dasharray="4 4"/>
+  
+  <!-- Hit Zone -->
+  <rect x="28" y="28" width="8" height="8" fill="none" stroke="#4CAF50" stroke-width="2"/>
+
+  <!-- Beats/Notes -->
+  <g fill="url(#rg-grad)">
+    <circle cx="16" cy="32" r="4"/>
+    <path d="M20 32 V 20 L 26 22"/>
+    
+    <circle cx="48" cy="32" r="4"/>
+    <path d="M52 32 V 20 L 58 22"/>
+  </g>
+</svg>
