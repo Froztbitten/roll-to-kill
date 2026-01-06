@@ -66,7 +66,7 @@ func setup():
 	call_deferred("_center_intent_display")
 
 	if enemy_data.enemy_name == "White Knight":
-		apply_duration_status("crash_out", 99)
+		apply_duration_status("crash_out", -1)
 	elif enemy_data.enemy_name == "Plot Armorer":
 		apply_charges_status("main_character_energy", 1)
 
@@ -116,8 +116,8 @@ func declare_intent(active_enemies: Array):
 		die_sides_for_icon = next_action.dice_sides
 
 	var intent_icon_type = "attack"
-	if next_action.dice_count == 0:
-		# Any action with no dice is considered a "charge" or "setup" move.
+	if next_action.dice_count == 0 and next_action.base_value == 0:
+		# Any action with no dice AND no value is considered a "charge" or "setup" move.
 		intent_icon_type = "charge"
 	elif next_action.action_type == EnemyAction.ActionType.SHIELD or next_action.action_type == EnemyAction.ActionType.SUPPORT_SHIELD:
 		intent_icon_type = "shield"

@@ -174,7 +174,10 @@ func apply_duration_status(status_id: String, duration: int = 1, _source: Charac
 	if effect:
 		statuses[effect] = duration
 		_new_statuses_this_turn.append(effect)
-		print("%s gained status '%s' for %d rounds." % [name, effect.status_name, duration])
+		if duration == -1:
+			print("%s gained status '%s' indefinitely." % [name, effect.status_name])
+		else:
+			print("%s gained status '%s' for %d rounds." % [name, effect.status_name, duration])
 		statuses_changed.emit(statuses)
 	else:
 		push_warning("Attempted to apply unknown status with id: '%s'" % status_id)
@@ -205,13 +208,19 @@ func apply_effect(effect: StatusEffect, value: int, _source: Character = null):
 			print("%s gained %d charges of '%s'. Total: %d" % [name, value, effect.status_name, statuses[effect]])
 		else:
 			statuses[effect] = value
-			print("%s gained status '%s' for %d rounds." % [name, effect.status_name, value])
+			if value == -1:
+				print("%s gained status '%s' indefinitely." % [name, effect.status_name])
+			else:
+				print("%s gained status '%s' for %d rounds." % [name, effect.status_name, value])
 	else:
 		statuses[effect] = value
 		if effect.charges != -1:
 			print("%s gained %d charges of '%s'." % [name, value, effect.status_name])
 		else:
-			print("%s gained status '%s' for %d rounds." % [name, effect.status_name, value])
+			if value == -1:
+				print("%s gained status '%s' indefinitely." % [name, effect.status_name])
+			else:
+				print("%s gained status '%s' for %d rounds." % [name, effect.status_name, value])
 
 	_new_statuses_this_turn.append(effect)
 	statuses_changed.emit(statuses)
@@ -268,6 +277,9 @@ func tick_down_statuses():
 		# charge buff, we add an explicit check to ensure it never decays. Debuffs
 		# like Bleed and Burn are also charge-based and should not decay over time.
 		if status.charges != -1 or status.status_name == STATUS_SPIKY or status.status_name == STATUS_BLEEDING or status.status_name == STATUS_BURNING:
+			continue
+		
+		if statuses[status] == -1:
 			continue
 		
 		statuses[status] -= 1

@@ -10,4 +10,6 @@ encounter_type = 2
 enemy_types = Array[ExtResource("1_upcgc")]([ExtResource("2_w0dle")])
 min_count = 1
 max_count = 1
+node_type = "final_boss"
+region = "rpg"
 metadata/_custom_type_script = "uid://ck2drfaun3f25"

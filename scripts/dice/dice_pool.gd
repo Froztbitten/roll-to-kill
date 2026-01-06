@@ -55,6 +55,9 @@ func animate_add_dice(dice_to_draw: Array[Die], start_pos: Vector2):
 	for i in range(displays_to_animate.size()):
 		var display: DieDisplay = displays_to_animate[i]
 		
+		if not is_instance_valid(display):
+			continue
+		
 		# Store the final destination, which is now correct.
 		var final_pos = display.global_position
 		var final_scale = display.scale

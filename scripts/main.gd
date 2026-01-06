@@ -3,6 +3,8 @@ class_name MainGame
 
 static var debug_mode: bool = false
 
+signal player_performed_action(action_type, target)
+
 @export var player: Player
 @onready var enemy_container = $EnemySpawner/Enemies
 @onready var enemy_spawner = $EnemySpawner
@@ -38,6 +40,7 @@ enum Turn {PLAYER, ENEMY}
 
 const ABILITY_UI_SCENE = preload("res://scenes/ui/ability.tscn")
 const DIE_DISPLAY_SCENE = preload("res://scenes/dice/die_display.tscn")
+const DIE_GRID_CELL_SCENE = preload("res://scenes/dice/die_grid_cell.tscn")
 const ARROW_SCENE = preload("res://scenes/ui/arrow.tscn")
 const RHYTHM_GAME_UI_SCENE = preload("res://scenes/ui/rhythm_game_ui.tscn")
 var selected_dice_display: Array[DieDisplay] = []
@@ -70,6 +73,8 @@ var higher_lower_die_display_node: DieDisplay
 var higher_lower_message_label: Label
 var higher_lower_buttons_container: HBoxContainer
 var higher_lower_accumulated_results: Array = []
+var higher_lower_grid: GridContainer
+var higher_lower_used_faces: Array = []
 
 # Even Odd Ability Variables
 var even_odd_ui: Control
@@ -79,11 +84,17 @@ var even_odd_die_display_node: DieDisplay
 var even_odd_message_label: Label
 var even_odd_buttons_container: HBoxContainer
 var even_odd_accumulated_results: Array = []
+var even_odd_grid: GridContainer
+var even_odd_used_faces: Array = []
 
 # --- Rhythm Game Ability Variables ---
 var rhythm_game_ui: Control
 var rhythm_game_target: Character
 var rhythm_game_die: Die
+
+# --- Crypt Variables ---
+var is_in_crypt: bool = false
+var current_crypt_stage: int = 0
 
 # --- Multiplayer Variables ---
 var game_state
@@ -140,7 +151,7 @@ func _ready() -> void:
 	
 	debug_menu.encounter_selected.connect(_on_debug_menu_encounter_selected)
 	debug_menu.close_requested.connect(func(): debug_menu.visible = false)
-	campfire_screen.leave_campfire.connect(func(): map_screen.visible = true)
+	campfire_screen.leave_campfire.connect(_on_leave_campfire)
 	
 	dice_bag_button.pressed.connect(_on_dice_bag_button_pressed)
 	dice_bag_close_button.pressed.connect(func(): dice_bag_screen.visible = false)
@@ -176,6 +187,20 @@ func _ready() -> void:
 
 	_update_total_dice_count(player._game_dice_bag.size())
 	_update_selected_value_label()
+
+	if get_tree().root.has_meta("tutorial_mode") and get_tree().root.get_meta("tutorial_mode"):
+		var tutorial_script = load("res://scripts/tutorial_manager.gd")
+		if tutorial_script:
+			var tutorial_manager = tutorial_script.new()
+			add_child(tutorial_manager)
+			var tutorial_encounter = load("res://resources/encounters/tutorial_encounter.tres")
+			if tutorial_encounter:
+				var spawned_enemies = enemy_spawner.spawn_specific_encounter(tutorial_encounter)
+				await _setup_round(spawned_enemies)
+			else:
+				push_error("Failed to load tutorial encounter.")
+				map_screen.visible = true
+			return
 
 	if debug_mode:
 		await start_new_round()
@@ -335,6 +360,7 @@ func _on_ability_activated(ability_ui: AbilityUI):
 	# This is where you'll implement the effects for different abilities.
 	if ability_data.title == "Heal":
 		var total_heal = 0
+		emit_signal("player_performed_action", "ability", player)
 		for die_display in slotted_dice_displays:
 			total_heal += die_display.die.result_value
 		
@@ -346,6 +372,7 @@ func _on_ability_activated(ability_ui: AbilityUI):
 		var die_value = slotted_dice_displays[0].die.result_value
 		var damage = ceili(die_value / 2.0)
 		
+		emit_signal("player_performed_action", "ability", get_active_enemies())
 		for enemy in get_active_enemies():
 			await enemy.take_damage(damage, true, player, true)
 			await _apply_all_die_effects(slotted_dice_displays[0].die, enemy, damage)
@@ -354,6 +381,7 @@ func _on_ability_activated(ability_ui: AbilityUI):
 		if slotted_dice_displays.is_empty(): return
 		
 		var die_to_hold = slotted_dice_displays[0].die
+		emit_signal("player_performed_action", "ability", player)
 		player.hold_die(die_to_hold)
 		print("Resolved 'Hold' ability. Die with value %d will be kept." % die_to_hold.result_value)
 	elif ability_data.title == "Roulette":
@@ -379,6 +407,7 @@ func _on_ability_activated(ability_ui: AbilityUI):
 			# Animate the temp die flying to the random target
 			await _animate_dice_to_target([temp_display], target)
 			
+			emit_signal("player_performed_action", "ability", target)
 			await target.take_damage(damage, true, player, true)
 			print("Resolved 'Roulette' ability for %d damage to %s." % [damage, target.name])
 
@@ -703,6 +732,7 @@ func _on_character_clicked(character: Character) -> void:
 	await _animate_dice_to_target(used_dice_displays, character)
 
 	if is_targeting_player:
+		emit_signal("player_performed_action", "block", player)
 		player.add_block(total_roll)
 		print("Player blocked for %d. Total block: %d" % [total_roll, player.block])
 		# Update player health preview immediately
@@ -729,6 +759,7 @@ func _on_character_clicked(character: Character) -> void:
 					_process_die_face_effect(effect, die.result_value, player, die)
 	else: # It's an enemy
 		var enemy_target: Enemy = character
+		emit_signal("player_performed_action", "attack", enemy_target)
 		await enemy_target.take_damage(total_roll, false, player, true)
 		print("Dealt %d damage to %s" % [total_roll, enemy_target.name])
 
@@ -775,6 +806,7 @@ func _resolve_targeted_ability(target: Character):
 		await _animate_dice_to_target([temp_display], target)
 		
 		# Main damage
+		emit_signal("player_performed_action", "ability", target)
 		await target.take_damage(damage, true, player, true)
 		
 		# Splash damage
@@ -799,6 +831,7 @@ func _resolve_targeted_ability(target: Character):
 		_broadcast_player_action(dice_list_for_packet, target, damage, 0, "Explosive Shot")
 		
 	elif ability_data.title == "Higher Lower":
+		emit_signal("player_performed_action", "ability", target)
 		_start_higher_lower(target, die_display)
 		# Clean up targeting arrow immediately, but keep active_targeting_ability set until game ends
 		if targeting_arrow:
@@ -806,12 +839,14 @@ func _resolve_targeted_ability(target: Character):
 			targeting_arrow = null
 		return
 	elif ability_data.title == "Even Odd":
+		emit_signal("player_performed_action", "ability", target)
 		_start_even_odd(target, die_display)
 		if targeting_arrow:
 			targeting_arrow.queue_free()
 			targeting_arrow = null
 		return
 	elif ability_data.title == "Rhythm Game":
+		emit_signal("player_performed_action", "ability", target)
 		_start_rhythm_game(target, die_display)
 		if targeting_arrow:
 			targeting_arrow.queue_free()
@@ -853,14 +888,18 @@ func _start_higher_lower(target: Character, source_display: DieDisplay):
 	higher_lower_target = target
 	higher_lower_die = source_display.die
 	higher_lower_accumulated_results.clear()
+	higher_lower_used_faces.clear()
 	# Add the initial die result to the accumulated results
 	higher_lower_accumulated_results.append({"face": higher_lower_die.result_face, "multiplier": 1})
+	higher_lower_used_faces.append(higher_lower_die.result_face)
 	
 	_create_higher_lower_ui()
 	
 	# Update UI with current die state
 	higher_lower_die_display_node.set_die(higher_lower_die)
 	higher_lower_message_label.text = "Current Roll: %d\nGuess Higher or Lower!" % higher_lower_die.result_value
+	
+	_update_higher_lower_grid()
 	
 	# Enable buttons
 	for btn in higher_lower_buttons_container.get_children():
@@ -874,14 +913,14 @@ func _create_higher_lower_ui():
 	var canvas = get_node("UI")
 	var panel = Panel.new()
 	panel.name = "HigherLowerUI"
-	panel.custom_minimum_size = Vector2(400, 300)
+	panel.custom_minimum_size = Vector2(500, 500)
 	panel.set_anchors_preset(Control.PRESET_CENTER)
 	panel.grow_horizontal = Control.GROW_DIRECTION_BOTH
 	panel.grow_vertical = Control.GROW_DIRECTION_BOTH
-	panel.offset_left = -200
-	panel.offset_top = -150
-	panel.offset_right = 200
-	panel.offset_bottom = 150
+	panel.offset_left = -250
+	panel.offset_top = -250
+	panel.offset_right = 250
+	panel.offset_bottom = 250
 	
 	var style = StyleBoxFlat.new()
 	style.bg_color = Color(0.1, 0.1, 0.15, 0.95)
@@ -923,6 +962,12 @@ func _create_higher_lower_ui():
 	# We don't want interactions with this display
 	higher_lower_die_display_node.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	
+	higher_lower_grid = GridContainer.new()
+	higher_lower_grid.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	higher_lower_grid.add_theme_constant_override("h_separation", 2)
+	higher_lower_grid.add_theme_constant_override("v_separation", 2)
+	vbox.add_child(higher_lower_grid)
+	
 	higher_lower_message_label = Label.new()
 	higher_lower_message_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	higher_lower_message_label.text = "Current Roll: ?"
@@ -951,13 +996,80 @@ func _create_higher_lower_ui():
 	btn_equal.pressed.connect(_on_higher_lower_guess.bind("equal"))
 	higher_lower_buttons_container.add_child(btn_equal)
 
+func _update_higher_lower_grid():
+	if not higher_lower_grid: return
+	for child in higher_lower_grid.get_children():
+		child.queue_free()
+	
+	var die = higher_lower_die
+	match die.sides:
+		4, 6: higher_lower_grid.columns = die.sides
+		8: higher_lower_grid.columns = 4
+		10: higher_lower_grid.columns = 5
+		12: higher_lower_grid.columns = 6
+		20: higher_lower_grid.columns = 5
+		_: higher_lower_grid.columns = 4
+		
+	for face in die.faces:
+		var cell = DIE_GRID_CELL_SCENE.instantiate()
+		cell.custom_minimum_size = Vector2(30, 30)
+		var label = cell.get_node("Label")
+		label.text = str(face.value)
+		
+		var style = StyleBoxFlat.new()
+		style.border_width_left = 1
+		style.border_width_top = 1
+		style.border_width_right = 1
+		style.border_width_bottom = 1
+		style.border_color = Color.BLACK
+		style.corner_radius_top_left = 2
+		style.corner_radius_top_right = 2
+		style.corner_radius_bottom_right = 2
+		style.corner_radius_bottom_left = 2
+		
+		if higher_lower_used_faces.has(face):
+			style.bg_color = Color(0.2, 0.2, 0.2, 0.5)
+			label.modulate = Color(0.5, 0.5, 0.5)
+		else:
+			style.bg_color = Color(0.2, 0.6, 0.8, 0.8)
+			if not face.effects.is_empty():
+				style.bg_color = face.effects[0].highlight_color
+			
+			if face == die.result_face:
+				style.border_color = Color.GOLD
+				style.border_width_left = 2
+				style.border_width_top = 2
+				style.border_width_right = 2
+				style.border_width_bottom = 2
+		
+		cell.add_theme_stylebox_override("panel", style)
+		higher_lower_grid.add_child(cell)
+
 func _on_higher_lower_guess(guess_type: String):
 	# Disable buttons during animation/processing
 	for btn in higher_lower_buttons_container.get_children():
 		if btn is Button: btn.disabled = true
 	
 	var old_val = higher_lower_die.result_value
-	higher_lower_die.roll()
+	
+	# Custom roll logic: pick from unused faces
+	var available_faces = []
+	for face in higher_lower_die.faces:
+		if not higher_lower_used_faces.has(face):
+			available_faces.append(face)
+	
+	if available_faces.is_empty():
+		# Should not happen if logic is correct, but handle gracefully
+		_end_higher_lower()
+		return
+		
+	var new_face = available_faces.pick_random()
+	higher_lower_die.result_face = new_face
+	higher_lower_die.result_value = new_face.value
+	higher_lower_used_faces.append(new_face)
+	
+	_update_higher_lower_grid()
+	
 	var new_val = higher_lower_die.result_value
 	
 	higher_lower_die_display_node.set_die(higher_lower_die)
@@ -977,9 +1089,16 @@ func _on_higher_lower_guess(guess_type: String):
 			higher_lower_message_label.text = "Correct! Equal! (x2) Rolled %d. Guess again?" % new_val
 		else:
 			higher_lower_message_label.text = "Correct! Rolled %d. Guess again?" % new_val
-		# Re-enable buttons
-		for btn in higher_lower_buttons_container.get_children():
-			if btn is Button: btn.disabled = false
+			
+		# Check if any faces left
+		if higher_lower_used_faces.size() >= higher_lower_die.faces.size():
+			higher_lower_message_label.text += "\n(All faces used!)"
+			await get_tree().create_timer(1.5).timeout
+			_end_higher_lower()
+		else:
+			# Re-enable buttons
+			for btn in higher_lower_buttons_container.get_children():
+				if btn is Button: btn.disabled = false
 	else:
 		if new_val == old_val:
 			higher_lower_message_label.text = "Equal! (%d) It's a loss." % new_val
@@ -992,7 +1111,7 @@ func _on_higher_lower_guess(guess_type: String):
 func _end_higher_lower():
 	higher_lower_ui.visible = false
 	
-	if not higher_lower_accumulated_results.is_empty() and higher_lower_target and not higher_lower_target._is_dead:
+	if not higher_lower_accumulated_results.is_empty() and is_instance_valid(higher_lower_target) and not higher_lower_target._is_dead:
 		await _animate_higher_lower_damage_sequence()
 	
 	active_targeting_ability = null
@@ -1026,7 +1145,7 @@ func _animate_higher_lower_damage_sequence():
 		target_pos = sprite.get_global_rect().get_center()
 	
 	for i in range(higher_lower_accumulated_results.size()):
-		if higher_lower_target._is_dead:
+		if not is_instance_valid(higher_lower_target) or higher_lower_target._is_dead:
 			break
 			
 		var result_entry = higher_lower_accumulated_results[i]
@@ -1072,14 +1191,18 @@ func _start_even_odd(target: Character, source_display: DieDisplay):
 	even_odd_target = target
 	even_odd_die = source_display.die
 	even_odd_accumulated_results.clear()
+	even_odd_used_faces.clear()
 	# Add the initial die result to the accumulated results
 	even_odd_accumulated_results.append({"face": even_odd_die.result_face, "multiplier": 1})
+	even_odd_used_faces.append(even_odd_die.result_face)
 	
 	_create_even_odd_ui()
 	
 	# Update UI with current die state
 	even_odd_die_display_node.set_die(even_odd_die)
 	even_odd_message_label.text = "Current Roll: %d\nGuess Even or Odd!" % even_odd_die.result_value
+	
+	_update_even_odd_grid()
 	
 	# Enable buttons
 	for btn in even_odd_buttons_container.get_children():
@@ -1093,14 +1216,14 @@ func _create_even_odd_ui():
 	var canvas = get_node("UI")
 	var panel = Panel.new()
 	panel.name = "EvenOddUI"
-	panel.custom_minimum_size = Vector2(400, 300)
+	panel.custom_minimum_size = Vector2(500, 500)
 	panel.set_anchors_preset(Control.PRESET_CENTER)
 	panel.grow_horizontal = Control.GROW_DIRECTION_BOTH
 	panel.grow_vertical = Control.GROW_DIRECTION_BOTH
-	panel.offset_left = -200
-	panel.offset_top = -150
-	panel.offset_right = 200
-	panel.offset_bottom = 150
+	panel.offset_left = -250
+	panel.offset_top = -250
+	panel.offset_right = 250
+	panel.offset_bottom = 250
 	
 	var style = StyleBoxFlat.new()
 	style.bg_color = Color(0.15, 0.1, 0.15, 0.95)
@@ -1142,6 +1265,12 @@ func _create_even_odd_ui():
 	# We don't want interactions with this display
 	even_odd_die_display_node.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	
+	even_odd_grid = GridContainer.new()
+	even_odd_grid.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	even_odd_grid.add_theme_constant_override("h_separation", 2)
+	even_odd_grid.add_theme_constant_override("v_separation", 2)
+	vbox.add_child(even_odd_grid)
+	
 	even_odd_message_label = Label.new()
 	even_odd_message_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	even_odd_message_label.text = "Current Roll: ?"
@@ -1164,12 +1293,77 @@ func _create_even_odd_ui():
 	btn_odd.pressed.connect(_on_even_odd_guess.bind("odd"))
 	even_odd_buttons_container.add_child(btn_odd)
 
+func _update_even_odd_grid():
+	if not even_odd_grid: return
+	for child in even_odd_grid.get_children():
+		child.queue_free()
+	
+	var die = even_odd_die
+	match die.sides:
+		4, 6: even_odd_grid.columns = die.sides
+		8: even_odd_grid.columns = 4
+		10: even_odd_grid.columns = 5
+		12: even_odd_grid.columns = 6
+		20: even_odd_grid.columns = 5
+		_: even_odd_grid.columns = 4
+		
+	for face in die.faces:
+		var cell = DIE_GRID_CELL_SCENE.instantiate()
+		cell.custom_minimum_size = Vector2(30, 30)
+		var label = cell.get_node("Label")
+		label.text = str(face.value)
+		
+		var style = StyleBoxFlat.new()
+		style.border_width_left = 1
+		style.border_width_top = 1
+		style.border_width_right = 1
+		style.border_width_bottom = 1
+		style.border_color = Color.BLACK
+		style.corner_radius_top_left = 2
+		style.corner_radius_top_right = 2
+		style.corner_radius_bottom_right = 2
+		style.corner_radius_bottom_left = 2
+		
+		if even_odd_used_faces.has(face):
+			style.bg_color = Color(0.2, 0.2, 0.2, 0.5)
+			label.modulate = Color(0.5, 0.5, 0.5)
+		else:
+			style.bg_color = Color(0.7, 0.3, 0.8, 0.8) # Purple-ish
+			if not face.effects.is_empty():
+				style.bg_color = face.effects[0].highlight_color
+			
+			if face == die.result_face:
+				style.border_color = Color.GOLD
+				style.border_width_left = 2
+				style.border_width_top = 2
+				style.border_width_right = 2
+				style.border_width_bottom = 2
+		
+		cell.add_theme_stylebox_override("panel", style)
+		even_odd_grid.add_child(cell)
+
 func _on_even_odd_guess(guess_type: String):
 	# Disable buttons during animation/processing
 	for btn in even_odd_buttons_container.get_children():
 		if btn is Button: btn.disabled = true
 	
-	even_odd_die.roll()
+	# Custom roll logic
+	var available_faces = []
+	for face in even_odd_die.faces:
+		if not even_odd_used_faces.has(face):
+			available_faces.append(face)
+	
+	if available_faces.is_empty():
+		_end_even_odd()
+		return
+		
+	var new_face = available_faces.pick_random()
+	even_odd_die.result_face = new_face
+	even_odd_die.result_value = new_face.value
+	even_odd_used_faces.append(new_face)
+	
+	_update_even_odd_grid()
+	
 	var new_val = even_odd_die.result_value
 	
 	even_odd_die_display_node.set_die(even_odd_die)
@@ -1183,9 +1377,15 @@ func _on_even_odd_guess(guess_type: String):
 	if success:
 		even_odd_accumulated_results.append({"face": even_odd_die.result_face, "multiplier": multiplier})
 		even_odd_message_label.text = "Correct! Rolled %d. Guess again?" % new_val
-		# Re-enable buttons
-		for btn in even_odd_buttons_container.get_children():
-			if btn is Button: btn.disabled = false
+		
+		if even_odd_used_faces.size() >= even_odd_die.faces.size():
+			even_odd_message_label.text += "\n(All faces used!)"
+			await get_tree().create_timer(1.5).timeout
+			_end_even_odd()
+		else:
+			# Re-enable buttons
+			for btn in even_odd_buttons_container.get_children():
+				if btn is Button: btn.disabled = false
 	else:
 		even_odd_message_label.text = "Wrong! Rolled %d." % new_val
 		
@@ -1195,7 +1395,7 @@ func _on_even_odd_guess(guess_type: String):
 func _end_even_odd():
 	even_odd_ui.visible = false
 	
-	if not even_odd_accumulated_results.is_empty() and even_odd_target and not even_odd_target._is_dead:
+	if not even_odd_accumulated_results.is_empty() and is_instance_valid(even_odd_target) and not even_odd_target._is_dead:
 		await _animate_even_odd_damage_sequence()
 	
 	active_targeting_ability = null
@@ -1229,7 +1429,7 @@ func _animate_even_odd_damage_sequence():
 		target_pos = sprite.get_global_rect().get_center()
 	
 	for i in range(even_odd_accumulated_results.size()):
-		if even_odd_target._is_dead:
+		if not is_instance_valid(even_odd_target) or even_odd_target._is_dead:
 			break
 			
 		var result_entry = even_odd_accumulated_results[i]
@@ -1439,6 +1639,10 @@ func _on_map_node_selected(node_data):
 		await _setup_round(spawned_enemies)
 	elif node_data.type == "campfire":
 		campfire_screen.open()
+	elif node_data.type == "crypt":
+		is_in_crypt = true
+		current_crypt_stage = 0
+		_advance_crypt_stage()
 	else:
 		print("Unknown node type selected: ", node_data.type)
 
@@ -1450,9 +1654,12 @@ func _on_enemy_died(dead_enemy: Character):
 			if enemy.enemy_data.enemy_name == "White Knight" and enemy.has_status("Crash Out"):
 				print("White Knight becomes enraged!")
 				enemy.remove_status("crash_out")
-				enemy.apply_duration_status("raging", 99)
+				enemy.apply_duration_status("raging", -1)
 
 	if get_active_enemies().is_empty():
+		if get_tree().root.has_meta("tutorial_mode") and get_tree().root.get_meta("tutorial_mode"):
+			return
+
 		# All enemies for the round are defeated
 		if map_screen.current_node and map_screen.current_node.type == "boss":
 			victory_screen.visible = true
@@ -1462,6 +1669,29 @@ func _on_enemy_died(dead_enemy: Character):
 		# Defer arrangement to prevent physics race conditions where the collision
 		# shape position doesn't update in the same frame as the visual position.
 		enemy_container.call_deferred("arrange_enemies")
+
+func _advance_crypt_stage():
+	# Stages: 0, 1, 2 = Normal. 3 = Campfire. 4 = Mini-boss (Rare).
+	if current_crypt_stage < 3:
+		print("Crypt Stage %d: Normal Encounter" % current_crypt_stage)
+		if current_crypt_stage > 0:
+			player.reset_for_new_round()
+			enemy_container.clear_everything()
+		var spawned_enemies = enemy_spawner.spawn_random_encounter(EncounterData.EncounterType.NORMAL)
+		await _setup_round(spawned_enemies)
+	elif current_crypt_stage == 3:
+		print("Crypt Stage %d: Rest Area" % current_crypt_stage)
+		campfire_screen.open()
+	elif current_crypt_stage == 4:
+		print("Crypt Stage %d: Mini-Boss" % current_crypt_stage)
+		player.reset_for_new_round()
+		enemy_container.clear_everything()
+		var spawned_enemies = enemy_spawner.spawn_random_encounter(EncounterData.EncounterType.RARE)
+		await _setup_round(spawned_enemies)
+	else:
+		print("Crypt Completed")
+		is_in_crypt = false
+		map_screen.visible = true
 
 func start_new_round() -> void:
 	print("Round start")
@@ -1689,7 +1919,10 @@ func _on_reward_chosen(chosen_die: Die) -> void:
 	round_number += 1
 	reward_screen.visible = false
 	
-	if debug_mode:
+	if is_in_crypt:
+		current_crypt_stage += 1
+		_advance_crypt_stage()
+	elif debug_mode:
 		await start_new_round()
 	else:
 		# Return to map
@@ -1698,6 +1931,13 @@ func _on_reward_chosen(chosen_die: Die) -> void:
 func _on_play_again_button_pressed():
 	# Reload the entire main scene to restart the game.
 	get_tree().reload_current_scene()
+
+func _on_leave_campfire():
+	if is_in_crypt:
+		current_crypt_stage += 1
+		_advance_crypt_stage()
+	else:
+		map_screen.visible = true
 
 func _on_player_died():
 	defeat_screen.visible = true

@@ -7,6 +7,9 @@
 
 [resource]
 script = ExtResource("4_encounter")
+encounter_type = 1
 enemy_types = Array[ExtResource("1_data")]([ExtResource("2_warchief"), ExtResource("3_ogre")])
 min_count = 2
 max_count = 4
+node_type = "goblin_camp"
+region = "rpg"

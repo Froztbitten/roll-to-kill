@@ -51,7 +51,7 @@ func generate_new_map():
 		for j in range(node_count):
 			# Center the nodes vertically around MAP_START_Y
 			var y_pos = MAP_START_Y + (j - (node_count - 1) / 2.0) * NODE_SPACING
-			var node_type = "combat"
+			var node_type = "crypt"
 			# 15% chance for a rare encounter
 			if i == 5 and j == guaranteed_shop_index:
 				node_type = "shop"
@@ -151,6 +151,8 @@ func draw_map():
 			elif node.type == "campfire":
 				icon.texture = load("res://assets/ai/ui/campfire_encounter.svg") # Placeholder
 				icon.modulate = Color(1, 0.4, 0.0) # Orange/Fire color
+			elif node.type == "crypt":
+				icon.texture = load("res://assets/ai/ui/crypt_node.svg")
 			else:
 				icon.texture = load("res://assets/ai/ui/normal_encounter.svg")
 

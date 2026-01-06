@@ -9,4 +9,6 @@ script = ExtResource("3_encounter")
 enemy_types = Array[ExtResource("2_data")]([ExtResource("1_tinkerer")])
 min_count = 2
 max_count = 3
+node_type = "dwarven_forge"
+region = "rpg"
 metadata/_custom_type_script = "uid://ck2drfaun3f25"

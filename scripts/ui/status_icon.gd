@@ -21,7 +21,10 @@ func set_status(effect: StatusEffect, value: int):
 	# The built-in tooltip is replaced by our custom implementation.
 	# self.tooltip_text = "%s\n%s" % [effect.status_name, effect.description]
 	if count_label:
-		count_label.text = str(value)
+		if value == -1:
+			count_label.text = ""
+		else:
+			count_label.text = str(value)
 
 func _on_mouse_entered():
 	hover_timer.start()

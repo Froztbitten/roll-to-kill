@@ -9,7 +9,13 @@ extends Node
 const ENEMY_UI = preload("res://scenes/characters/enemy/enemy.tscn")
 
 func _ready():
-	encounter_pool.assign(Utils.load_all_resources("res://resources/encounters"))
+	var all_encounters = Utils.load_all_resources("res://resources/encounters")
+	var filtered_encounters: Array[EncounterData] = []
+	for res in all_encounters:
+		if res is EncounterData and res.resource_path.get_file() != "tutorial_encounter.tres":
+			filtered_encounters.append(res)
+	encounter_pool.assign(filtered_encounters)
+
 	# Auto-populate the minion pool if it's empty, for convenience.
 	if minion_pool.is_empty():
 		var minion_paths = [
@@ -49,6 +55,9 @@ func spawn_random_encounter(encounter_type: EncounterData.EncounterType):
 	return []
 
 func spawn_specific_encounter(encounter: EncounterData) -> Array:
+	if not encounter:
+		push_error("spawn_specific_encounter: EncounterData is null.")
+		return []
 	var number_to_spawn = randi_range(encounter.min_count, encounter.max_count)
 	return _spawn_enemies(encounter, number_to_spawn)
 

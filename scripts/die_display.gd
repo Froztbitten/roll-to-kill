@@ -155,6 +155,7 @@ func deselect(animated: bool = true):
 func _on_hover_timer_timeout():
 	# This function is called after the hover delay.
 	# Check if the rolled face has an effect and a description.
+	if not is_inside_tree(): return
 	if die and die.result_face and not die.result_face.effects.is_empty():
 		var effect: DieFaceEffect = die.result_face.effects[0]
 		if not effect.description.is_empty():

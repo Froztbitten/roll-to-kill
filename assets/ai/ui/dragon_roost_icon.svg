@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500">
+  <defs>
+    <linearGradient id="rockGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#7d7d7d;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#4a4a4a;stop-opacity:1" />
+    </linearGradient>
+    <radialGradient id="goldGradient" cx="50%" cy="50%" r="50%" fx="50%" fy="50%">
+      <stop offset="0%" style="stop-color:#ffd700;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#d4af37;stop-opacity:1" />
+    </radialGradient>
+  </defs>
+
+  <path d="M 100 450 L 150 250 L 120 220 L 180 150 L 250 100 L 320 150 L 380 220 L 350 250 L 400 450 Z" 
+        fill="url(#rockGradient)" 
+        stroke="#2c2c2c" 
+        stroke-width="8" 
+        stroke-linejoin="round" />
+
+  <path d="M 180 350 L 220 300 M 320 380 L 300 320" 
+        stroke="#2c2c2c" 
+        stroke-width="5" 
+        fill="none" 
+        stroke-linecap="round"/>
+
+  <ellipse cx="250" cy="110" rx="80" ry="30" 
+           fill="#8b4513" 
+           stroke="#2c2c2c" 
+           stroke-width="6" />
+
+  <path d="M 220 110 Q 250 90 280 110 Q 270 130 230 130 Z" 
+        fill="url(#goldGradient)" 
+        stroke="#2c2c2c" 
+        stroke-width="3" />
+  
+  <circle cx="230" cy="115" r="5" fill="#fffacd" opacity="0.6"/>
+  <circle cx="260" cy="105" r="4" fill="#fffacd" opacity="0.6"/>
+  
+  <circle cx="150" cy="440" r="10" fill="#f0f0f0" stroke="#2c2c2c" stroke-width="3"/>
+  <path d="M 160 445 L 170 450" stroke="#2c2c2c" stroke-width="3" stroke-linecap="round"/>
+
+</svg>

@@ -10,3 +10,5 @@
 script = ExtResource("5_encounter")
 enemy_types = Array[ExtResource("1_data")]([ExtResource("2_wk"), ExtResource("3_ff"), ExtResource("4_kw")])
 max_count = 3
+node_type = "dragons_roost"
+region = "rpg"
