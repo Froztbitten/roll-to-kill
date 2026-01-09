@@ -1,4 +1,4 @@
-[gd_scene load_steps=20 format=3 uid="uid://bnpd5h2y0tnye"]
+[gd_scene load_steps=22 format=3 uid="uid://bnpd5h2y0tnye"]
 
 [ext_resource type="PackedScene" uid="uid://bvyv5m1pde7i7" path="res://scenes/characters/player.tscn" id="1_t2esq"]
 [ext_resource type="Script" uid="uid://bik3wojuaq330" path="res://scripts/main.gd" id="1_v4h7v"]
@@ -19,6 +19,8 @@
 [ext_resource type="Script" uid="uid://kby8d4xma06b" path="res://scripts/character/enemy/enemies.gd" id="14_jkv2x"]
 [ext_resource type="PackedScene" path="res://scenes/screens/debug_menu.tscn" id="15_debug"]
 [ext_resource type="PackedScene" path="res://scenes/screens/campfire_screen.tscn" id="16_campfire"]
+[ext_resource type="PackedScene" path="res://scenes/screens/town_screen.tscn" id="17_town"]
+[ext_resource type="PackedScene" path="res://scenes/screens/quest_board_screen.tscn" id="18_quest"]
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_map"]
 
@@ -39,6 +41,7 @@ script = ExtResource("14_jkv2x")
 [node name="IntentLines" type="Node2D" parent="."]
 
 [node name="UI" type="CanvasLayer" parent="."]
+layer = 20
 
 [node name="GameInfo" type="PanelContainer" parent="UI"]
 anchors_preset = 10
@@ -187,6 +190,12 @@ visible = false
 visible = false
 
 [node name="CampfireScreen" parent="UI" instance=ExtResource("16_campfire")]
+visible = false
+
+[node name="TownScreen" parent="UI" instance=ExtResource("17_town")]
+visible = false
+
+[node name="QuestBoardScreen" parent="UI" instance=ExtResource("18_quest")]
 visible = false
 
 [node name="DebugMenu" parent="UI" instance=ExtResource("15_debug")]

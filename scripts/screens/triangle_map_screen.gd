@@ -1,6 +1,11 @@
 extends Control
 
 signal node_selected(node_data)
+signal open_quest_board
+signal open_shop
+signal open_forge
+signal open_dice_shop
+signal open_inn
 
 const DIE_DISPLAY_SCENE = preload("res://scenes/dice/die_display.tscn")
 const TriangleButton = preload("res://scripts/ui/triangle_button.gd")
@@ -25,19 +30,37 @@ var full_distance_label: Label
 var turn_limit_label: Label
 var moves_label: Label
 var is_moving = false
-var ui_layer: CanvasLayer
+var is_rolling = false
+var current_tween: Tween
+var pending_roll_result = 0
+var current_roll_overlay: Control
+var pending_movement_path = []
+var final_moves_remaining = 0
+var ui_layer: Control
 var mountain_texture: ImageTexture
 var water_texture: ImageTexture
 var grass_texture: ImageTexture
 var town_ui: Control
+
+func _input(event):
+	if not visible: return
+	
+	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and event.is_pressed():
+		if is_rolling:
+			_skip_roll_animation()
+			get_viewport().set_input_as_handled()
+		elif is_moving:
+			_skip_movement_animation()
+			get_viewport().set_input_as_handled()
 
 func _ready():
 	visible = false
 	visibility_changed.connect(func(): if ui_layer: ui_layer.visible = visible)
 	
 	# Setup Static UI
-	ui_layer = CanvasLayer.new()
-	ui_layer.layer = 10
+	ui_layer = Control.new()
+	ui_layer.set_anchors_preset(Control.PRESET_FULL_RECT)
+	ui_layer.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	ui_layer.visible = visible
 	add_child(ui_layer)
 	
@@ -198,11 +221,11 @@ func _create_town_ui():
 		grid.add_child(btn)
 		return btn
 
-	create_town_btn.call("Quest Board", Color(0.55, 0.35, 0.15), "res://assets/ai/ui/quest_board.svg")
-	create_town_btn.call("Spell Shop", Color(0.4, 0.2, 0.6), "res://assets/ai/ui/spell_shop.svg")
-	create_town_btn.call("Forge", Color(0.7, 0.3, 0.1), "res://assets/ai/ui/dice_forge.svg")
-	create_town_btn.call("Dice Shop", Color(0.8, 0.7, 0.1), "res://assets/ai/ui/dice_shop.svg")
-	create_town_btn.call("Inn", Color(0.2, 0.5, 0.2), "res://assets/ai/ui/inn.svg")
+	create_town_btn.call("Quest Board", Color(0.55, 0.35, 0.15), "res://assets/ai/ui/quest_board.svg").pressed.connect(func(): emit_signal("open_quest_board"))
+	create_town_btn.call("Spell Shop", Color(0.4, 0.2, 0.6), "res://assets/ai/ui/spell_shop.svg").pressed.connect(func(): emit_signal("open_shop"))
+	create_town_btn.call("Forge", Color(0.7, 0.3, 0.1), "res://assets/ai/ui/dice_forge.svg").pressed.connect(func(): emit_signal("open_forge"))
+	create_town_btn.call("Dice Shop", Color(0.8, 0.7, 0.1), "res://assets/ai/ui/dice_shop.svg").pressed.connect(func(): emit_signal("open_dice_shop"))
+	create_town_btn.call("Inn", Color(0.2, 0.5, 0.2), "res://assets/ai/ui/inn.svg").pressed.connect(func(): emit_signal("open_inn"))
 	
 	var leave_btn = Button.new()
 	leave_btn.text = "Leave Town"
@@ -986,8 +1009,12 @@ func start_turn():
 	d1.roll()
 	d2.roll()
 	
+	pending_roll_result = d1.result_value + d2.result_value
+	is_rolling = true
+	
 	# Create visual displays for the roll
 	var roll_overlay = Control.new()
+	current_roll_overlay = roll_overlay
 	roll_overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
 	roll_overlay.z_index = 200 # Ensure it's on top
 	add_child(roll_overlay)
@@ -1013,20 +1040,32 @@ func start_turn():
 	disp2.scale = Vector2.ZERO
 	
 	var tween = create_tween()
+	current_tween = tween
 	tween.tween_property(disp1, "scale", Vector2(1.5, 1.5), 0.4).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 	tween.parallel().tween_property(disp2, "scale", Vector2(1.5, 1.5), 0.4).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 	
 	await tween.finished
-	await get_tree().create_timer(0.5).timeout
+	if not is_rolling: return
 	
-	moves_remaining = d1.result_value + d2.result_value
+	var timer_tween = create_tween()
+	current_tween = timer_tween
+	timer_tween.tween_interval(0.5)
+	await timer_tween.finished
+	if not is_rolling: return
+	
+	moves_remaining = pending_roll_result
 	moves_label.text = "%d" % moves_remaining
 	
 	# Fade out overlay
 	var out_tween = create_tween()
+	current_tween = out_tween
 	out_tween.tween_property(roll_overlay, "modulate:a", 0.0, 0.3)
 	await out_tween.finished
+	if not is_rolling: return
+	
 	roll_overlay.queue_free()
+	current_roll_overlay = null
+	is_rolling = false
 
 func _on_end_turn_pressed():
 	start_turn()
@@ -1137,6 +1176,8 @@ func _on_node_pressed(node):
 		distance = moves_remaining
 	
 	is_moving = true
+	pending_movement_path = path
+	final_moves_remaining = moves_remaining - distance
 	
 	path_line.clear_points()
 	full_path_line.clear_points()
@@ -1144,6 +1185,8 @@ func _on_node_pressed(node):
 	full_distance_label.visible = false
 	
 	var tween = create_tween()
+	current_tween = tween
+	
 	if not path.is_empty() and path[0] != current_node:
 		tween.tween_method(func(t): _animate_hop(t, current_node.pos, path[0].pos), 0.0, 1.0, 0.15)
 		
@@ -1160,6 +1203,9 @@ func _on_node_pressed(node):
 		)
 	
 	await tween.finished
+	if not is_moving: return
+	
+	pending_movement_path = [] # Movement finished, prevent skip logic from re-running movement completion
 	
 	var destination_node = path.back()
 	current_node = destination_node
@@ -1172,11 +1218,15 @@ func _on_node_pressed(node):
 	elif current_node.type != "normal" and current_node.type != "start":
 		emit_signal("node_selected", current_node)
 	
-	is_moving = false
-	
 	if moves_remaining == 0:
-		await get_tree().create_timer(0.5).timeout
+		var timer_tween = create_tween()
+		current_tween = timer_tween
+		timer_tween.tween_interval(0.5)
+		await timer_tween.finished
+		if not is_moving: return
 		start_turn()
+		
+	is_moving = false
 
 func get_node_by_indices(_layer, _index):
 	return null
@@ -1186,3 +1236,53 @@ func _animate_hop(t: float, start_pos: Vector2, end_pos: Vector2):
 	var hop_height = 30.0
 	var height_offset = 4.0 * t * (1.0 - t) * hop_height
 	player_icon.position = current_pos - Vector2(0, height_offset) - (player_icon.size / 2.0)
+
+func _skip_roll_animation():
+	if current_tween and current_tween.is_valid():
+		current_tween.kill()
+	
+	moves_remaining = pending_roll_result
+	moves_label.text = "%d" % moves_remaining
+	
+	if current_roll_overlay:
+		current_roll_overlay.queue_free()
+		current_roll_overlay = null
+	
+	is_rolling = false
+
+func _skip_movement_animation():
+	if current_tween and current_tween.is_valid():
+		current_tween.kill()
+	
+	if pending_movement_path.is_empty(): return
+	
+	moves_remaining = final_moves_remaining
+	if moves_remaining > 0:
+		moves_label.text = "%d" % moves_remaining
+	else:
+		moves_label.text = ""
+	
+	var destination_node = pending_movement_path.back()
+	current_node = destination_node
+	current_node.cleared = true
+	
+	player_icon.position = current_node.pos - (player_icon.size / 2.0)
+	update_visuals()
+	
+	if current_node.type == "town":
+		town_ui.visible = true
+	elif current_node.type != "normal" and current_node.type != "start":
+		emit_signal("node_selected", current_node)
+	
+	is_moving = false
+	
+	if moves_remaining == 0:
+		start_turn()
+
+func close_town_menu():
+	if town_ui:
+		town_ui.visible = false
+
+func open_town_menu():
+	if town_ui:
+		town_ui.visible = true

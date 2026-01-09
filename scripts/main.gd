@@ -24,6 +24,8 @@ signal player_performed_action(action_type, target)
 @onready var map_screen = $UI/MapScreen
 @onready var shop_screen = $UI/ShopScreen
 @onready var campfire_screen = $UI/CampfireScreen
+@onready var town_screen = $UI/TownScreen
+@onready var quest_board_screen = $UI/QuestBoardScreen
 @onready var end_turn_button = $UI/EndTurnButton
 @onready var debug_menu = $UI/DebugMenu
 
@@ -109,6 +111,8 @@ var _tooltip_timer: Timer
 var _tooltip_tween: Tween
 var _hovered_control: Control
 
+var active_quests = {}
+
 func _ready() -> void:
 	# Set process modes to allow the MainGame script to handle input while the game is paused.
 	process_mode = Node.PROCESS_MODE_ALWAYS
@@ -166,6 +170,28 @@ func _ready() -> void:
 	debug_menu.close_requested.connect(func(): debug_menu.visible = false)
 	campfire_screen.leave_campfire.connect(_on_leave_campfire)
 	
+	if not town_screen and has_node("UI/TownScreen"): town_screen = $UI/TownScreen
+	if not quest_board_screen and has_node("UI/QuestBoardScreen"): quest_board_screen = $UI/QuestBoardScreen
+	
+	if town_screen:
+		town_screen.z_index = 100
+		town_screen.open_quest_board.connect(func(): 
+			quest_board_screen.open(player)
+		)
+		town_screen.open_shop.connect(func(): shop_screen.open())
+		town_screen.open_map.connect(_on_town_open_map)
+	
+	if quest_board_screen:
+		quest_board_screen.z_index = 110
+		quest_board_screen.close_requested.connect(func(): 
+			quest_board_screen.visible = false
+			if town_screen and not (map_screen and map_screen.visible):
+				town_screen.visible = true
+			if map_screen and map_screen.has_method("open_town_menu") and map_screen.visible:
+				map_screen.open_town_menu()
+		)
+		quest_board_screen.quests_confirmed.connect(_on_quests_confirmed)
+	
 	dice_bag_button.pressed.connect(_on_dice_bag_button_pressed)
 	dice_bag_close_button.pressed.connect(func(): dice_bag_screen.visible = false)
 
@@ -209,6 +235,20 @@ func _ready() -> void:
 		$UI.move_child(triangle_map, $UI/MapScreen.get_index() if has_node("UI/MapScreen") else 0)
 		map_screen = triangle_map
 		map_screen.node_selected.connect(_on_map_node_selected)
+		
+		# Connect Triangle Map town signals
+		map_screen.open_quest_board.connect(func(): 
+			quest_board_screen.open(player)
+			map_screen.close_town_menu()
+		)
+		map_screen.open_shop.connect(func(): 
+			shop_screen.open()
+			map_screen.close_town_menu()
+		)
+		# map_screen.open_forge.connect(...) 
+		# map_screen.open_dice_shop.connect(...)
+		# map_screen.open_inn.connect(...)
+		
 		map_screen.visibility_changed.connect(func():
 			var round_info = $UI/RoundInfo
 			if round_info:
@@ -1664,6 +1704,21 @@ func _on_map_node_selected(node_data):
 	elif node_data.type == "boss":
 		var spawned_enemies = enemy_spawner.spawn_random_encounter(EncounterData.EncounterType.BOSS)
 		await _setup_round(spawned_enemies)
+	elif node_data.type == "goblin_camp":
+		var encounter = load("res://resources/encounters/pack_o_goblins.tres")
+		var spawned_enemies = enemy_spawner.spawn_specific_encounter(encounter)
+		_apply_quest_modifiers(spawned_enemies, "goblin_camp")
+		await _setup_round(spawned_enemies)
+	elif node_data.type == "dragon_roost":
+		var encounter = load("res://resources/encounters/white_eyes_blue_dragon_encounter.tres")
+		var spawned_enemies = enemy_spawner.spawn_specific_encounter(encounter)
+		_apply_quest_modifiers(spawned_enemies, "dragons_roost")
+		await _setup_round(spawned_enemies)
+	elif node_data.type == "dwarven_forge":
+		var encounter = load("res://resources/encounters/gnomes.tres")
+		var spawned_enemies = enemy_spawner.spawn_specific_encounter(encounter)
+		_apply_quest_modifiers(spawned_enemies, "dwarven_forge")
+		await _setup_round(spawned_enemies)
 	elif node_data.type == "campfire":
 		campfire_screen.open()
 	elif node_data.type == "crypt":
@@ -1705,6 +1760,7 @@ func _advance_crypt_stage():
 			player.reset_for_new_round()
 			enemy_container.clear_everything()
 		var spawned_enemies = enemy_spawner.spawn_random_encounter(EncounterData.EncounterType.NORMAL)
+		_apply_quest_modifiers(spawned_enemies, "crypt")
 		await _setup_round(spawned_enemies)
 	elif current_crypt_stage == 3:
 		print("Crypt Stage %d: Rest Area" % current_crypt_stage)
@@ -1714,6 +1770,7 @@ func _advance_crypt_stage():
 		player.reset_for_new_round()
 		enemy_container.clear_everything()
 		var spawned_enemies = enemy_spawner.spawn_random_encounter(EncounterData.EncounterType.RARE)
+		_apply_quest_modifiers(spawned_enemies, "crypt")
 		await _setup_round(spawned_enemies)
 	else:
 		print("Crypt Completed")
@@ -1791,6 +1848,13 @@ func _on_enemy_exploded(damage: int, source: Enemy):
 	await player.take_damage(damage, true, source, false)
 
 func _on_enemy_gold_dropped(amount: int, source_enemy: Node2D):
+	if source_enemy.has_meta("quest_die_value"):
+		var die_val = source_enemy.get_meta("quest_die_value")
+		if die_val >= 5:
+			amount = ceili(amount * 1.5)
+		elif die_val <= 2:
+			amount = ceili(amount * 0.7)
+
 	_show_gold_popup(amount, source_enemy.global_position)
 	_animate_gold_collection(amount, source_enemy)
 	
@@ -2879,3 +2943,32 @@ func _handle_remote_player_action(packet):
 	
 	if packet.block > 0 and target == r_player:
 		target.add_block(packet.block)
+
+func _on_quests_confirmed(quests_data):
+	active_quests.clear()
+	for q in quests_data:
+		active_quests[q.id] = q
+	print("Quests confirmed: ", active_quests)
+
+func _apply_quest_modifiers(spawned_enemies: Array, quest_id: String):
+	if not active_quests.has(quest_id): return
+	
+	var quest_data = active_quests[quest_id]
+	var die_value = quest_data.die_value
+	print("Applying quest modifiers for %s with die value %d" % [quest_id, die_value])
+	
+	var modifier = 1.0
+	if die_value <= 2:
+		modifier = 0.8
+	elif die_value >= 5:
+		modifier = 1.2
+		
+	for enemy in spawned_enemies:
+		enemy.max_hp = ceili(enemy.max_hp * modifier)
+		enemy.hp = enemy.max_hp
+		enemy.update_health_display()
+		enemy.set_meta("quest_die_value", die_value)
+
+func _on_town_open_map():
+	map_screen.visible = true
+	town_screen.visible = false
