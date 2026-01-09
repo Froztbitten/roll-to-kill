@@ -112,6 +112,19 @@ var _hovered_control: Control
 func _ready() -> void:
 	# Set process modes to allow the MainGame script to handle input while the game is paused.
 	process_mode = Node.PROCESS_MODE_ALWAYS
+	
+	# --- Analytics Debug Check ---
+	if has_node("/root/GameAnalyticsManager"):
+		print("MainGame: GameAnalyticsManager is loaded.")
+	else:
+		push_error("MainGame: GameAnalyticsManager NOT found. Please add it to Project Settings > Globals.")
+
+	if has_node("/root/GoogleAnalytics"):
+		print("MainGame: GoogleAnalytics plugin is loaded.")
+	else:
+		push_warning("MainGame: GoogleAnalytics plugin NOT found. Check if it is enabled or named differently (e.g. 'GA4').")
+	# -----------------------------
+
 	player.process_mode = Node.PROCESS_MODE_PAUSABLE
 	enemy_container.process_mode = Node.PROCESS_MODE_PAUSABLE
 	dice_pool_ui.process_mode = Node.PROCESS_MODE_PAUSABLE
@@ -187,6 +200,20 @@ func _ready() -> void:
 
 	_update_total_dice_count(player._game_dice_bag.size())
 	_update_selected_value_label()
+
+	if get_tree().root.has_meta("experimental_mode") and get_tree().root.get_meta("experimental_mode"):
+		map_screen.queue_free()
+		var triangle_map = load("res://scenes/screens/triangle_map_screen.tscn").instantiate()
+		$UI.add_child(triangle_map)
+		# Move it to where MapScreen was in the tree order if needed, or just ensure it's below other UI
+		$UI.move_child(triangle_map, $UI/MapScreen.get_index() if has_node("UI/MapScreen") else 0)
+		map_screen = triangle_map
+		map_screen.node_selected.connect(_on_map_node_selected)
+		map_screen.visibility_changed.connect(func():
+			var round_info = $UI/RoundInfo
+			if round_info:
+				round_info.visible = !map_screen.visible
+		)
 
 	if get_tree().root.has_meta("tutorial_mode") and get_tree().root.get_meta("tutorial_mode"):
 		var tutorial_script = load("res://scripts/tutorial_manager.gd")
@@ -1710,6 +1737,9 @@ func start_new_round() -> void:
 	
 	await _setup_round(spawned_enemies)
 
+	if has_node("/root/GameAnalyticsManager"):
+		get_node("/root/GameAnalyticsManager").start_round(round_number)
+
 func _setup_round(spawned_enemies: Array) -> void:
 	if spawned_enemies.is_empty():
 		push_error("No enemies spawned, cannot start round.")
@@ -1765,7 +1795,11 @@ func _on_enemy_gold_dropped(amount: int, source_enemy: Node2D):
 	_animate_gold_collection(amount, source_enemy)
 	
 	# Delay adding gold until the animation (approx) finishes so the counter updates when gold arrives
-	get_tree().create_timer(0.8).timeout.connect(func(): player.add_gold(amount))
+	get_tree().create_timer(0.8).timeout.connect(func(): 
+		player.add_gold(amount)
+		if has_node("/root/GameAnalyticsManager"):
+			get_node("/root/GameAnalyticsManager").track_gold_source(amount, "loot", source_enemy.enemy_data.enemy_name if source_enemy.enemy_data else "enemy")
+	)
 
 func _show_gold_popup(amount: int, pos: Vector2):
 	var label = Label.new()
@@ -1906,6 +1940,8 @@ func _generate_reward_dice() -> Array[Die]:
 func _on_reward_chosen(chosen_die: Die) -> void:
 	if (chosen_die == null):
 		player.add_gold(10)
+		if has_node("/root/GameAnalyticsManager"):
+			get_node("/root/GameAnalyticsManager").track_gold_source(10, "reward", "skip_reward")
 	else:
 		if chosen_die.has_meta("is_upgrade_reward"):
 			var target_die = chosen_die.get_meta("upgrade_target")
@@ -1916,6 +1952,9 @@ func _on_reward_chosen(chosen_die: Die) -> void:
 			# Add the chosen die to the player's deck
 			player.add_to_game_bag([chosen_die])
 	
+	if has_node("/root/GameAnalyticsManager"):
+		get_node("/root/GameAnalyticsManager").complete_round(round_number)
+
 	round_number += 1
 	reward_screen.visible = false
 	
@@ -1940,6 +1979,8 @@ func _on_leave_campfire():
 		map_screen.visible = true
 
 func _on_player_died():
+	if has_node("/root/GameAnalyticsManager"):
+		get_node("/root/GameAnalyticsManager").fail_round(round_number)
 	defeat_screen.visible = true
 
 func next_turn():

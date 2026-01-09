@@ -1,0 +1,68 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <radialGradient id="magmaGradient" cx="50%" cy="80%" r="60%" fx="50%" fy="80%">
+      <stop offset="0%" style="stop-color:#f1c40f;stop-opacity:1" /> <stop offset="40%" style="stop-color:#e67e22;stop-opacity:1" /> <stop offset="100%" style="stop-color:#c0392b;stop-opacity:1" /> </radialGradient>
+    
+    <linearGradient id="ironGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#95a5a6;stop-opacity:1" /> <stop offset="100%" style="stop-color:#2c3e50;stop-opacity:1" /> </linearGradient>
+    
+    <linearGradient id="stoneGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#7f8c8d;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#34495e;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+
+  <path d="M 100 450 L 100 200 Q 256 50 412 200 L 412 450 Z" 
+        fill="url(#stoneGradient)" 
+        stroke="#1a1a1a" 
+        stroke-width="12" 
+        stroke-linejoin="round"/>
+        
+  <path d="M 150 450 L 150 250 Q 256 150 362 250 L 362 450 Z" 
+        fill="#1a1a1a" />
+        
+  <path d="M 160 450 L 160 280 Q 256 200 352 280 L 352 450 Z" 
+        fill="url(#magmaGradient)" />
+
+  <path d="M 180 450 L 332 450 L 312 400 Q 256 420 200 400 Z" 
+        fill="url(#ironGradient)" 
+        stroke="#1a1a1a" 
+        stroke-width="10" 
+        stroke-linejoin="round"/>
+  
+  <path d="M 220 400 L 292 400 L 300 300 L 212 300 Z" 
+        fill="url(#ironGradient)" 
+        stroke="#1a1a1a" 
+        stroke-width="10" 
+        stroke-linejoin="round"/>
+
+  <path d="M 130 300 
+           L 380 300 
+           L 380 350 
+           L 300 350 
+           Q 256 320 212 350 
+           L 180 350 
+           Q 150 350 130 300 Z" 
+        fill="url(#ironGradient)" 
+        stroke="#1a1a1a" 
+        stroke-width="10" 
+        stroke-linejoin="round"/>
+
+  <g transform="rotate(-15, 420, 380)">
+    <rect x="410" y="280" width="20" height="120" 
+          fill="#8b4513" 
+          stroke="#1a1a1a" 
+          stroke-width="8" 
+          rx="5"/>
+    <rect x="380" y="280" width="80" height="40" 
+          fill="#95a5a6" 
+          stroke="#1a1a1a" 
+          stroke-width="8" 
+          rx="5"/>
+  </g>
+
+  <circle cx="200" cy="220" r="5" fill="#f1c40f" opacity="0.8"/>
+  <circle cx="280" cy="180" r="8" fill="#e67e22" opacity="0.8"/>
+  <circle cx="320" cy="240" r="4" fill="#f39c12" opacity="0.8"/>
+
+</svg>

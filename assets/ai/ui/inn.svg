@@ -1,0 +1,64 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <radialGradient id="lightGradient" cx="50%" cy="50%" r="50%" fx="50%" fy="50%">
+      <stop offset="0%" style="stop-color:#f1c40f;stop-opacity:1" /> <stop offset="100%" style="stop-color:#f39c12;stop-opacity:1" /> </radialGradient>
+
+    <linearGradient id="woodGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#8b4513;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#5e2f0d;stop-opacity:1" />
+    </linearGradient>
+
+    <linearGradient id="roofGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#c0392b;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#7b241c;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+
+  <path d="M 50 450 L 462 450" stroke="#1a1a1a" stroke-width="12" stroke-linecap="round" />
+
+  <rect x="150" y="250" width="212" height="200" 
+        fill="#95a5a6" 
+        stroke="#1a1a1a" 
+        stroke-width="10"/>
+
+  <rect x="130" y="120" width="252" height="130" 
+        fill="url(#woodGradient)" 
+        stroke="#1a1a1a" 
+        stroke-width="10"/>
+
+  <line x1="190" y1="120" x2="190" y2="250" stroke="#1a1a1a" stroke-width="8"/>
+  <line x1="322" y1="120" x2="322" y2="250" stroke="#1a1a1a" stroke-width="8"/>
+  <line x1="130" y1="120" x2="382" y2="250" stroke="#1a1a1a" stroke-width="8" opacity="0.3"/>
+  <line x1="382" y1="120" x2="130" y2="250" stroke="#1a1a1a" stroke-width="8" opacity="0.3"/>
+
+  <path d="M 110 120 L 256 20 L 402 120 Z" 
+        fill="url(#roofGradient)" 
+        stroke="#1a1a1a" 
+        stroke-width="10" 
+        stroke-linejoin="round"/>
+
+  <rect x="340" y="40" width="40" height="60" fill="#7f8c8d" stroke="#1a1a1a" stroke-width="8"/>
+  <path d="M 340 40 L 380 40" stroke="#1a1a1a" stroke-width="8"/> <circle cx="370" cy="20" r="10" fill="#bdc3c7" opacity="0.6"/>
+  <circle cx="390" cy="0" r="15" fill="#bdc3c7" opacity="0.4"/>
+
+  <path d="M 230 450 L 230 350 Q 256 330 282 350 L 282 450 Z" 
+        fill="#6e2c00" 
+        stroke="#1a1a1a" 
+        stroke-width="8"/>
+
+  <rect x="150" y="150" width="30" height="40" fill="url(#lightGradient)" stroke="#1a1a1a" stroke-width="6"/>
+  <rect x="332" y="150" width="30" height="40" fill="url(#lightGradient)" stroke="#1a1a1a" stroke-width="6"/>
+  <rect x="320" y="300" width="30" height="40" fill="url(#lightGradient)" stroke="#1a1a1a" stroke-width="6"/>
+
+  <path d="M 130 180 L 80 180" stroke="#1a1a1a" stroke-width="10" stroke-linecap="round"/>
+  <path d="M 130 220 L 90 180" stroke="#1a1a1a" stroke-width="8"/>
+  
+  <line x1="90" y1="185" x2="90" y2="210" stroke="#1a1a1a" stroke-width="4"/>
+  <line x1="120" y1="185" x2="120" y2="210" stroke="#1a1a1a" stroke-width="4"/>
+
+  <rect x="80" y="210" width="50" height="50" rx="5" fill="#ecf0f1" stroke="#1a1a1a" stroke-width="6"/>
+  
+  <rect x="92" y="222" width="26" height="26" rx="4" fill="#1a1a1a"/>
+  <circle cx="105" cy="235" r="3" fill="#ecf0f1"/>
+
+</svg>

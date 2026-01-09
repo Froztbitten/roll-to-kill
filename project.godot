@@ -20,6 +20,12 @@ config/main_scene="res://scenes/main.tscn"
 Utils="*res://scripts/utils.gd"
 EffectLibrary="*res://scripts/effect_library.gd"
 StatusLibrary="*res://scripts/status_library.gd"
+GameAnalyticsManager="*res://scripts/game_analytics_manager.gd"
+GoogleAnalytics="*res://addons/google_analytics/analytics_singleton.gd"
+
+[editor_plugins]
+
+enabled=PackedStringArray("res://addons/google_analytics/plugin.cfg")
 
 [rendering]
 

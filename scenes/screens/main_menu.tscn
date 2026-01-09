@@ -60,6 +60,12 @@ layout_mode = 2
 theme_override_font_sizes/font_size = 32
 text = "Debug Run"
 
+[node name="ExperimentalButton" type="Button" parent="VBoxContainer"]
+custom_minimum_size = Vector2(0, 60)
+layout_mode = 2
+theme_override_font_sizes/font_size = 32
+text = "Experimental Mode"
+
 [node name="QuitButton" type="Button" parent="VBoxContainer"]
 custom_minimum_size = Vector2(0, 60)
 layout_mode = 2
@@ -69,4 +75,5 @@ text = "Quit"
 [connection signal="pressed" from="VBoxContainer/StartButton" to="." method="_on_start_button_pressed"]
 [connection signal="pressed" from="VBoxContainer/TutorialButton" to="." method="_on_tutorial_button_pressed"]
 [connection signal="pressed" from="VBoxContainer/DebugButton" to="." method="_on_debug_button_pressed"]
+[connection signal="pressed" from="VBoxContainer/ExperimentalButton" to="." method="_on_experimental_button_pressed"]
 [connection signal="pressed" from="VBoxContainer/QuitButton" to="." method="_on_quit_button_pressed"]

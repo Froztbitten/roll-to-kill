@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://sj0byon6s6mk"
-path="res://.godot/imported/dragon_roost_icon.svg-1a4dea7229e43b110fefd1abd218fb60.ctex"
+uid="uid://cm1g5j6ijd56l"
+path="res://.godot/imported/town_node.svg-5250ba02021327f334a31b3a948eae3e.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/ai/ui/dragon_roost_icon.svg"
-dest_files=["res://.godot/imported/dragon_roost_icon.svg-1a4dea7229e43b110fefd1abd218fb60.ctex"]
+source_file="res://assets/ai/ui/town_node.svg"
+dest_files=["res://.godot/imported/town_node.svg-5250ba02021327f334a31b3a948eae3e.ctex"]
 
 [params]
 

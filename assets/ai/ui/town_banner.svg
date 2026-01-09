@@ -1,0 +1,161 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 250">
+  <defs>
+    <linearGradient id="skyGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#85c1e9;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#d6eaf8;stop-opacity:1" />
+    </linearGradient>
+
+    <linearGradient id="groundGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#95a5a6;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#7f8c8d;stop-opacity:1" />
+    </linearGradient>
+
+    <linearGradient id="woodGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#8b4513;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#5e2f0d;stop-opacity:1" />
+    </linearGradient>
+
+    <linearGradient id="roofRed" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#c0392b;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#922b21;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+
+  <rect x="0" y="0" width="800" height="250" fill="url(#skyGradient)"/>
+  
+  <path d="M 100 50 Q 120 30 140 50 T 180 50" stroke="white" stroke-width="5" fill="none" opacity="0.6"/>
+  <path d="M 600 40 Q 620 20 640 40 T 680 40" stroke="white" stroke-width="5" fill="none" opacity="0.6"/>
+  <path d="M 350 60 Q 370 40 390 60 T 430 60" stroke="white" stroke-width="4" fill="none" opacity="0.5"/>
+
+  <rect x="0" y="180" width="800" height="70" fill="url(#groundGradient)"/>
+  <g stroke="#5e6d75" stroke-width="2" opacity="0.4">
+    <ellipse cx="100" cy="200" rx="10" ry="5" fill="none"/>
+    <ellipse cx="250" cy="220" rx="12" ry="6" fill="none"/>
+    <ellipse cx="450" cy="210" rx="10" ry="5" fill="none"/>
+    <ellipse cx="650" cy="230" rx="12" ry="6" fill="none"/>
+    <ellipse cx="350" cy="190" rx="8" ry="4" fill="none"/>
+    <ellipse cx="550" cy="200" rx="10" ry="5" fill="none"/>
+  </g>
+
+  <path d="M 80 180 L 80 120 L 120 90 L 160 120 L 160 180 Z" fill="#7f8c8d" stroke="#546e7a" stroke-width="2"/>
+  <path d="M 180 180 L 180 100 L 230 60 L 280 100 L 280 180 Z" fill="#7f8c8d" stroke="#546e7a" stroke-width="2"/>
+  <rect x="200" y="120" width="20" height="30" fill="#546e7a"/>
+  <path d="M 480 180 L 480 130 L 510 100 L 540 130 L 540 180 Z" fill="#7f8c8d" stroke="#546e7a" stroke-width="2"/>
+  <path d="M 520 180 L 520 110 L 560 80 L 600 110 L 600 180 Z" fill="#7f8c8d" stroke="#546e7a" stroke-width="2"/>
+  <path d="M 700 180 L 700 120 L 740 90 L 780 120 L 780 180 Z" fill="#7f8c8d" stroke="#546e7a" stroke-width="2"/>
+
+  <g transform="translate(40, 50)">
+    <rect x="10" y="80" width="120" height="100" fill="#95a5a6" stroke="#1a1a1a" stroke-width="4"/>
+    <path d="M 10 120 L 130 120 M 40 120 L 40 180 M 90 80 L 90 120" stroke="#1a1a1a" stroke-width="2" opacity="0.3"/>
+    <path d="M 0 80 L 140 80 L 140 30 L 0 30 Z" fill="url(#woodGradient)" stroke="#1a1a1a" stroke-width="4"/>
+    <line x1="10" y1="30" x2="10" y2="80" stroke="#1a1a1a" stroke-width="3"/>
+    <line x1="130" y1="30" x2="130" y2="80" stroke="#1a1a1a" stroke-width="3"/>
+    <line x1="10" y1="30" x2="50" y2="80" stroke="#1a1a1a" stroke-width="3"/>
+    <line x1="50" y1="30" x2="10" y2="80" stroke="#1a1a1a" stroke-width="3"/>
+    <path d="M -10 30 L 70 -20 L 150 30 Z" fill="url(#roofRed)" stroke="#1a1a1a" stroke-width="4" stroke-linejoin="round"/>
+    <rect x="45" y="130" width="50" height="50" fill="#5e2f0d" stroke="#1a1a1a" stroke-width="3"/>
+    <circle cx="85" cy="155" r="3" fill="#f1c40f"/>
+    <rect x="60" y="40" width="30" height="30" fill="#f1c40f" stroke="#1a1a1a" stroke-width="2"/>
+    <line x1="75" y1="40" x2="75" y2="70" stroke="#1a1a1a" stroke-width="2"/>
+    <line x1="60" y1="55" x2="90" y2="55" stroke="#1a1a1a" stroke-width="2"/>
+    <path d="M 130 50 L 160 50" stroke="#1a1a1a" stroke-width="3"/>
+    <line x1="155" y1="50" x2="155" y2="65" stroke="#1a1a1a" stroke-width="2"/>
+    <rect x="145" y="65" width="20" height="20" fill="#e67e22" stroke="#1a1a1a" stroke-width="2"/>
+    <circle cx="155" cy="75" r="3" fill="#fff"/>
+  </g>
+
+  <g transform="translate(320, 20)">
+    <rect x="-10" y="150" width="140" height="10" fill="#bdc3c7" stroke="#1a1a1a" stroke-width="2"/>
+    <rect x="0" y="140" width="120" height="10" fill="#bdc3c7" stroke="#1a1a1a" stroke-width="2"/>
+    <rect x="10" y="60" width="100" height="80" fill="#ecf0f1" stroke="#1a1a1a" stroke-width="4"/>
+    <rect x="15" y="60" width="10" height="80" fill="#bdc3c7" stroke="#1a1a1a" stroke-width="2"/>
+    <rect x="35" y="60" width="10" height="80" fill="#bdc3c7" stroke="#1a1a1a" stroke-width="2"/>
+    <rect x="75" y="60" width="10" height="80" fill="#bdc3c7" stroke="#1a1a1a" stroke-width="2"/>
+    <rect x="95" y="60" width="10" height="80" fill="#bdc3c7" stroke="#1a1a1a" stroke-width="2"/>
+    <rect x="45" y="90" width="30" height="50" fill="#5e2f0d" stroke="#1a1a1a" stroke-width="3"/>
+    <line x1="60" y1="90" x2="60" y2="140" stroke="#1a1a1a" stroke-width="2"/>
+    <rect x="30" y="0" width="60" height="60" fill="#bdc3c7" stroke="#1a1a1a" stroke-width="4"/>
+    <path d="M 20 0 L 60 -30 L 100 0" fill="#2c3e50" stroke="#1a1a1a" stroke-width="4"/>
+    <circle cx="60" cy="30" r="20" fill="#fff" stroke="#1a1a1a" stroke-width="3"/>
+    <line x1="60" y1="30" x2="60" y2="15" stroke="#1a1a1a" stroke-width="2"/>
+    <line x1="60" y1="30" x2="70" y2="30" stroke="#1a1a1a" stroke-width="2"/>
+  </g>
+
+  <g transform="translate(600, 60)">
+    <rect x="10" y="60" width="120" height="120" fill="#e59866" stroke="#1a1a1a" stroke-width="4"/>
+    <rect x="20" y="90" width="100" height="60" fill="#d6eaf8" stroke="#1a1a1a" stroke-width="3"/>
+    <line x1="20" y1="120" x2="120" y2="120" stroke="#1a1a1a" stroke-width="2" opacity="0.5"/>
+    <circle cx="40" cy="110" r="8" fill="#9b59b6" stroke="#1a1a1a" stroke-width="2"/>
+    <rect x="80" y="105" width="15" height="15" fill="#f1c40f" stroke="#1a1a1a" stroke-width="2"/>
+    <path d="M 0 60 L 140 60 L 130 40 L 10 40 Z" fill="#ecf0f1" stroke="#1a1a1a" stroke-width="3"/>
+    <path d="M 20 60 L 30 40 L 50 40 L 40 60 Z" fill="#e74c3c"/>
+    <path d="M 60 60 L 70 40 L 90 40 L 80 60 Z" fill="#e74c3c"/>
+    <path d="M 100 60 L 110 40 L 130 40 L 120 60 Z" fill="#e74c3c"/>
+    <rect x="90" y="120" width="30" height="60" fill="#5e2f0d" stroke="#1a1a1a" stroke-width="3"/>
+    <rect x="5" y="160" width="25" height="20" fill="#d35400" stroke="#1a1a1a" stroke-width="2"/>
+    <line x1="5" y1="160" x2="30" y2="180" stroke="#1a1a1a" stroke-width="1"/>
+    <line x1="30" y1="160" x2="5" y2="180" stroke="#1a1a1a" stroke-width="1"/>
+  </g>
+
+  <g transform="translate(220, 205)">
+    <circle cx="10" cy="0" r="8" fill="#f1c40f" stroke="#1a1a1a" stroke-width="2"/>
+    <path d="M 10 8 L 10 30" stroke="#1a1a1a" stroke-width="4"/>
+    <path d="M 10 30 L 0 50" stroke="#1a1a1a" stroke-width="3"/>
+    <path d="M 10 30 L 20 50" stroke="#1a1a1a" stroke-width="3"/>
+    <path d="M 10 15 L 20 25" stroke="#1a1a1a" stroke-width="3"/>
+  </g>
+
+  <g transform="translate(340, 205)">
+    <circle cx="10" cy="0" r="8" fill="#e74c3c" stroke="#1a1a1a" stroke-width="2"/>
+    <path d="M 10 8 L 10 30" stroke="#1a1a1a" stroke-width="4"/>
+    <path d="M 10 30 L 10 50" stroke="#1a1a1a" stroke-width="3"/>
+    <line x1="10" y1="15" x2="5" y2="25" stroke="#1a1a1a" stroke-width="3"/>
+    <line x1="10" y1="15" x2="15" y2="25" stroke="#1a1a1a" stroke-width="3"/>
+  </g>
+
+  <g transform="translate(570, 205)">
+    <circle cx="10" cy="0" r="8" fill="#3498db" stroke="#1a1a1a" stroke-width="2"/>
+    <path d="M 10 8 L 10 30" stroke="#1a1a1a" stroke-width="4"/>
+    <path d="M 10 30 L 15 50" stroke="#1a1a1a" stroke-width="3"/>
+    <path d="M 10 30 L 5 50" stroke="#1a1a1a" stroke-width="3"/>
+  </g>
+
+  <g transform="translate(120, 195) scale(0.8)">
+    <circle cx="10" cy="0" r="8" fill="#2ecc71" stroke="#1a1a1a" stroke-width="2"/>
+    <path d="M 10 8 L 10 30" stroke="#1a1a1a" stroke-width="4"/>
+    <path d="M 10 30 L 0 50" stroke="#1a1a1a" stroke-width="3"/>
+    <path d="M 10 30 L 20 50" stroke="#1a1a1a" stroke-width="3"/>
+  </g>
+
+   <g transform="translate(400, 195) scale(0.8)">
+    <circle cx="10" cy="0" r="8" fill="#9b59b6" stroke="#1a1a1a" stroke-width="2"/>
+    <path d="M 10 8 L 10 30" stroke="#1a1a1a" stroke-width="4"/>
+    <path d="M 10 30 L 10 50" stroke="#1a1a1a" stroke-width="3"/>
+  </g>
+
+  <g transform="translate(500, 225)">
+    <rect x="0" y="0" width="25" height="12" rx="4" fill="#8b4513" stroke="#1a1a1a" stroke-width="2"/>
+    <circle cx="25" cy="2" r="7" fill="#8b4513" stroke="#1a1a1a" stroke-width="2"/>
+    <ellipse cx="28" cy="4" rx="2" ry="4" fill="#5e2f0d"/>
+    <path d="M 5 12 L 0 20" stroke="#1a1a1a" stroke-width="2"/> 
+    <path d="M 20 12 L 25 20" stroke="#1a1a1a" stroke-width="2"/>
+    <path d="M 0 2 L -6 -4" stroke="#1a1a1a" stroke-width="2"/>
+  </g>
+  
+  <g transform="translate(250, -10)">
+    <line x1="50" y1="0" x2="50" y2="40" stroke="#1a1a1a" stroke-width="4"/>
+    <line x1="250" y1="0" x2="250" y2="40" stroke="#1a1a1a" stroke-width="4"/>
+    <rect x="0" y="40" width="300" height="80" rx="10" fill="url(#woodGradient)" stroke="#1a1a1a" stroke-width="6"/>
+    <rect x="10" y="50" width="280" height="60" rx="5" fill="none" stroke="#5e2f0d" stroke-width="2"/>
+    <circle cx="20" cy="50" r="4" fill="#95a5a6"/>
+    <circle cx="280" cy="50" r="4" fill="#95a5a6"/>
+    <circle cx="20" cy="110" r="4" fill="#95a5a6"/>
+    <circle cx="280" cy="110" r="4" fill="#95a5a6"/>
+    <g fill="#ecf0f1" stroke="#1a1a1a" stroke-width="2">
+      <path d="M 70 60 L 100 60 L 100 70 L 90 70 L 90 95 L 80 95 L 80 70 L 70 70 Z" />
+      <path d="M 125 60 Q 110 60 110 77.5 Q 110 95 125 95 Q 140 95 140 77.5 Q 140 60 125 60 Z M 125 68 Q 132 68 132 77.5 Q 132 87 125 87 Q 118 87 118 77.5 Q 118 68 125 68 Z" />
+      <path d="M 150 60 L 158 95 L 168 75 L 178 95 L 186 60 L 176 60 L 172 80 L 168 68 L 164 80 L 160 60 Z" />
+      <path d="M 195 95 L 195 60 L 205 60 L 215 80 L 215 60 L 225 60 L 225 95 L 215 95 L 205 75 L 205 95 Z" />
+    </g>
+  </g>
+</svg>

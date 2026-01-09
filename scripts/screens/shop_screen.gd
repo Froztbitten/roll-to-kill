@@ -214,6 +214,10 @@ func _on_die_selected(die: Die):
 		if player.gold >= player.die_removal_cost:
 			player.add_gold(-player.die_removal_cost)
 			player.remove_die_from_bag(die)
+			
+			if has_node("/root/GameAnalyticsManager"):
+				get_node("/root/GameAnalyticsManager").track_gold_sink(player.die_removal_cost, "shop", "remove_die")
+
 			player.die_removal_cost += 25
 			
 			# Reroll any shop offers that were for this die
@@ -237,6 +241,10 @@ func _on_die_selected(die: Die):
 		if player.gold >= cost:
 			player.add_gold(-cost)
 			player.upgrade_die(die)
+			
+			if has_node("/root/GameAnalyticsManager"):
+				get_node("/root/GameAnalyticsManager").track_gold_sink(cost, "upgrade", "die_upgrade")
+
 			_update_ui()
 			selection_overlay.visible = false
 		else:
@@ -245,6 +253,9 @@ func _on_die_selected(die: Die):
 func _on_buy_specific_upgrade_pressed(die: Die, face, effect: DieFaceEffect, cost: int, button: Button, die_display: Control):
 	if player.gold >= cost:
 		player.add_gold(-cost)
+		if has_node("/root/GameAnalyticsManager"):
+			get_node("/root/GameAnalyticsManager").track_gold_sink(cost, "upgrade", effect.name)
+
 		face.effects.clear()
 		face.effects.append(effect)
 		button.disabled = true
@@ -258,6 +269,9 @@ func _on_buy_specific_upgrade_pressed(die: Die, face, effect: DieFaceEffect, cos
 func _on_buy_ability_pressed(ability, cost, button):
 	if player.gold >= cost:
 		player.add_gold(-cost)
+		if has_node("/root/GameAnalyticsManager"):
+			get_node("/root/GameAnalyticsManager").track_gold_sink(cost, "ability", ability.title)
+
 		player.add_ability(ability)
 		button.disabled = true
 		button.text = "Sold"
