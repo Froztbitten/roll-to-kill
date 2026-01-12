@@ -7,8 +7,9 @@ signal open_forge
 signal open_dice_shop
 signal open_inn
 
-const DIE_DISPLAY_SCENE = preload("res://scenes/dice/die_display.tscn")
+const DIE_RENDERER_SCENE = preload("res://scenes/ui/die_3d_renderer.tscn")
 const TriangleButton = preload("res://scripts/ui/triangle_button.gd")
+const REWARDS_DIE_DISPLAY = preload("res://scenes/screens/rewards_die_display.tscn")
 
 @onready var map_container = $ScrollContainer/MapContainer
 @onready var scroll_container = $ScrollContainer
@@ -40,22 +41,74 @@ var ui_layer: Control
 var mountain_texture: ImageTexture
 var water_texture: ImageTexture
 var grass_texture: ImageTexture
+var dirt_texture: ImageTexture
 var town_ui: Control
+var temp_labels: Array[Label] = []
+var roll_id = 0
+var quest_log_container: VBoxContainer
+var fog_enabled = true
+var fog_radius = 4
+var explored_nodes = {}
+var special_visuals = {}
+var player = null
+var inn_ui: Control
+var inn_options_container: VBoxContainer
+var dice_shop_ui: Control
+var dice_shop_grid: GridContainer
+var dice_removal_overlay: Control
+var dice_removal_grid: GridContainer
+var remove_die_button: Button
+var forge_ui: Control
+var forge_selection_overlay: Control
+var forge_selection_grid: GridContainer
+var forge_selection_title: Label
+var forge_effect_overlay: Control
+var forge_action_overlay: Control
+var forge_action_container: VBoxContainer
+var forge_grid: GridContainer
+var forge_effect_container: VBoxContainer
+var selected_forge_die: Die
+var current_forge_mode: String = ""
+var has_rested_in_town = false
+var spell_shop_ui: Control
+var spell_shop_abilities_grid: GridContainer
+var spell_shop_charms_grid: GridContainer
+var reroll_charms_button: Button
+var reroll_charms_cost = 25
+var spell_shop_generated = false
 
 func _input(event):
 	if not visible: return
 	
-	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and event.is_pressed():
-		if is_rolling:
-			_skip_roll_animation()
-			get_viewport().set_input_as_handled()
-		elif is_moving:
-			_skip_movement_animation()
-			get_viewport().set_input_as_handled()
+	if event is InputEventMouseButton:
+		if event.button_index == MOUSE_BUTTON_LEFT and event.is_pressed():
+			if is_rolling:
+				_skip_roll_animation()
+				get_viewport().set_input_as_handled()
+			elif is_moving:
+				_skip_movement_animation()
+				get_viewport().set_input_as_handled()
+		elif event.is_pressed():
+			if event.button_index == MOUSE_BUTTON_WHEEL_UP:
+				fog_radius = min(fog_radius + 1, 10)
+				update_fog()
+			elif event.button_index == MOUSE_BUTTON_WHEEL_DOWN:
+				fog_radius = max(fog_radius - 1, 1)
+				update_fog()
+	
+	if event is InputEventKey and event.pressed and event.keycode == KEY_ENTER:
+		fog_enabled = !fog_enabled
+		update_fog()
+		get_viewport().set_input_as_handled()
 
 func _ready():
 	visible = false
-	visibility_changed.connect(func(): if ui_layer: ui_layer.visible = visible)
+	visibility_changed.connect(func(): 
+		if ui_layer: ui_layer.visible = visible
+		# Auto-start turn if we return to map with no moves (e.g. after combat)
+		if visible and moves_remaining == 0 and not is_rolling and not is_moving and current_node and current_node.type != "town":
+			start_turn()
+	)
 	
 	# Setup Static UI
 	ui_layer = Control.new()
@@ -78,6 +131,16 @@ func _ready():
 	turn_limit_label.add_theme_constant_override("outline_size", 4)
 	turn_limit_label.text = "Turns: 20"
 	limit_container.add_child(turn_limit_label)
+	
+	# Quest Log (Top Left)
+	var log_margin = MarginContainer.new()
+	log_margin.set_anchors_preset(Control.PRESET_TOP_LEFT)
+	log_margin.add_theme_constant_override("margin_top", 20)
+	log_margin.add_theme_constant_override("margin_left", 20)
+	ui_layer.add_child(log_margin)
+	
+	quest_log_container = VBoxContainer.new()
+	log_margin.add_child(quest_log_container)
 	
 	# Movement Label on Player
 	moves_label = Label.new()
@@ -122,7 +185,19 @@ func _ready():
 	g_gradient.set_color(1, Color(0.2, 0.35, 0.2))
 	grass_texture = _create_noise_texture(g_noise, g_gradient)
 	
+	var d_noise = FastNoiseLite.new()
+	d_noise.seed = randi()
+	d_noise.frequency = 0.05
+	var d_gradient = Gradient.new()
+	d_gradient.set_color(0, Color(0.4, 0.3, 0.2))
+	d_gradient.set_color(1, Color(0.5, 0.4, 0.3))
+	dirt_texture = _create_noise_texture(d_noise, d_gradient)
+	
 	_create_town_ui()
+	_create_inn_ui()
+	_create_dice_shop_ui()
+	_create_forge_ui()
+	_create_spell_shop_ui()
 
 func _create_noise_texture(noise: FastNoiseLite, gradient: Gradient) -> ImageTexture:
 	var size = 512
@@ -141,6 +216,7 @@ func _create_noise_texture(noise: FastNoiseLite, gradient: Gradient) -> ImageTex
 func _create_town_ui():
 	town_ui = Control.new()
 	town_ui.set_anchors_preset(Control.PRESET_FULL_RECT)
+	town_ui.z_index = 200
 	town_ui.visible = false
 	ui_layer.add_child(town_ui)
 	
@@ -222,18 +298,673 @@ func _create_town_ui():
 		return btn
 
 	create_town_btn.call("Quest Board", Color(0.55, 0.35, 0.15), "res://assets/ai/ui/quest_board.svg").pressed.connect(func(): emit_signal("open_quest_board"))
-	create_town_btn.call("Spell Shop", Color(0.4, 0.2, 0.6), "res://assets/ai/ui/spell_shop.svg").pressed.connect(func(): emit_signal("open_shop"))
-	create_town_btn.call("Forge", Color(0.7, 0.3, 0.1), "res://assets/ai/ui/dice_forge.svg").pressed.connect(func(): emit_signal("open_forge"))
-	create_town_btn.call("Dice Shop", Color(0.8, 0.7, 0.1), "res://assets/ai/ui/dice_shop.svg").pressed.connect(func(): emit_signal("open_dice_shop"))
-	create_town_btn.call("Inn", Color(0.2, 0.5, 0.2), "res://assets/ai/ui/inn.svg").pressed.connect(func(): emit_signal("open_inn"))
+	create_town_btn.call("Spell Shop", Color(0.4, 0.2, 0.6), "res://assets/ai/ui/spell_shop.svg").pressed.connect(_open_spell_shop_menu)
+	create_town_btn.call("Forge", Color(0.7, 0.3, 0.1), "res://assets/ai/ui/dice_forge.svg").pressed.connect(_open_forge_menu)
+	create_town_btn.call("Dice Shop", Color(0.8, 0.7, 0.1), "res://assets/ai/ui/dice_shop.svg").pressed.connect(_open_dice_shop_menu)
+	create_town_btn.call("Inn", Color(0.2, 0.5, 0.2), "res://assets/ai/ui/inn.svg").pressed.connect(_open_inn_menu)
 	
 	var leave_btn = Button.new()
 	leave_btn.text = "Leave Town"
 	leave_btn.custom_minimum_size = Vector2(200, 60)
 	leave_btn.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	leave_btn.add_theme_font_size_override("font_size", 24)
-	leave_btn.pressed.connect(func(): town_ui.visible = false)
+	leave_btn.pressed.connect(func(): 
+		town_ui.visible = false
+		if moves_remaining <= 0:
+			start_turn()
+	)
 	vbox.add_child(leave_btn)
+
+func _create_inn_ui():
+	inn_ui = Control.new()
+	inn_ui.set_anchors_preset(Control.PRESET_FULL_RECT)
+	inn_ui.z_index = 201 # Above town UI
+	inn_ui.visible = false
+	ui_layer.add_child(inn_ui)
+	
+	var bg = ColorRect.new()
+	bg.color = Color(0, 0, 0, 0.95)
+	bg.set_anchors_preset(Control.PRESET_FULL_RECT)
+	inn_ui.add_child(bg)
+	
+	var center = CenterContainer.new()
+	center.set_anchors_preset(Control.PRESET_FULL_RECT)
+	inn_ui.add_child(center)
+	
+	var vbox = VBoxContainer.new()
+	vbox.add_theme_constant_override("separation", 40)
+	center.add_child(vbox)
+	
+	var title = Label.new()
+	title.text = "The Inn"
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	title.add_theme_font_size_override("font_size", 48)
+	vbox.add_child(title)
+	
+	var options_container = VBoxContainer.new()
+	options_container.name = "Options"
+	inn_options_container = options_container
+	options_container.add_theme_constant_override("separation", 20)
+	vbox.add_child(options_container)
+	
+	var create_room_btn = func(text: String, cost: int, heal_percent: float):
+		var btn = Button.new()
+		btn.custom_minimum_size = Vector2(400, 80)
+		btn.text = "%s\nHeal %.0f%% HP (%dg)" % [text, heal_percent * 100, cost]
+		btn.add_theme_font_size_override("font_size", 24)
+		btn.pressed.connect(func(): _on_rest_selected(cost, heal_percent))
+		btn.set_meta("cost", cost)
+		btn.set_meta("base_text", text)
+		btn.set_meta("percent", heal_percent)
+		options_container.add_child(btn)
+		return btn
+
+	create_room_btn.call("Straw Bed", 10, 0.25)
+	create_room_btn.call("Standard Room", 25, 0.50)
+	create_room_btn.call("Luxury Suite", 50, 0.75)
+	
+	var back_btn = Button.new()
+	back_btn.text = "Back"
+	back_btn.custom_minimum_size = Vector2(200, 60)
+	back_btn.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	back_btn.add_theme_font_size_override("font_size", 24)
+	back_btn.pressed.connect(_close_inn_menu)
+	vbox.add_child(back_btn)
+
+func _open_inn_menu():
+	town_ui.visible = false
+	inn_ui.visible = true
+	_update_inn_buttons()
+
+func _close_inn_menu():
+	inn_ui.visible = false
+	town_ui.visible = true
+
+func _update_inn_buttons():
+	var options = inn_options_container
+	for btn in options.get_children():
+		var cost = btn.get_meta("cost")
+		var base_text = btn.get_meta("base_text")
+		var percent = btn.get_meta("percent")
+		
+		if has_rested_in_town:
+			btn.disabled = true
+			btn.text = base_text + "\n(Already Rested)"
+		elif player and player.gold < cost:
+			btn.disabled = true
+			btn.modulate = Color(0.7, 0.7, 0.7)
+			btn.text = "%s\nHeal %.0f%% HP (%dg)" % [base_text, percent * 100, cost]
+		else:
+			btn.disabled = false
+			btn.modulate = Color.WHITE
+			btn.text = "%s\nHeal %.0f%% HP (%dg)" % [base_text, percent * 100, cost]
+
+func _on_rest_selected(cost: int, percent: float):
+	if has_rested_in_town or not player: return
+	if player.gold >= cost:
+		player.add_gold(-cost)
+		var heal_amount = floor(player.max_hp * percent)
+		player.heal(heal_amount)
+		has_rested_in_town = true
+		_update_inn_buttons()
+
+func _create_dice_shop_ui():
+	dice_shop_ui = Control.new()
+	dice_shop_ui.set_anchors_preset(Control.PRESET_FULL_RECT)
+	dice_shop_ui.z_index = 201
+	dice_shop_ui.visible = false
+	ui_layer.add_child(dice_shop_ui)
+	
+	var bg = ColorRect.new()
+	bg.color = Color(0, 0, 0, 0.95)
+	bg.set_anchors_preset(Control.PRESET_FULL_RECT)
+	dice_shop_ui.add_child(bg)
+	
+	var center = CenterContainer.new()
+	center.set_anchors_preset(Control.PRESET_FULL_RECT)
+	dice_shop_ui.add_child(center)
+	
+	var vbox = VBoxContainer.new()
+	vbox.add_theme_constant_override("separation", 30)
+	center.add_child(vbox)
+	
+	var title = Label.new()
+	title.text = "Dice Shop"
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	title.add_theme_font_size_override("font_size", 48)
+	vbox.add_child(title)
+	
+	dice_shop_grid = GridContainer.new()
+	dice_shop_grid.columns = 3
+	dice_shop_grid.add_theme_constant_override("h_separation", 40)
+	dice_shop_grid.add_theme_constant_override("v_separation", 40)
+	vbox.add_child(dice_shop_grid)
+	
+	remove_die_button = Button.new()
+	remove_die_button.text = "Remove Die"
+	remove_die_button.custom_minimum_size = Vector2(300, 60)
+	remove_die_button.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	remove_die_button.add_theme_font_size_override("font_size", 24)
+	remove_die_button.pressed.connect(_on_remove_die_shop_pressed)
+	vbox.add_child(remove_die_button)
+	
+	var back_btn = Button.new()
+	back_btn.text = "Back"
+	back_btn.custom_minimum_size = Vector2(200, 60)
+	back_btn.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	back_btn.add_theme_font_size_override("font_size", 24)
+	back_btn.pressed.connect(_close_dice_shop_menu)
+	vbox.add_child(back_btn)
+	
+	# Create Removal Overlay
+	dice_removal_overlay = Control.new()
+	dice_removal_overlay.visible = false
+	dice_removal_overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
+	dice_removal_overlay.z_index = 202
+	ui_layer.add_child(dice_removal_overlay)
+	
+	var overlay_bg = ColorRect.new()
+	overlay_bg.color = Color(0, 0, 0, 0.95)
+	overlay_bg.set_anchors_preset(Control.PRESET_FULL_RECT)
+	dice_removal_overlay.add_child(overlay_bg)
+	
+	var overlay_center = CenterContainer.new()
+	overlay_center.set_anchors_preset(Control.PRESET_FULL_RECT)
+	dice_removal_overlay.add_child(overlay_center)
+	
+	var overlay_vbox = VBoxContainer.new()
+	overlay_vbox.add_theme_constant_override("separation", 30)
+	overlay_center.add_child(overlay_vbox)
+	
+	var overlay_title = Label.new()
+	overlay_title.text = "Select Die to Remove"
+	overlay_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	overlay_title.add_theme_font_size_override("font_size", 32)
+	overlay_vbox.add_child(overlay_title)
+	
+	var scroll = ScrollContainer.new()
+	scroll.custom_minimum_size = Vector2(800, 500)
+	overlay_vbox.add_child(scroll)
+	
+	dice_removal_grid = GridContainer.new()
+	dice_removal_grid.columns = 5
+	dice_removal_grid.add_theme_constant_override("h_separation", 20)
+	dice_removal_grid.add_theme_constant_override("v_separation", 20)
+	dice_removal_grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	scroll.add_child(dice_removal_grid)
+	
+	var cancel_btn = Button.new()
+	cancel_btn.text = "Cancel"
+	cancel_btn.custom_minimum_size = Vector2(200, 50)
+	cancel_btn.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	cancel_btn.pressed.connect(func(): dice_removal_overlay.visible = false)
+	overlay_vbox.add_child(cancel_btn)
+
+func _open_dice_shop_menu():
+	town_ui.visible = false
+	dice_shop_ui.visible = true
+	if player:
+		remove_die_button.text = "Remove Die (%dg)" % player.die_removal_cost
+		remove_die_button.disabled = player.gold < player.die_removal_cost
+	_generate_dice_shop_inventory()
+
+func _close_dice_shop_menu():
+	dice_shop_ui.visible = false
+	town_ui.visible = true
+
+func _generate_dice_shop_inventory():
+	for child in dice_shop_grid.get_children():
+		child.queue_free()
+	
+	# 6 dice: 2 normal, 2 custom values, 2 effects (randomized order)
+	var types = ["normal", "normal", "custom", "custom", "effect", "effect"]
+	types.shuffle()
+	
+	for type in types:
+		var sides = [4, 6, 8, 10, 12].pick_random()
+		var die = Die.new(sides)
+		var cost = sides * 5 # Base cost
+		
+		if type == "custom":
+			var normal_total = 0
+			var new_total = 0
+			for i in range(die.faces.size()):
+				normal_total += (i + 1)
+				var face = die.faces[i]
+				face.value = max(1, face.value + randi_range(-3, 4))
+				new_total += face.value
+			
+			# Sort faces numerically
+			die.faces.sort_custom(func(a, b): return a.value < b.value)
+			
+			cost += (new_total - normal_total) * 3
+			cost = max(10, cost)
+		elif type == "effect":
+			var effect = EffectLibrary.get_random_effect_for_die(sides)
+			if effect:
+				for face in die.faces:
+					face.effects.append(effect)
+				cost += 75 * effect.tier # More expensive for better effects on all faces
+				
+				# Rare chance for custom values AND effect
+				if randf() < 0.1: # 10% chance
+					var bonus = randi_range(1, 3)
+					for face in die.faces:
+						face.value += bonus
+					cost += bonus * sides * 2
+		
+		var item_vbox = VBoxContainer.new()
+		item_vbox.add_theme_constant_override("separation", 10)
+		dice_shop_grid.add_child(item_vbox)
+		
+		var display = REWARDS_DIE_DISPLAY.instantiate()
+		item_vbox.add_child(display)
+		display.set_die(die, true) # force_grid = true
+		
+		# Extract name and hide internal label to show it above the die
+		var die_name = display.die_label.text
+		display.die_label.visible = false
+		
+		var name_label = Label.new()
+		name_label.text = die_name
+		name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		name_label.autowrap_mode = TextServer.AUTOWRAP_WORD
+		item_vbox.add_child(name_label)
+		item_vbox.move_child(name_label, 0)
+		
+		display.mouse_filter = Control.MOUSE_FILTER_PASS
+		display.custom_minimum_size = Vector2(120, 120)
+		
+		var buy_btn = Button.new()
+		buy_btn.text = "Buy (%dg)" % cost
+		buy_btn.custom_minimum_size = Vector2(120, 40)
+		buy_btn.pressed.connect(_on_buy_die_pressed.bind(die, cost, buy_btn))
+		item_vbox.add_child(buy_btn)
+		
+		if player and player.gold < cost:
+			buy_btn.disabled = true
+
+func _on_buy_die_pressed(die: Die, cost: int, button: Button):
+	if player and player.gold >= cost:
+		player.add_gold(-cost)
+		player.add_to_game_bag([die])
+		button.disabled = true
+		button.text = "Sold"
+
+func _on_remove_die_shop_pressed():
+	if not player or player.gold < player.die_removal_cost: return
+	
+	dice_removal_overlay.visible = true
+	for child in dice_removal_grid.get_children():
+		child.queue_free()
+		
+	for die in player._game_dice_bag:
+		var display = REWARDS_DIE_DISPLAY.instantiate()
+		dice_removal_grid.add_child(display)
+		display.set_die(die, true)
+		display.custom_minimum_size = Vector2(100, 100)
+		display.pressed.connect(_on_shop_die_removal_selected.bind(die))
+
+func _on_shop_die_removal_selected(die: Die):
+	if player.gold >= player.die_removal_cost:
+		player.add_gold(-player.die_removal_cost)
+		player.remove_die_from_bag(die)
+		player.die_removal_cost += 25
+		
+		dice_removal_overlay.visible = false
+		_open_dice_shop_menu() # Refresh UI
+
+func _create_forge_ui():
+	forge_ui = Control.new()
+	forge_ui.set_anchors_preset(Control.PRESET_FULL_RECT)
+	forge_ui.z_index = 201
+	forge_ui.visible = false
+	ui_layer.add_child(forge_ui)
+	
+	var bg = ColorRect.new()
+	bg.color = Color(0, 0, 0, 0.95)
+	bg.set_anchors_preset(Control.PRESET_FULL_RECT)
+	forge_ui.add_child(bg)
+	
+	var center = CenterContainer.new()
+	center.set_anchors_preset(Control.PRESET_FULL_RECT)
+	forge_ui.add_child(center)
+	
+	var vbox = VBoxContainer.new()
+	vbox.add_theme_constant_override("separation", 30)
+	center.add_child(vbox)
+	
+	var title = Label.new()
+	title.text = "The Forge"
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	title.add_theme_font_size_override("font_size", 48)
+	vbox.add_child(title)
+	
+	var scroll = ScrollContainer.new()
+	scroll.custom_minimum_size = Vector2(800, 500)
+	vbox.add_child(scroll)
+	
+	forge_grid = GridContainer.new()
+	forge_grid.columns = 5
+	forge_grid.add_theme_constant_override("h_separation", 20)
+	forge_grid.add_theme_constant_override("v_separation", 20)
+	forge_grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	scroll.add_child(forge_grid)
+	
+	var back_btn = Button.new()
+	back_btn.text = "Back"
+	back_btn.custom_minimum_size = Vector2(200, 60)
+	back_btn.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	back_btn.add_theme_font_size_override("font_size", 24)
+	back_btn.pressed.connect(_close_forge_menu)
+	vbox.add_child(back_btn)
+	
+	# Action Selection Overlay (Promote/Inscribe)
+	forge_action_overlay = Control.new()
+	forge_action_overlay.visible = false
+	forge_action_overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
+	forge_action_overlay.z_index = 202
+	ui_layer.add_child(forge_action_overlay)
+	
+	var act_bg = ColorRect.new()
+	act_bg.color = Color(0, 0, 0, 0.95)
+	act_bg.set_anchors_preset(Control.PRESET_FULL_RECT)
+	forge_action_overlay.add_child(act_bg)
+	
+	var act_center = CenterContainer.new()
+	act_center.set_anchors_preset(Control.PRESET_FULL_RECT)
+	forge_action_overlay.add_child(act_center)
+	
+	forge_action_container = VBoxContainer.new()
+	forge_action_container.add_theme_constant_override("separation", 20)
+	act_center.add_child(forge_action_container)
+	
+	# Effect Selection Overlay
+	# Effect Selection Overlay
+	forge_effect_overlay = Control.new()
+	forge_effect_overlay.visible = false
+	forge_effect_overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
+	forge_effect_overlay.z_index = 203
+	ui_layer.add_child(forge_effect_overlay)
+	
+	var eff_bg = ColorRect.new()
+	eff_bg.color = Color(0, 0, 0, 0.95)
+	eff_bg.set_anchors_preset(Control.PRESET_FULL_RECT)
+	forge_effect_overlay.add_child(eff_bg)
+	
+	var eff_center = CenterContainer.new()
+	eff_center.set_anchors_preset(Control.PRESET_FULL_RECT)
+	forge_effect_overlay.add_child(eff_center)
+	
+	forge_effect_container = VBoxContainer.new()
+	forge_effect_container.add_theme_constant_override("separation", 20)
+	eff_center.add_child(forge_effect_container)
+
+func _open_forge_menu():
+	town_ui.visible = false
+	forge_ui.visible = true
+	_refresh_forge_grid()
+
+func _close_forge_menu():
+	forge_ui.visible = false
+	town_ui.visible = true
+
+func _refresh_forge_grid():
+	if not player: return
+	for child in forge_grid.get_children():
+		child.queue_free()
+		
+	for die in player._game_dice_bag:
+		var display = REWARDS_DIE_DISPLAY.instantiate()
+		forge_grid.add_child(display)
+		display.set_die(die, true)
+		display.custom_minimum_size = Vector2(100, 100)
+		display.pressed.connect(_on_forge_die_clicked.bind(die))
+
+func _on_forge_die_clicked(die: Die):
+	selected_forge_die = die
+	forge_action_overlay.visible = true
+	
+	for child in forge_action_container.get_children():
+		child.queue_free()
+		
+	var title = Label.new()
+	title.text = "Modify Die"
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	title.add_theme_font_size_override("font_size", 32)
+	forge_action_container.add_child(title)
+	
+	var upgrades = die.get_meta("upgrade_count", 0)
+	var promote_cost = 25 + (25 * upgrades)
+	
+	var promote_btn = Button.new()
+	promote_btn.text = "Promote (+1 to rolls) (%dg)" % promote_cost
+	promote_btn.custom_minimum_size = Vector2(300, 60)
+	promote_btn.pressed.connect(_on_forge_promote_confirm.bind(die, promote_cost))
+	if player.gold < promote_cost:
+		promote_btn.disabled = true
+	forge_action_container.add_child(promote_btn)
+	
+	var inscribe_label = Label.new()
+	inscribe_label.text = "Inscribe Effect"
+	inscribe_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	forge_action_container.add_child(inscribe_label)
+	
+	# Get existing effects on this die to disable duplicates
+	var existing_effect_names = []
+	for face in die.faces:
+		for eff in face.effects:
+			if not existing_effect_names.has(eff.name):
+				existing_effect_names.append(eff.name)
+	
+	# Get 3 random effects suitable for this die
+	var available_effects = []
+	if EffectLibrary.effects_by_die_size.has(die.sides):
+		available_effects = EffectLibrary.effects_by_die_size[die.sides].duplicate()
+	available_effects.shuffle()
+	
+	for i in range(min(3, available_effects.size())):
+		var template = available_effects[i]
+		# Duplicate effect to ensure unique instance
+		var eff = DieFaceEffect.new(template.name, template.description, template.tier, template.highlight_color)
+		eff.process_effect = template.process_effect
+		
+		var cost = 75 * eff.tier
+		var btn = Button.new()
+		btn.text = "%s (%dg)\n%s" % [eff.name, cost, eff.description]
+		btn.custom_minimum_size = Vector2(300, 60)
+		btn.pressed.connect(_on_forge_effect_chosen.bind(eff, cost))
+		
+		if existing_effect_names.has(eff.name):
+			btn.disabled = true
+			btn.text = "%s (Owned)" % eff.name
+		elif player.gold < cost:
+			btn.disabled = true
+			
+		forge_action_container.add_child(btn)
+	
+	var cancel_btn = Button.new()
+	cancel_btn.text = "Cancel"
+	cancel_btn.pressed.connect(func(): forge_action_overlay.visible = false)
+	forge_action_container.add_child(cancel_btn)
+
+func _on_forge_promote_confirm(die: Die, cost: int):
+	if player.gold >= cost:
+		player.add_gold(-cost)
+		player.upgrade_die(die)
+		forge_action_overlay.visible = false
+		_refresh_forge_grid()
+
+func _on_forge_effect_chosen(effect: DieFaceEffect, cost: int):
+	if player.gold >= cost:
+		player.add_gold(-cost)
+		for face in selected_forge_die.faces:
+			face.effects.append(effect)
+		forge_action_overlay.visible = false
+		_refresh_forge_grid()
+
+func _create_spell_shop_ui():
+	spell_shop_ui = Control.new()
+	spell_shop_ui.set_anchors_preset(Control.PRESET_FULL_RECT)
+	spell_shop_ui.z_index = 201
+	spell_shop_ui.visible = false
+	ui_layer.add_child(spell_shop_ui)
+	
+	var bg = ColorRect.new()
+	bg.color = Color(0, 0, 0, 0.95)
+	bg.set_anchors_preset(Control.PRESET_FULL_RECT)
+	spell_shop_ui.add_child(bg)
+	
+	var center = CenterContainer.new()
+	center.set_anchors_preset(Control.PRESET_FULL_RECT)
+	spell_shop_ui.add_child(center)
+	
+	var vbox = VBoxContainer.new()
+	vbox.add_theme_constant_override("separation", 20)
+	center.add_child(vbox)
+	
+	var title = Label.new()
+	title.text = "Spell Shop"
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	title.add_theme_font_size_override("font_size", 48)
+	vbox.add_child(title)
+	
+	# Abilities Section
+	var lbl_abilities = Label.new()
+	lbl_abilities.text = "Abilities"
+	lbl_abilities.add_theme_font_size_override("font_size", 32)
+	vbox.add_child(lbl_abilities)
+	
+	spell_shop_abilities_grid = GridContainer.new()
+	spell_shop_abilities_grid.columns = 3
+	spell_shop_abilities_grid.add_theme_constant_override("h_separation", 20)
+	spell_shop_abilities_grid.add_theme_constant_override("v_separation", 20)
+	vbox.add_child(spell_shop_abilities_grid)
+	
+	# Charms Section
+	var lbl_charms = Label.new()
+	lbl_charms.text = "Charms (Permanent Buffs)"
+	lbl_charms.add_theme_font_size_override("font_size", 32)
+	vbox.add_child(lbl_charms)
+	
+	spell_shop_charms_grid = GridContainer.new()
+	spell_shop_charms_grid.columns = 3
+	spell_shop_charms_grid.add_theme_constant_override("h_separation", 20)
+	spell_shop_charms_grid.add_theme_constant_override("v_separation", 20)
+	vbox.add_child(spell_shop_charms_grid)
+	
+	reroll_charms_button = Button.new()
+	reroll_charms_button.text = "Reroll Charms (25g)"
+	reroll_charms_button.custom_minimum_size = Vector2(200, 50)
+	reroll_charms_button.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	reroll_charms_button.pressed.connect(_on_reroll_charms_pressed)
+	vbox.add_child(reroll_charms_button)
+	
+	var back_btn = Button.new()
+	back_btn.text = "Back"
+	back_btn.custom_minimum_size = Vector2(200, 60)
+	back_btn.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	back_btn.add_theme_font_size_override("font_size", 24)
+	back_btn.pressed.connect(_close_spell_shop_menu)
+	vbox.add_child(back_btn)
+
+func _open_spell_shop_menu():
+	town_ui.visible = false
+	spell_shop_ui.visible = true
+	if not spell_shop_generated:
+		_generate_spell_shop_inventory()
+		spell_shop_generated = true
+	_update_spell_shop_ui()
+
+func _close_spell_shop_menu():
+	spell_shop_ui.visible = false
+	town_ui.visible = true
+
+func _update_spell_shop_ui():
+	reroll_charms_button.text = "Reroll Charms (%dg)" % reroll_charms_cost
+	if player:
+		reroll_charms_button.disabled = player.gold < reroll_charms_cost
+
+func _generate_spell_shop_inventory():
+	_generate_abilities()
+	_generate_charms()
+
+func _generate_abilities():
+	for child in spell_shop_abilities_grid.get_children():
+		child.queue_free()
+		
+	var all_abilities = Utils.load_all_resources("res://resources/abilities")
+	var available = []
+	for res in all_abilities:
+		if res is AbilityData:
+			if player and not player.abilities.has(res):
+				available.append(res)
+	
+	available.shuffle()
+	for i in range(min(3, available.size())):
+		var ability = available[i]
+		var cost = 150
+		
+		var btn = Button.new()
+		btn.text = "%s\n(%dg)" % [ability.title, cost]
+		btn.custom_minimum_size = Vector2(150, 80)
+		btn.pressed.connect(_on_buy_ability_pressed.bind(ability, cost, btn))
+		
+		if player and player.gold < cost:
+			btn.disabled = true
+			
+		spell_shop_abilities_grid.add_child(btn)
+
+func _generate_charms():
+	for child in spell_shop_charms_grid.get_children():
+		child.queue_free()
+		
+	var buff_keys = []
+	if StatusLibrary.statuses:
+		for key in StatusLibrary.statuses:
+			var status = StatusLibrary.statuses[key]
+			if not status.is_debuff:
+				buff_keys.append(key)
+	
+	buff_keys.shuffle()
+	for i in range(min(3, buff_keys.size())):
+		var key = buff_keys[i]
+		var status = StatusLibrary.statuses[key]
+		var cost = 100
+		
+		var btn = Button.new()
+		btn.text = "%s\n(%dg)" % [status.status_name, cost]
+		btn.custom_minimum_size = Vector2(150, 80)
+		btn.tooltip_text = status.description
+		btn.pressed.connect(_on_buy_charm_pressed.bind(key, cost, btn))
+		
+		if player and player.gold < cost:
+			btn.disabled = true
+			
+		spell_shop_charms_grid.add_child(btn)
+
+func _on_buy_ability_pressed(ability, cost, btn):
+	if player and player.gold >= cost:
+		player.add_gold(-cost)
+		player.add_ability(ability)
+		btn.disabled = true
+		btn.text = "Sold"
+		_update_spell_shop_ui()
+
+func _on_buy_charm_pressed(status_id, cost, btn):
+	if player and player.gold >= cost:
+		player.add_gold(-cost)
+		player.apply_duration_status(status_id, -1)
+		btn.disabled = true
+		btn.text = "Sold"
+		_update_spell_shop_ui()
+
+func _on_reroll_charms_pressed():
+	if player and player.gold >= reroll_charms_cost:
+		player.add_gold(-reroll_charms_cost)
+		reroll_charms_cost += 25
+		_generate_charms()
+		_update_spell_shop_ui()
 
 func _process(delta):
 	# Animate water UVs
@@ -260,6 +991,7 @@ func _process(delta):
 func generate_new_map():
 	grid_data.clear()
 	current_node = null
+	explored_nodes.clear()
 	
 	# 1. Initialize Grid
 	for child in map_container.get_children():
@@ -304,32 +1036,40 @@ func generate_new_map():
 	current_node = start_node
 	start_node.cleared = true
 
-	# 3. Place Town (Middle rows, 3 wide)
-	var town_row = randi_range(int(grid_height * 0.3), int(grid_height * 0.6))
-	var town_col = randi_range(2, grid_width - 5)
+	# 3. Place Town (Roughly Center)
+	var town_row = randi_range(int(grid_height * 0.4), int(grid_height * 0.6))
+	var town_col = randi_range(int(grid_width * 0.4), int(grid_width * 0.6))
 	var town_nodes = []
 	for i in range(3):
 		var n = grid_data[Vector2(town_row, town_col + i)]
 		n.type = "town"
 		town_nodes.append(n)
 
+	# 3b. Create Path from Start to Town
+	var path_to_town = _find_path_ignoring_terrain(start_node, town_nodes[1])
+	for n in path_to_town:
+		if n.type == "normal":
+			n.type = "safe_path"
+
 	# 4. Place Goblin Camp (2 triangles, near water, no mountains)
 	# We pick a spot first, then enforce terrain constraints later
-	var valid_goblin_starts = _get_nodes_in_range(town_nodes, 4, 8)
-	var goblin_nodes = _pick_random_cluster(2, ["start", "town"], valid_goblin_starts)
+	var valid_goblin_starts = _get_nodes_in_range(town_nodes, 6, 12)
+	var goblin_nodes = _pick_random_cluster(2, ["start", "town", "safe_path"], valid_goblin_starts)
 	for n in goblin_nodes: n.type = "goblin_camp"
 	
 	# 5. Place Dragon's Roost (2 triangles, near mountains)
-	var valid_dragon_starts = _get_nodes_in_range(town_nodes, 4, 8)
-	var dragon_nodes = _pick_random_cluster(2, ["start", "town", "goblin_camp"], valid_dragon_starts)
+	var valid_dragon_starts = _get_nodes_in_range(town_nodes, 6, 12)
+	var dragon_nodes = _pick_random_cluster(2, ["start", "town", "goblin_camp", "safe_path"], valid_dragon_starts)
 	for n in dragon_nodes: n.type = "dragon_roost"
 
 	# 6. Place Crypt (2 triangles, no water in 2 tile radius)
-	var crypt_nodes = _pick_random_cluster(2, ["start", "town", "goblin_camp", "dragon_roost"])
+	var valid_crypt_starts = _get_nodes_in_range(town_nodes, 6, 12)
+	var crypt_nodes = _pick_random_cluster(2, ["start", "town", "goblin_camp", "dragon_roost", "safe_path"], valid_crypt_starts)
 	for n in crypt_nodes: n.type = "crypt"
 
 	# 7. Place Dwarven Forge (2 triangles, 5 mountains in 2 radius, 1 touching)
-	var dwarven_forge_nodes = _pick_random_cluster(2, ["start", "town", "goblin_camp", "dragon_roost", "crypt"])
+	var valid_forge_starts = _get_nodes_in_range(town_nodes, 6, 12)
+	var dwarven_forge_nodes = _pick_random_cluster(2, ["start", "town", "goblin_camp", "dragon_roost", "crypt", "safe_path"], valid_forge_starts)
 	for n in dwarven_forge_nodes: n.type = "dwarven_forge"
 
 	# 8. Generate Terrain & Enforce Constraints
@@ -376,13 +1116,20 @@ func generate_new_map():
 		if rand < 0.04: _grow_clump(node, "mountain", 3, 6, goblin_zone)
 		elif rand < 0.08: _grow_clump(node, "water", 3, 6, crypt_zone)
 
+	# Restore safe path
+	for pos in grid_data:
+		if grid_data[pos].type == "safe_path":
+			grid_data[pos].type = "road"
+
 	# 9. Ensure Connectivity
 	_ensure_connectivity()
 
 	draw_map()
+	update_fog()
 	start_turn()
 
 func draw_map():
+	special_visuals.clear()
 	var height = triangle_size * sqrt(3) / 2.0
 	var crypt_nodes_for_visuals = []
 	var goblin_nodes_for_visuals = []
@@ -472,6 +1219,7 @@ func draw_map():
 			shadow.color = Color.BLACK
 			shadow.position = node.pos + Vector2(-10, 10)
 			shadow_container.add_child(shadow)
+			node["shadow"] = shadow
 
 		if node.type == "mountain":
 			poly.color = Color.WHITE
@@ -562,6 +1310,19 @@ func draw_map():
 			lbl.size = Vector2(100, 30)
 			lbl.z_index = 10
 			btn.add_child(lbl)
+		elif node.type == "road":
+			poly.color = Color.WHITE
+			poly.texture = dirt_texture
+			poly.texture_repeat = CanvasItem.TEXTURE_REPEAT_ENABLED
+			# Add faint outline to distinguish tiles
+			var outline = Line2D.new()
+			var outline_points = vertices.duplicate()
+			outline_points.append(vertices[0])
+			outline.points = outline_points
+			outline.width = 1.0
+			outline.default_color = Color(0.3, 0.2, 0.1, 0.3)
+			outline.position = center_offset
+			btn.add_child(outline)
 		elif node.type == "normal":
 			poly.color = Color.WHITE
 			poly.texture = grass_texture
@@ -610,6 +1371,7 @@ func draw_map():
 		lbl.position = center_pos - Vector2(50, -15) # Centered on icon
 		lbl.z_index = 21
 		map_container.add_child(lbl)
+		special_visuals["crypt"] = {"icon": icon, "label": lbl, "nodes": crypt_nodes_for_visuals}
 		
 	# Draw Goblin Camp Icon and Title centered
 	if not goblin_nodes_for_visuals.is_empty():
@@ -639,6 +1401,7 @@ func draw_map():
 		lbl.position = center_pos - Vector2(50, -15) # Centered on icon
 		lbl.z_index = 21
 		map_container.add_child(lbl)
+		special_visuals["goblin_camp"] = {"icon": icon, "label": lbl, "nodes": goblin_nodes_for_visuals}
 		
 	# Draw Dragon Roost Icon and Title centered
 	if not dragon_nodes_for_visuals.is_empty():
@@ -668,6 +1431,7 @@ func draw_map():
 		lbl.position = center_pos - Vector2(50, -15) # Centered on icon
 		lbl.z_index = 21
 		map_container.add_child(lbl)
+		special_visuals["dragon_roost"] = {"icon": icon, "label": lbl, "nodes": dragon_nodes_for_visuals}
 		
 	# Draw Town Icon and Title centered
 	if not town_nodes_for_visuals.is_empty():
@@ -697,6 +1461,7 @@ func draw_map():
 		lbl.position = center_pos - Vector2(50, -15) # Centered on icon
 		lbl.z_index = 21
 		map_container.add_child(lbl)
+		special_visuals["town"] = {"icon": icon, "label": lbl, "nodes": town_nodes_for_visuals}
 		
 	# Draw Dwarven Forge Icon and Title centered
 	if not dwarven_forge_nodes_for_visuals.is_empty():
@@ -726,6 +1491,7 @@ func draw_map():
 		lbl.position = center_pos - Vector2(60, -15) # Centered on icon
 		lbl.z_index = 21
 		map_container.add_child(lbl)
+		special_visuals["dwarven_forge"] = {"icon": icon, "label": lbl, "nodes": dwarven_forge_nodes_for_visuals}
 		
 	update_visuals()
 
@@ -810,6 +1576,35 @@ func _pick_random_cluster(size: int, excluded_types: Array, valid_starts: Array 
 		if cluster.size() == size:
 			return cluster
 	return []
+
+func _get_visible_nodes_with_los(center_nodes: Array, radius: int) -> Array:
+	var result = {}
+	var queue = []
+	for n in center_nodes:
+		queue.append({"node": n, "dist": 0})
+		result[n] = true
+		
+	var head = 0
+	while head < queue.size():
+		var current = queue[head]
+		head += 1
+		
+		# Mountains block line of sight (cannot see PAST them)
+		# We can see the mountain itself, but we don't expand from it.
+		var is_start_node = current.node in center_nodes
+		
+		if current.node.type == "mountain" and not is_start_node:
+			continue
+
+		if current.dist >= radius: continue
+		
+		var neighbors = get_neighbors(current.node)
+		for n in neighbors:
+			if not result.has(n):
+				result[n] = true
+				queue.append({"node": n, "dist": current.dist + 1})
+				
+	return result.keys()
 
 func _get_nodes_in_radius(center_nodes: Array, radius: int) -> Array:
 	var result = {}
@@ -968,7 +1763,7 @@ func find_path(from_node, to_node):
 			if next.type == "mountain" or next.type == "water":
 				continue
 			
-			if next.type != "normal" and next.type != "start" and next != to_node:
+			if next.type != "normal" and next.type != "road" and next.type != "start" and next != to_node:
 				continue
 
 			if not came_from.has(next):
@@ -986,7 +1781,76 @@ func find_path(from_node, to_node):
 	path.reverse()
 	return path
 
+func get_quest_directions() -> Dictionary:
+	var directions = {}
+	var town_center = Vector2.ZERO
+	var town_count = 0
+	
+	# Calculate centers
+	var type_centers = {}
+	var type_counts = {}
+	
+	for pos in grid_data:
+		var node = grid_data[pos]
+		if node.type == "town":
+			town_center += node.pos
+			town_count += 1
+		elif node.type in ["goblin_camp", "crypt", "dragon_roost", "dwarven_forge"]:
+			if not type_centers.has(node.type):
+				type_centers[node.type] = Vector2.ZERO
+				type_counts[node.type] = 0
+			type_centers[node.type] += node.pos
+			type_counts[node.type] += 1
+			
+	if town_count > 0:
+		town_center /= town_count
+		
+	for type in type_centers:
+		var center = type_centers[type] / type_counts[type]
+		var dir_vec = center - town_center
+		
+		var angle = dir_vec.angle()
+		var octant = round(angle / (PI / 4.0))
+		var dir_str = "Unknown"
+		match int(octant):
+			0: dir_str = "East"
+			1: dir_str = "South East"
+			2: dir_str = "South"
+			3: dir_str = "South West"
+			4, -4: dir_str = "West"
+			-1: dir_str = "North East"
+			-2: dir_str = "North"
+			-3: dir_str = "North West"
+		
+		directions[type] = dir_str
+		
+	return directions
+
+func update_quest_log(active_quests: Array):
+	for child in quest_log_container.get_children():
+		child.queue_free()
+		
+	if active_quests.is_empty(): return
+	
+	var directions = get_quest_directions()
+	
+	for q in active_quests:
+		var lbl = Label.new()
+		var dir = directions.get(q.id, "")
+		var text = "- %s" % q.name
+		if dir != "":
+			text += " (%s)" % dir
+		lbl.text = text
+		lbl.add_theme_color_override("font_outline_color", Color.BLACK)
+		lbl.add_theme_constant_override("outline_size", 4)
+		quest_log_container.add_child(lbl)
+
 func start_turn():
+	if is_rolling: return
+	
+	if current_roll_overlay and is_instance_valid(current_roll_overlay):
+		current_roll_overlay.queue_free()
+
 	if turns_left <= 0:
 		print("Game Over - Out of turns")
 		# Handle game over logic here if needed
@@ -1002,6 +1866,9 @@ func start_turn():
 	else:
 		turn_limit_label.modulate = Color.WHITE
 		turn_limit_label.scale = Vector2.ONE
+
+	roll_id += 1
+	var my_roll_id = roll_id
 
 	# Roll Animation
 	var d1 = Die.new(4)
@@ -1020,20 +1887,26 @@ func start_turn():
 	add_child(roll_overlay)
 	
 	var center_cont = CenterContainer.new()
-	center_cont.set_anchors_preset(Control.PRESET_CENTER)
+	center_cont.set_anchors_preset(Control.PRESET_FULL_RECT)
 	roll_overlay.add_child(center_cont)
 	
 	var hbox = HBoxContainer.new()
 	hbox.add_theme_constant_override("separation", 30)
 	center_cont.add_child(hbox)
 	
-	var disp1 = DIE_DISPLAY_SCENE.instantiate()
-	var disp2 = DIE_DISPLAY_SCENE.instantiate()
+	var disp1 = DIE_RENDERER_SCENE.instantiate()
+	var disp2 = DIE_RENDERER_SCENE.instantiate()
+	
+	disp1.custom_minimum_size = Vector2(500, 500)
+	disp2.custom_minimum_size = Vector2(500, 500)
+	
 	hbox.add_child(disp1)
 	hbox.add_child(disp2)
 	
-	disp1.set_die(d1)
-	disp2.set_die(d2)
+	disp1.configure(4)
+	disp2.configure(4)
+	disp1.roll(0, 0.8) # Value ignored, physics decides
+	disp2.roll(0, 0.8)
 	
 	# Animate dice appearing
 	disp1.scale = Vector2.ZERO
@@ -1045,15 +1918,97 @@ func start_turn():
 	tween.parallel().tween_property(disp2, "scale", Vector2(1.5, 1.5), 0.4).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 	
 	await tween.finished
-	if not is_rolling: return
+	if not is_rolling or roll_id != my_roll_id: return
 	
-	var timer_tween = create_tween()
-	current_tween = timer_tween
-	timer_tween.tween_interval(0.5)
-	await timer_tween.finished
-	if not is_rolling: return
+	# Wait for physics results
+	var results_map = {}
+	var finished_count = 0
+	var on_finished = func(val, source): 
+		results_map[source] = val
+		finished_count += 1
+		# Update pending result immediately if we have all dice, to prevent race condition on skip
+		if finished_count == 2:
+			pending_roll_result = results_map.get(disp1, 0) + results_map.get(disp2, 0)
+			
+	disp1.roll_finished.connect(on_finished.bind(disp1))
+	disp2.roll_finished.connect(on_finished.bind(disp2))
 	
-	moves_remaining = pending_roll_result
+	while finished_count < 2 and is_rolling and roll_id == my_roll_id:
+		await get_tree().process_frame
+		
+	if not is_rolling or roll_id != my_roll_id: return
+	
+	# Sync pending result with actual physics result so skipping later uses the correct value
+	var val1 = results_map.get(disp1, 1)
+	var val2 = results_map.get(disp2, 1)
+	pending_roll_result = val1 + val2
+	
+	# --- Floating Numbers Animation ---
+	var label1 = Label.new()
+	var label2 = Label.new()
+	temp_labels = [label1, label2]
+	var values = [val1, val2]
+	
+	for i in range(2):
+		var lbl = temp_labels[i]
+		lbl.text = str(values[i])
+		lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		lbl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		lbl.add_theme_font_size_override("font_size", 64)
+		lbl.add_theme_color_override("font_outline_color", Color.BLACK)
+		lbl.add_theme_constant_override("outline_size", 12)
+		lbl.modulate.a = 0.0
+		lbl.z_index = 300 # Above overlay
+		add_child(lbl)
+	
+	# Wait for labels to resize based on text
+	await get_tree().process_frame
+	if not is_rolling or roll_id != my_roll_id: return
+
+	# Start at dice positions
+	label1.pivot_offset = label1.size / 2.0
+	label2.pivot_offset = label2.size / 2.0
+	
+	# Start at dice positions
+	label1.global_position = disp1.get_die_screen_position() - label1.pivot_offset
+	label2.global_position = disp2.get_die_screen_position() - label2.pivot_offset
+	
+	var anim_tween = create_tween()
+	current_tween = anim_tween
+	
+	# 1. Fade In & Float Up
+	anim_tween.set_parallel(true)
+	for lbl in temp_labels:
+		anim_tween.tween_property(lbl, "modulate:a", 1.0, 0.3)
+		anim_tween.tween_property(lbl, "global_position:y", lbl.global_position.y - 50, 0.4).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
+	
+	await anim_tween.finished
+	if not is_rolling or roll_id != my_roll_id: return # Check if skipped
+	
+	# 2. Move to Player
+	var move_tween = create_tween()
+	current_tween = move_tween
+	move_tween.set_parallel(true)
+	
+	var target_center = moves_label.global_position + moves_label.size / 2.0
+	
+	for i in range(2):
+		var lbl = temp_labels[i]
+		var delay = i * 0.1
+		var target_pos = target_center - lbl.pivot_offset
+		move_tween.tween_property(lbl, "global_position", target_pos, 0.5).set_delay(delay).set_ease(Tween.EASE_IN_OUT).set_trans(Tween.TRANS_CUBIC)
+		move_tween.tween_property(lbl, "scale", Vector2(0.5, 0.5), 0.5).set_delay(delay)
+		move_tween.tween_property(lbl, "modulate:a", 0.0, 0.2).set_delay(delay + 0.3)
+	
+	await move_tween.finished
+	
+	for lbl in temp_labels:
+		if is_instance_valid(lbl): lbl.queue_free()
+	temp_labels.clear()
+	
+	if not is_rolling or roll_id != my_roll_id: return
+	
+	moves_remaining = val1 + val2
 	moves_label.text = "%d" % moves_remaining
 	
 	# Fade out overlay
@@ -1061,7 +2016,7 @@ func start_turn():
 	current_tween = out_tween
 	out_tween.tween_property(roll_overlay, "modulate:a", 0.0, 0.3)
 	await out_tween.finished
-	if not is_rolling: return
+	if not is_rolling or roll_id != my_roll_id: return
 	
 	roll_overlay.queue_free()
 	current_roll_overlay = null
@@ -1179,6 +2134,11 @@ func _on_node_pressed(node):
 	pending_movement_path = path
 	final_moves_remaining = moves_remaining - distance
 	
+	# If destination is special, we will lose all remaining moves
+	var destination_node = path.back()
+	if destination_node.type != "normal" and destination_node.type != "road" and destination_node.type != "start":
+		final_moves_remaining = 0
+	
 	path_line.clear_points()
 	full_path_line.clear_points()
 	distance_label.visible = false
@@ -1207,15 +2167,23 @@ func _on_node_pressed(node):
 	
 	pending_movement_path = [] # Movement finished, prevent skip logic from re-running movement completion
 	
-	var destination_node = path.back()
 	current_node = destination_node
 	current_node.cleared = true
 	update_visuals()
+	update_fog()
+	
+	# Apply special node movement penalty
+	if current_node.type != "normal" and current_node.type != "road" and current_node.type != "start":
+		moves_remaining = 0
+		moves_label.text = ""
 	
 	# Only trigger an encounter (switch to main game view) if it's a special node.
 	if current_node.type == "town":
 		town_ui.visible = true
-	elif current_node.type != "normal" and current_node.type != "start":
+		has_rested_in_town = false
+		spell_shop_generated = false
+		reroll_charms_cost = 25
+	elif current_node.type != "normal" and current_node.type != "road" and current_node.type != "start":
 		emit_signal("node_selected", current_node)
 	
 	if moves_remaining == 0:
@@ -1224,7 +2192,8 @@ func _on_node_pressed(node):
 		timer_tween.tween_interval(0.5)
 		await timer_tween.finished
 		if not is_moving: return
-		start_turn()
+		if current_node.type != "town" and visible:
+			start_turn()
 		
 	is_moving = false
 
@@ -1248,6 +2217,10 @@ func _skip_roll_animation():
 		current_roll_overlay.queue_free()
 		current_roll_overlay = null
 	
+	for lbl in temp_labels:
+		if is_instance_valid(lbl): lbl.queue_free()
+	temp_labels.clear()
+	
 	is_rolling = false
 
 func _skip_movement_animation():
@@ -1268,15 +2241,19 @@ func _skip_movement_animation():
 	
 	player_icon.position = current_node.pos - (player_icon.size / 2.0)
 	update_visuals()
+	update_fog()
 	
 	if current_node.type == "town":
 		town_ui.visible = true
-	elif current_node.type != "normal" and current_node.type != "start":
+		has_rested_in_town = false
+		spell_shop_generated = false
+		reroll_charms_cost = 25
+	elif current_node.type != "normal" and current_node.type != "road" and current_node.type != "start":
 		emit_signal("node_selected", current_node)
 	
 	is_moving = false
 	
-	if moves_remaining == 0:
+	if moves_remaining == 0 and current_node.type != "town" and visible:
 		start_turn()
 
 func close_town_menu():
@@ -1286,3 +2263,65 @@ func close_town_menu():
 func open_town_menu():
 	if town_ui:
 		town_ui.visible = true
+
+func update_fog():
+	if not current_node: return
+	
+	if not fog_enabled:
+		for pos in grid_data:
+			var node = grid_data[pos]
+			if node.has("button") and node.button:
+				node.button.visible = true
+				node.button.modulate = Color.WHITE
+			if node.has("shadow") and node.shadow:
+				node.shadow.visible = true
+		
+		for type in special_visuals:
+			var vis = special_visuals[type]
+			if vis.icon: 
+				vis.icon.visible = true
+				vis.icon.modulate = Color.WHITE
+			if vis.label: 
+				vis.label.visible = true
+				vis.label.modulate = Color.WHITE
+		return
+
+	var visible_nodes = _get_visible_nodes_with_los([current_node], fog_radius)
+	
+	for n in visible_nodes:
+		explored_nodes[Vector2(n.row, n.col)] = true
+		
+	for pos in grid_data:
+		var node = grid_data[pos]
+		if not node.has("button") or not node.button: continue
+		
+		if explored_nodes.has(pos):
+			node.button.visible = true
+			if node.has("shadow") and node.shadow:
+				node.shadow.visible = true
+			if node in visible_nodes:
+				node.button.modulate = Color.WHITE
+			else:
+				node.button.modulate = Color(0.5, 0.5, 0.5)
+		else:
+			node.button.visible = false
+			if node.has("shadow") and node.shadow:
+				node.shadow.visible = false
+
+	for type in special_visuals:
+		var vis = special_visuals[type]
+		var is_explored = false
+		var is_currently_visible = false
+		
+		for n in vis.nodes:
+			if explored_nodes.has(Vector2(n.row, n.col)):
+				is_explored = true
+			if n in visible_nodes:
+				is_currently_visible = true
+		
+		if vis.icon: 
+			vis.icon.visible = is_explored
+			vis.icon.modulate = Color.WHITE if is_currently_visible else Color(0.5, 0.5, 0.5)
+		if vis.label: 
+			vis.label.visible = is_explored
+			vis.label.modulate = Color.WHITE if is_currently_visible else Color(0.5, 0.5, 0.5)

@@ -174,15 +174,19 @@ func _ready() -> void:
 	if not quest_board_screen and has_node("UI/QuestBoardScreen"): quest_board_screen = $UI/QuestBoardScreen
 	
 	if town_screen:
-		town_screen.z_index = 100
+		town_screen.z_index = 200
 		town_screen.open_quest_board.connect(func(): 
-			quest_board_screen.open(player)
+			var directions = {}
+			if map_screen and map_screen.has_method("get_quest_directions"):
+				directions = map_screen.get_quest_directions()
+			
+			quest_board_screen.open(player, directions)
 		)
 		town_screen.open_shop.connect(func(): shop_screen.open())
 		town_screen.open_map.connect(_on_town_open_map)
 	
 	if quest_board_screen:
-		quest_board_screen.z_index = 110
+		quest_board_screen.z_index = 210
 		quest_board_screen.close_requested.connect(func(): 
 			quest_board_screen.visible = false
 			if town_screen and not (map_screen and map_screen.visible):
@@ -234,6 +238,7 @@ func _ready() -> void:
 		# Move it to where MapScreen was in the tree order if needed, or just ensure it's below other UI
 		$UI.move_child(triangle_map, $UI/MapScreen.get_index() if has_node("UI/MapScreen") else 0)
 		map_screen = triangle_map
+		map_screen.player = player
 		map_screen.node_selected.connect(_on_map_node_selected)
 		
 		# Connect Triangle Map town signals
@@ -250,9 +255,16 @@ func _ready() -> void:
 		# map_screen.open_inn.connect(...)
 		
 		map_screen.visibility_changed.connect(func():
+			var show_combat_ui = !map_screen.visible
 			var round_info = $UI/RoundInfo
 			if round_info:
-				round_info.visible = !map_screen.visible
+				round_info.visible = show_combat_ui
+			if end_turn_button:
+				end_turn_button.visible = show_combat_ui
+			if dice_pool_ui:
+				dice_pool_ui.visible = show_combat_ui
+			if abilities_ui:
+				abilities_ui.visible = show_combat_ui
 		)
 
 	if get_tree().root.has_meta("tutorial_mode") and get_tree().root.get_meta("tutorial_mode"):
@@ -2169,6 +2181,7 @@ func _create_pause_menu():
 	panel.name = "PauseMenu"
 	panel.set_anchors_preset(Control.PRESET_FULL_RECT)
 	panel.visible = false
+	panel.z_index = 1000
 	var style = StyleBoxFlat.new()
 	style.bg_color = Color(0, 0, 0, 0.8)
 	panel.add_theme_stylebox_override("panel", style)
@@ -2949,6 +2962,9 @@ func _on_quests_confirmed(quests_data):
 	for q in quests_data:
 		active_quests[q.id] = q
 	print("Quests confirmed: ", active_quests)
+	
+	if map_screen and map_screen.has_method("update_quest_log"):
+		map_screen.update_quest_log(quests_data)
 
 func _apply_quest_modifiers(spawned_enemies: Array, quest_id: String):
 	if not active_quests.has(quest_id): return

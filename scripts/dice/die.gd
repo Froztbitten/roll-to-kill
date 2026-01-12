@@ -59,7 +59,8 @@ func roll(with_advantage: bool = false):
 	else:
 		result_face = roll1_face
 	
-	result_value = result_face.value
+	var bonus = get_meta("upgrade_count", 0)
+	result_value = result_face.value + bonus
 	return result_value
 
 func flip_die():
@@ -70,7 +71,8 @@ func flip_die():
 	var current_index = faces.find(result_face)
 	var new_index = (faces.size() - 1) - current_index
 	result_face = faces[new_index]
-	result_value = result_face.value
+	var bonus = get_meta("upgrade_count", 0)
+	result_value = result_face.value + bonus
 
 func get_face_values() -> Array[int]:
 	var values: Array[int] = []

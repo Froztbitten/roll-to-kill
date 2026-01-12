@@ -8,6 +8,7 @@ signal die_hovered(die_display)
 @onready var status_label: Label = $StatusLabel
 @onready var face_grid: GridContainer = $FaceGrid
 @onready var average_label: Label = $AverageLabel
+@onready var promotion_label: Label = $PromotionLabel
 const DieGridCell = preload("res://scenes/dice/die_grid_cell.tscn")
 
 var die: Die
@@ -34,6 +35,8 @@ func _ready():
 	add_theme_stylebox_override("pressed", new_style)
 
 	face_grid.set_anchors_preset(Control.PRESET_TOP_WIDE)
+	die_label.label_settings = null # Allow theme overrides
+	die_label.vertical_alignment = VERTICAL_ALIGNMENT_TOP
 
 	# Create a container to display the list of upgrades on the die.
 	upgrades_list = VBoxContainer.new()
@@ -42,6 +45,7 @@ func _ready():
 	add_child(upgrades_list)
 	face_grid.resized.connect(_update_layout)
 	upgrades_list.resized.connect(_update_layout)
+	resized.connect(_update_layout)
 
 	# --- Custom Tooltip Setup ---
 	_tooltip_panel = PanelContainer.new()
@@ -84,6 +88,8 @@ func set_die(die_data: Die, force_grid: bool = false, is_upgrade_reward: bool = 
 	
 	self.die = die_data
 	status_label.text = ""
+	die_label.visible = false
+	promotion_label.visible = false
 	var die_object: Die = die_data
 
 	# Clear previous contents of the grid
@@ -140,7 +146,14 @@ func set_die(die_data: Die, force_grid: bool = false, is_upgrade_reward: bool = 
 			child.queue_free()
 			
 		if is_upgrade_reward:
-			die_label.text = "d" + str(die.sides)
+			var d_name = _get_die_name(die)
+			die_label.text = d_name
+			die_label.visible = true
+			if d_name.length() > 5:
+				die_label.add_theme_font_size_override("font_size", 18)
+			else:
+				die_label.remove_theme_font_size_override("font_size")
+				
 			status_label.text = "(Upgrade)" if show_status_text else ""
 			for face_info in upgraded_faces_info:
 				var face_value = face_info["face_value"]
@@ -189,7 +202,14 @@ func set_die(die_data: Die, force_grid: bool = false, is_upgrade_reward: bool = 
 				upgrades_list.add_child(panel)
 			upgrades_list.visible = not upgraded_faces_info.is_empty()
 		else: # New Die
-			die_label.text = "d" + str(die.sides)
+			var d_name = _get_die_name(die)
+			die_label.text = d_name
+			die_label.visible = true
+			if d_name.length() > 5:
+				die_label.add_theme_font_size_override("font_size", 18)
+			else:
+				die_label.remove_theme_font_size_override("font_size")
+				
 			status_label.text = "(New)" if show_status_text else ""
 			var unique_effects = []
 			for face_data in die_object.faces:
@@ -199,6 +219,12 @@ func set_die(die_data: Die, force_grid: bool = false, is_upgrade_reward: bool = 
 							unique_effects.append(effect.name)
 							_add_effect_panel_to_list(upgrades_list, effect, "Face Value") # Re-use existing helper
 			upgrades_list.visible = not unique_effects.is_empty()
+
+		# Show promotion count
+		var upgrades = die.get_meta("upgrade_count", 0)
+		if upgrades > 0:
+			promotion_label.text = "+%d" % upgrades
+			promotion_label.visible = true
 
 		original_grid_text = "" # Not needed for multi-cell grid
 		
@@ -213,7 +239,8 @@ func set_die(die_data: Die, force_grid: bool = false, is_upgrade_reward: bool = 
 		else:
 			die_icon.texture = null
 	
-	average_roll = (float(die.sides) + 1.0) / 2.0
+	var bonus = die.get_meta("upgrade_count", 0)
+	average_roll = ((float(die.sides) + 1.0) / 2.0) + bonus
 
 	_apply_scale()
 	visible = true
@@ -272,6 +299,48 @@ func _add_effect_panel_to_list(parent_container: VBoxContainer, effect: DieFaceE
 	
 	parent_container.add_child(panel)
 
+func _get_die_name(d: Die) -> String:
+	var parts = []
+	
+	# 1. Check Custom/Promoted
+	var values = []
+	for f in d.faces:
+		values.append(f.value)
+	values.sort()
+	
+	var is_standard = true
+	var is_promoted = false
+	var is_custom = false
+	
+	# Check against standard 1..N
+	for i in range(values.size()):
+		if values[i] != i + 1:
+			is_standard = false
+			break
+	
+	if not is_standard:
+		# Check if Promoted (Standard + K)
+		var k = values[0] - 1
+		var matches_promoted = true
+		if k <= 0: 
+			matches_promoted = false
+		else:
+			for i in range(values.size()):
+				if values[i] != (i + 1) + k:
+					matches_promoted = false
+					break
+		
+		if matches_promoted:
+			is_promoted = true
+		else:
+			is_custom = true
+			
+	if is_custom: parts.append("Customized")
+	elif is_promoted: parts.append("Promoted")
+	if d.faces.any(func(f): return not f.effects.is_empty()): parts.append("Special")
+	parts.append("D%d" % d.sides)
+	return " ".join(parts)
+
 func _apply_scale():
 	custom_minimum_size = current_base_size * current_scale_factor
 	
@@ -285,12 +354,29 @@ func _apply_scale():
 			label.add_theme_font_size_override("font_size", int(48 * current_scale_factor))
 		else:
 			label.add_theme_font_size_override("font_size", int(14 * current_scale_factor))
+	
+	if die_label.visible:
+		var base_font = 40
+		if die_label.text.length() > 5:
+			base_font = 18
+		die_label.add_theme_font_size_override("font_size", int(base_font * current_scale_factor))
+		die_label.add_theme_constant_override("outline_size", int(4 * current_scale_factor))
 			
 	call_deferred("_update_layout")
 
 func _update_layout():
-	# Position the grid at the top with a small margin
-	face_grid.position.y = 5 * current_scale_factor
+	var current_y = 5 * current_scale_factor
+	
+	if die_label.visible:
+		die_label.set_anchors_preset(Control.PRESET_TOP_WIDE)
+		die_label.position.y = current_y
+		die_label.size.x = size.x
+		die_label.size.y = 0 # Reset to allow auto-sizing
+		
+		current_y += die_label.get_minimum_size().y + (2 * current_scale_factor)
+
+	# Position the grid
+	face_grid.position.y = current_y
 	
 	# If the upgrades list is visible, position it below the grid
 	var content_bottom = face_grid.position.y + face_grid.get_minimum_size().y

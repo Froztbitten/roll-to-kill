@@ -36,7 +36,7 @@ func _add_die_to_pool(die_data: Die, invisible: bool) -> DieDisplay:
 	dice_pool_display.append(die_display)
 	return die_display
 
-func animate_add_dice(dice_to_draw: Array[Die], start_pos: Vector2):
+func animate_add_dice(dice_to_draw: Array[Die], start_pos_data: Variant):
 	if dice_to_draw.is_empty():
 		return
 
@@ -65,12 +65,24 @@ func animate_add_dice(dice_to_draw: Array[Die], start_pos: Vector2):
 		
 		# Instantly move the die to the start position and shrink it.
 		# This happens between frames, so it won't be visible to the player.
+		var start_pos = Vector2.ZERO
+		if start_pos_data is Array:
+			if i < start_pos_data.size():
+				start_pos = start_pos_data[i]
+			else:
+				start_pos = start_pos_data.back()
+		else:
+			start_pos = start_pos_data
+			
 		display.global_position = start_pos - (display.size / 2.0)
 		display.pivot_offset = display.size / 2.0 # Set pivot for scaling from the center
-		var rotation_amount = randf_range(PI * 2, PI * 4) * ([1, -1].pick_random())
-		display.rotation = rotation_amount
+		display.rotation = final_rotation
 		display.scale = Vector2.ZERO
 		display.modulate.a = 1.0 # Make it visible just before the animation starts
+		
+		# Ensure it renders above other UI elements (like overlays) during animation
+		var original_z = display.z_index
+		display.z_index = 400 
 		
 		# Animate it back to its final position and scale.
 		var tween = create_tween().set_parallel()
@@ -80,7 +92,7 @@ func animate_add_dice(dice_to_draw: Array[Die], start_pos: Vector2):
 		var delay = i * 0.07
 		tween.tween_property(display, "global_position", final_pos, duration).set_delay(delay).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 		tween.tween_property(display, "scale", final_scale, duration * 0.75).set_delay(delay).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
-		tween.tween_property(display, "rotation", final_rotation, duration).set_delay(delay).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+		tween.chain().tween_callback(func(): if is_instance_valid(display): display.z_index = original_z)
 
 	if not tweens.is_empty():
 		await tweens.back().finished

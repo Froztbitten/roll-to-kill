@@ -15,7 +15,7 @@ var _round_dice_bag: Array[Die] = []
 var _dice_discard: Array[Die] = []
 var _held_dice: Array[Die] = []
 var gold: int = 50
-var die_removal_cost: int = 75
+var die_removal_cost: int = 50
 var _shield_sound: AudioStream
 @onready var status_display: HBoxContainer = $Visuals/InfoContainer/StatusEffectDisplay
 @onready var info_container: VBoxContainer = $Visuals/InfoContainer
@@ -245,9 +245,6 @@ func remove_die_from_bag(die_to_remove: Die):
 		total_dice_count_changed.emit(_game_dice_bag.size())
 
 func upgrade_die(die_to_upgrade: Die):
-	# Increase value of all faces by 1
-	for face in die_to_upgrade.faces:
-		face.value += 1
 	# Update metadata to track upgrade count
 	var current_upgrades = die_to_upgrade.get_meta("upgrade_count", 0)
 	die_to_upgrade.set_meta("upgrade_count", current_upgrades + 1)

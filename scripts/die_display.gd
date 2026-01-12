@@ -238,10 +238,26 @@ func _get_drag_data(_at_position: Vector2):
 	# Let the main game know that a drag has started, so it can be deselected.
 	emit_signal("drag_started", self)
 
-	# Create a preview that follows the mouse
-	var preview = self.duplicate() # Duplicate the entire control for the preview
+	# Create a container for the preview that will be managed by Godot's drag system
+	var preview_container = Control.new()
+	# Attach a script to sync the visual's position (since it's in a CanvasLayer)
+	var script = GDScript.new()
+	script.source_code = "extends Control\nvar visual_node: Control\nfunc _ready():\n\tif get_child_count() > 0:\n\t\tvar cl = get_child(0)\n\t\tif cl is CanvasLayer and cl.get_child_count() > 0:\n\t\t\tvisual_node = cl.get_child(0)\nfunc _process(_delta):\n\tif visual_node:\n\t\tvisual_node.global_position = global_position - (visual_node.size * visual_node.scale) / 2.0\n"
+	script.reload()
+	preview_container.set_script(script)
+	
+	# Create a CanvasLayer to render the preview above the UI (Layer 20)
+	var canvas_layer = CanvasLayer.new()
+	canvas_layer.layer = 100
+	preview_container.add_child(canvas_layer)
+
+	# Create the actual visual preview
+	var preview = self.duplicate()
 	preview.scale = Vector2(0.8, 0.8)
-	set_drag_preview(preview)
+	preview.get_node("FaceGrid").visible = false
+	canvas_layer.add_child(preview)
+	
+	set_drag_preview(preview_container)
 
 	# The data payload that will be sent to the drop target
 	var payload = {
@@ -251,6 +267,7 @@ func _get_drag_data(_at_position: Vector2):
 	
 	# Hide the original die while it's being dragged
 	main_display.visible = false
+	face_grid.visible = false
 	
 	return payload
 
