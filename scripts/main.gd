@@ -117,6 +117,9 @@ func _ready() -> void:
 	# Set process modes to allow the MainGame script to handle input while the game is paused.
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	
+	# Ensure GameInfo (TopBar) is always on top of other screens (Map, Shop, etc.)
+	$UI/GameInfo.z_index = 400
+	
 	# --- Analytics Debug Check ---
 	if has_node("/root/GameAnalyticsManager"):
 		print("MainGame: GameAnalyticsManager is loaded.")
@@ -272,7 +275,7 @@ func _ready() -> void:
 		if tutorial_script:
 			var tutorial_manager = tutorial_script.new()
 			add_child(tutorial_manager)
-			var tutorial_encounter = load("res://resources/encounters/tutorial_encounter.tres")
+			var tutorial_encounter = load("res://resources/encounters/tutorial.tres")
 			if tutorial_encounter:
 				var spawned_enemies = enemy_spawner.spawn_specific_encounter(tutorial_encounter)
 				await _setup_round(spawned_enemies)
@@ -1610,82 +1613,99 @@ func _animate_dice_to_target(dice_displays: Array[DieDisplay], target: Character
 	var animation_data: Array = []
 
 	# Step 1: Gather all necessary data (start position, node to animate) before
-	# modifying the scene tree. This prevents the HBoxContainer from re-sorting
-	# and giving us incorrect positions for subsequent dice.
+	# modifying the scene tree.
 	for die_display in dice_displays:
+		var main_display = die_display.get_node("MainDisplay")
+		
+		# We duplicate individual components to break them free from the PanelContainer's layout,
+		# allowing us to animate their scale independently.
 		animation_data.append({
-			"start_center": die_display.get_node("MainDisplay").get_global_rect().get_center(),
-			"anim_disp": die_display.get_node("MainDisplay").duplicate(true),
-			"start_scale": die_display.get_node("MainDisplay").scale,
-			"die_data": die_display.die, # Add the Die object here
-			"start_size": die_display.get_node("MainDisplay").size
+			"start_center": main_display.get_global_rect().get_center(),
+			"start_scale": main_display.scale,
+			"start_size": main_display.size,
+			"die_data": die_display.die,
+			# Duplicate the visual elements we want to animate
+			"icon_dup": main_display.get_node("Icon").duplicate(),
+			"label_dup": main_display.get_node("LabelContainer").duplicate()
 		})
 
-	# Step 2: Now that we have the data, clear the original dice from the hand.
+	# Step 2: Clear the original dice from the hand/pool.
 	for die_display in dice_displays:
 		if die_display.dice_pool:
 			die_display.dice_pool.remove_die(die_display)
 			die_display.queue_free()
 		else:
-			# Fallback if not attached to a pool (e.g. temp display)
+			# Fallback if not attached to a pool
 			die_display.queue_free()
 
-	# Step 3: Add the animation nodes to the scene and start their tweens.
+	# Step 3: Create animation nodes and tweens.
 	for i in range(animation_data.size()):
 		var data = animation_data[i]
-		var anim_disp: PanelContainer = data.anim_disp
 		var start_scale: Vector2 = data.start_scale
 		var start_size: Vector2 = data.start_size
+		var icon: Control = data.icon_dup
+		var label: Control = data.label_dup
 
-		# Create an anchor to handle position, so the die can be scaled from its center.
+		# Create an anchor to handle position
 		var anchor = Node2D.new()
 		get_tree().get_root().add_child(anchor)
 		var anchor_start_pos: Vector2 = data.start_center
 		anchor.global_position = anchor_start_pos
-
-		# Add the duplicated display to the anchor and center it.
-		# Manually set scale and pivot to ensure it's a perfect match to the original.
-		# Reset anchors to prevent the "size is overridden" warning. When a Control node
-		# with fill anchors is duplicated, it keeps those properties.
-		anim_disp.set_anchors_preset(Control.PRESET_TOP_LEFT)
-		anim_disp.size = start_size
-		anim_disp.pivot_offset = start_size / 2.0
-		anchor.add_child(anim_disp)
-		anim_disp.scale = start_scale
-		anim_disp.position = -start_size / 2.0
-		anim_disp.visible = true
+		
+		# Setup Visuals on Anchor
+		anchor.add_child(icon)
+		icon.size = start_size
+		icon.position = -start_size / 2.0
+		icon.scale = start_scale
+		icon.pivot_offset = start_size / 2.0
+		
+		anchor.add_child(label)
+		label.size = start_size
+		label.position = -start_size / 2.0
+		label.scale = start_scale
+		label.pivot_offset = start_size / 2.0
+		# Ensure label container centers its children
+		if label is BoxContainer:
+			label.alignment = BoxContainer.ALIGNMENT_CENTER
 
 		var tween = create_tween()
-		tweens.append(tween)
+		if tween:
+			tweens.append(tween)
 		
-		# Get the visual center of the target character's sprite for a more accurate end position.
+		# Targeting Logic
 		var sprite_node: Node = target.get_node("Visuals/Sprite2D")
 		var end_pos: Vector2
-		if sprite_node is Control: # TextureRect is a Control node
+		if sprite_node is Control:
 			end_pos = (sprite_node as Control).get_global_rect().get_center()
-		elif sprite_node is Node2D: # Sprite2D is a Node2D
+		elif sprite_node is Node2D:
 			end_pos = (sprite_node as Node2D).global_position
-		else: # Fallback to the character's origin if the node is something unexpected
+		else:
 			end_pos = target.global_position
-		# Define the control point for the quadratic Bezier curve.
-		# A lower Y value creates a higher arc.
+			
 		var control_pos_x = lerp(anchor_start_pos.x, end_pos.x, 0.2)
 		var control_pos_y = min(anchor_start_pos.y, end_pos.y) - 150
 		var control_pos = Vector2(control_pos_x, control_pos_y)
 
-		var duration = 0.4
-		tween.tween_method(
+		var reveal_time = 0.2
+		var move_duration = 0.4
+		var delay = i * 0.1
+
+		# 1. Reveal Phase: Fade Icon, Pop Number
+		tween.tween_property(icon, "modulate:a", 0.0, reveal_time).set_delay(delay)
+		tween.parallel().tween_property(label, "scale", start_scale * 2.5, reveal_time).set_delay(delay).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+
+		# 2. Movement Phase: Move Anchor
+		tween.parallel().tween_method(
 			func(t: float): anchor.global_position = anchor_start_pos.lerp(control_pos, t).lerp(control_pos.lerp(end_pos, t), t),
-			0.0, 1.0, duration
-		).set_delay(i * 0.08).set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_CUBIC)
+			0.0, 1.0, move_duration
+		).set_delay(delay + reveal_time).set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_CUBIC)
 
-		tween.parallel().tween_property(anim_disp, "scale", anim_disp.scale * 1.2, duration / 2.0).set_delay(i * 0.08)
-		tween.parallel().tween_property(anim_disp, "scale", Vector2(0.5, 0.5), duration / 2.0).set_delay(i * 0.08 + duration / 2.0)
+		# 3. Impact Phase: Shrink Anchor
+		tween.parallel().tween_property(anchor, "scale", Vector2(0.5, 0.5), move_duration / 2.0).set_delay(delay + reveal_time + move_duration / 2.0)
 
-		# When the die "hits" at the end of its animation, trigger the recoil on the target.
-		# We don't await this, so multiple recoils can overlap for a cool, rapid-fire effect.
-		tween.tween_callback(target._recoil.bind(data.die_data.result_value))
-		tween.tween_callback(anchor.queue_free)
+		# Callbacks
+		tween.parallel().tween_callback(target._recoil.bind(data.die_data.result_value)).set_delay(delay + reveal_time + move_duration)
+		tween.parallel().tween_callback(anchor.queue_free).set_delay(delay + reveal_time + move_duration)
 
 	if not tweens.is_empty():
 		await tweens.back().finished
@@ -1722,12 +1742,12 @@ func _on_map_node_selected(node_data):
 		_apply_quest_modifiers(spawned_enemies, "goblin_camp")
 		await _setup_round(spawned_enemies)
 	elif node_data.type == "dragon_roost":
-		var encounter = load("res://resources/encounters/white_eyes_blue_dragon_encounter.tres")
+		var encounter = load("res://resources/encounters/white_eyes_blue_dragon.tres")
 		var spawned_enemies = enemy_spawner.spawn_specific_encounter(encounter)
 		_apply_quest_modifiers(spawned_enemies, "dragons_roost")
 		await _setup_round(spawned_enemies)
 	elif node_data.type == "dwarven_forge":
-		var encounter = load("res://resources/encounters/gnomes.tres")
+		var encounter = load("res://resources/encounters/gnomish_tinkerers.tres")
 		var spawned_enemies = enemy_spawner.spawn_specific_encounter(encounter)
 		_apply_quest_modifiers(spawned_enemies, "dwarven_forge")
 		await _setup_round(spawned_enemies)
@@ -2041,6 +2061,8 @@ func _on_reward_chosen(chosen_die: Die) -> void:
 		await start_new_round()
 	else:
 		# Return to map
+		if map_screen.has_method("set_view_only"):
+			map_screen.set_view_only(false)
 		map_screen.visible = true
 
 func _on_play_again_button_pressed():
@@ -2052,6 +2074,8 @@ func _on_leave_campfire():
 		current_crypt_stage += 1
 		_advance_crypt_stage()
 	else:
+		if map_screen.has_method("set_view_only"):
+			map_screen.set_view_only(false)
 		map_screen.visible = true
 
 func _on_player_died():
@@ -2497,6 +2521,8 @@ func _on_dice_bag_button_hover_exited():
 	_animate_icon_scale(dice_bag_button, 1.0)
 
 func _on_map_button_pressed():
+	if map_screen.has_method("set_view_only"):
+		map_screen.set_view_only(true)
 	map_screen.visible = true
 	if map_screen.has_node("CloseButton"):
 		map_screen.get_node("CloseButton").visible = true
@@ -2624,6 +2650,8 @@ func _setup_multiplayer_game():
 		seed(game_seed)
 		steam_manager.send_p2p_packet_to_all({"type": "game_start_sync", "seed": game_seed})
 		map_screen.generate_new_map()
+		if map_screen.has_method("set_view_only"):
+			map_screen.set_view_only(false)
 		map_screen.visible = true
 	else:
 		map_screen.set_input_enabled(false) # Client cannot pick nodes

@@ -1,0 +1,27 @@
+[gd_resource type="Resource" script_class="EncounterData" load_steps=6 format=3 uid="uid://b2txfce224r33"]
+
+[ext_resource type="Resource" uid="uid://xmj8jpj4gtlf" path="res://resources/enemies/altimate_driver.tres" id="1_bu5fr"]
+[ext_resource type="Resource" uid="uid://hbq8iut0qxo4" path="res://resources/enemies/drag_racer.tres" id="2_3o70a"]
+[ext_resource type="Script" uid="uid://ck2drfaun3f25" path="res://scripts/encounter_data.gd" id="2_6ojb2"]
+[ext_resource type="Resource" uid="uid://b3aoaxmitnawg" path="res://resources/enemies/speed_demon.tres" id="3_45i88"]
+[ext_resource type="Resource" uid="uid://b1kregyox5n5l" path="res://resources/enemies/family_mechanic.tres" id="4_8mfxb"]
+
+[resource]
+script = ExtResource("2_6ojb2")
+enemies = Array[Dictionary]([{
+"data": ExtResource("1_bu5fr"),
+"max": 1.0,
+"min": 1.0
+}, {
+"data": ExtResource("2_3o70a"),
+"max": 1.0,
+"min": 1.0
+}, {
+"data": ExtResource("3_45i88"),
+"max": 1.0,
+"min": 1.0
+}, {
+"data": ExtResource("4_8mfxb"),
+"max": 1.0,
+"min": 1.0
+}])

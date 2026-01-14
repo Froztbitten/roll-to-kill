@@ -1,30 +1,30 @@
 [gd_resource type="Resource" script_class="EnemyData" load_steps=6 format=3 uid="uid://d0v8v5xg7nftg"]
 
-[ext_resource type="Script" uid="uid://djeev1jhalfah" path="res://scripts/character/enemy/enemy_action.gd" id="1_action"]
-[ext_resource type="Script" uid="uid://dv6r7tro15lnf" path="res://scripts/character/enemy/enemy_data.gd" id="3_data"]
-[ext_resource type="Texture2D" uid="uid://bdtniiup2jndk" path="res://assets/ai/characters/femme_fatale.png" id="3_u8xck"]
+[ext_resource type="Script" uid="uid://djeev1jhalfah" path="res://scripts/character/enemy/enemy_action.gd" id="1_u8xck"]
+[ext_resource type="Script" uid="uid://dv6r7tro15lnf" path="res://scripts/character/enemy/enemy_data.gd" id="2_chin8"]
+[ext_resource type="Texture2D" uid="uid://bdtniiup2jndk" path="res://assets/ai/characters/femme_fatale.png" id="3_dgdw6"]
 
-[sub_resource type="Resource" id="action_charm"]
-script = ExtResource("1_action")
+[sub_resource type="Resource" id="Resource_l0b4v"]
+script = ExtResource("1_u8xck")
 action_name = "Charm"
 action_type = 9
 dice_count = 1
 status_id = "charming"
 duration = 1
 
-[sub_resource type="Resource" id="action_widows_web"]
-script = ExtResource("1_action")
+[sub_resource type="Resource" id="Resource_q5y71"]
+script = ExtResource("1_u8xck")
 action_name = "Widow's Web"
-action_type = 9
+dice_sides = 0
 status_id = "lock_down"
 duration = 1
 
 [resource]
-script = ExtResource("3_data")
+script = ExtResource("2_chin8")
 enemy_name = "Femme Fatale"
-sprite_texture = ExtResource("3_u8xck")
+sprite_texture = ExtResource("3_dgdw6")
 minimum_hp = 10
-gold_dice = 1
-hp_dice_count = 3
-hp_dice_sides = 4
-action_pool = Array[ExtResource("1_action")]([SubResource("action_charm"), SubResource("action_widows_web")])
+gold_dice = 2
+hp_dice_count = 4
+hp_dice_sides = 3
+action_pool = Array[ExtResource("1_u8xck")]([SubResource("Resource_l0b4v"), SubResource("Resource_q5y71")])

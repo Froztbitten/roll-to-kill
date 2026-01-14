@@ -201,7 +201,7 @@ func _roll_quest_dice():
 	roll_overlay.add_child(center_cont)
 	
 	var hbox = HBoxContainer.new()
-	hbox.add_theme_constant_override("separation", 50)
+	hbox.add_theme_constant_override("separation", -100)
 	center_cont.add_child(hbox)
 	
 	var renderers = []
@@ -211,21 +211,8 @@ func _roll_quest_dice():
 		hbox.add_child(disp)
 		disp.configure(6) # Quest dice are d6
 		renderers.append(disp)
-		
-	# Animate in
-	hbox.scale = Vector2.ZERO
-	var tween = create_tween()
-	current_tween = tween
-	tween.tween_property(hbox, "scale", Vector2.ONE, 0.4).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
-	
-	await tween.finished
-	if not is_rolling: return
-	
-	# Roll
-	for disp in renderers:
-		disp.roll(0, 0.8)
-		
-	# Wait for results
+
+	# Connect signals and start rolling immediately
 	var results_map = {}
 	var finished_count = 0
 	for disp in renderers:
@@ -243,6 +230,13 @@ func _roll_quest_dice():
 						temp_results.append(1) # Fallback
 				pending_dice_results = temp_results
 		)
+		disp.roll(0, 0.8)
+	
+	# Animate in while rolling
+	hbox.scale = Vector2.ZERO
+	var tween = create_tween()
+	current_tween = tween
+	tween.tween_property(hbox, "scale", Vector2.ONE, 0.4).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 	
 	# Wait for results with timeout to prevent hanging
 	var timeout_frames = 300 # Approx 5 seconds

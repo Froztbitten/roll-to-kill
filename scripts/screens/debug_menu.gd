@@ -20,9 +20,10 @@ func setup_encounters(combat_encounters: Array):
 	for encounter in combat_encounters:
 		var btn = Button.new()
 		var names = []
-		for type in encounter.enemy_types:
-			if type and not names.has(type.enemy_name):
-				names.append(type.enemy_name)
+		for entry in encounter.enemies:
+			var data = entry["data"]
+			if data and not names.has(data.enemy_name):
+				names.append(data.enemy_name)
 		var name_str = ", ".join(names)
 		
 		var type_str = "NORMAL"
@@ -31,7 +32,7 @@ func setup_encounters(combat_encounters: Array):
 		elif encounter.encounter_type == EncounterData.EncounterType.RARE:
 			type_str = "RARE"
 			
-		btn.text = "[%s] %s (%d-%d)" % [type_str, name_str, encounter.min_count, encounter.max_count]
+		btn.text = "[%s] %s" % [type_str, name_str]
 		btn.custom_minimum_size = Vector2(0, 60)
 		btn.size_flags_horizontal = 3
 		btn.pressed.connect(func(): encounter_selected.emit("combat", encounter))

@@ -1,29 +1,27 @@
 [gd_resource type="Resource" script_class="EnemyData" load_steps=6 format=3 uid="uid://du7ewmwn0eh7n"]
 
-[ext_resource type="Script" uid="uid://djeev1jhalfah" path="res://scripts/character/enemy/enemy_action.gd" id="1_eoums"]
-[ext_resource type="Texture2D" uid="uid://bky1c5q8wvh51" path="res://assets/ai/characters/goblin.png" id="3_bxi3o"]
-[ext_resource type="Script" uid="uid://dv6r7tro15lnf" path="res://scripts/character/enemy/enemy_data.gd" id="3_qxlb2"]
+[ext_resource type="Script" uid="uid://djeev1jhalfah" path="res://scripts/character/enemy/enemy_action.gd" id="1_bxi3o"]
+[ext_resource type="Script" uid="uid://dv6r7tro15lnf" path="res://scripts/character/enemy/enemy_data.gd" id="2_eoums"]
+[ext_resource type="Texture2D" uid="uid://bky1c5q8wvh51" path="res://assets/ai/characters/goblin.png" id="3_3kmag"]
 
-[sub_resource type="Resource" id="Resource_u32se"]
-script = ExtResource("1_eoums")
+[sub_resource type="Resource" id="Resource_qxlb2"]
+script = ExtResource("1_bxi3o")
 action_name = "Prick"
 dice_count = 1
 dice_sides = 4
-metadata/_custom_type_script = "uid://djeev1jhalfah"
 
-[sub_resource type="Resource" id="Resource_t87w3"]
-script = ExtResource("1_eoums")
+[sub_resource type="Resource" id="Resource_8263n"]
+script = ExtResource("1_bxi3o")
 action_name = "Cower"
 action_type = 1
 dice_count = 1
-metadata/_custom_type_script = "uid://djeev1jhalfah"
 
 [resource]
-script = ExtResource("3_qxlb2")
+script = ExtResource("2_eoums")
 enemy_name = "Goblin"
-sprite_texture = ExtResource("3_bxi3o")
+sprite_texture = ExtResource("3_3kmag")
 minimum_hp = 6
 gold_dice = 1
-gold_dice_sides = 8
-hp_dice_count = 2
-action_pool = Array[ExtResource("1_eoums")]([SubResource("Resource_u32se"), SubResource("Resource_t87w3")])
+hp_dice_count = 6
+hp_dice_sides = 2
+action_pool = Array[ExtResource("1_bxi3o")]([SubResource("Resource_qxlb2"), SubResource("Resource_8263n")])

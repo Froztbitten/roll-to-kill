@@ -1,30 +1,27 @@
 [gd_resource type="Resource" script_class="EnemyData" load_steps=6 format=3 uid="uid://b7dqjdxtlr5m1"]
 
 [ext_resource type="Script" uid="uid://djeev1jhalfah" path="res://scripts/character/enemy/enemy_action.gd" id="1_qu8um"]
-[ext_resource type="Texture2D" uid="uid://cwqublumk4eff" path="res://assets/ai/characters/goblin_archer.png" id="3_qu8um"]
-[ext_resource type="Script" uid="uid://dv6r7tro15lnf" path="res://scripts/character/enemy/enemy_data.gd" id="3_xbyo6"]
+[ext_resource type="Script" uid="uid://dv6r7tro15lnf" path="res://scripts/character/enemy/enemy_data.gd" id="2_g4trc"]
+[ext_resource type="Texture2D" uid="uid://cwqublumk4eff" path="res://assets/ai/characters/goblin_archer.png" id="3_xbyo6"]
 
-[sub_resource type="Resource" id="Resource_draw_action"]
+[sub_resource type="Resource" id="Resource_v16vd"]
 script = ExtResource("1_qu8um")
-action_name = "Draw Arrow"
+action_name = "Toothpick"
+dice_count = 1
+dice_sides = 10
+
+[sub_resource type="Resource" id="Resource_8k5n1"]
+script = ExtResource("1_qu8um")
+action_name = "Reload"
 action_type = 7
 dice_sides = 0
-metadata/_custom_type_script = "uid://djeev1jhalfah"
-
-[sub_resource type="Resource" id="Resource_fire_action"]
-script = ExtResource("1_qu8um")
-action_name = "Fire Arrow"
-dice_count = 1
-dice_sides = 8
-metadata/_custom_type_script = "uid://djeev1jhalfah"
 
 [resource]
-script = ExtResource("3_xbyo6")
+script = ExtResource("2_g4trc")
 enemy_name = "Goblin Archer"
-sprite_texture = ExtResource("3_qu8um")
+sprite_texture = ExtResource("3_xbyo6")
 minimum_hp = 8
-gold_dice = 1
-gold_dice_sides = 4
-hp_dice_sides = 8
-action_pool = Array[ExtResource("1_qu8um")]([SubResource("Resource_draw_action"), SubResource("Resource_fire_action")])
-metadata/_custom_type_script = "uid://dv6r7tro15lnf"
+gold_minimum = 3
+hp_dice_count = 8
+hp_dice_sides = 1
+action_pool = Array[ExtResource("1_qu8um")]([SubResource("Resource_v16vd"), SubResource("Resource_8k5n1")])

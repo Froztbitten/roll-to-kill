@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="EnemyData" load_steps=5 format=3 uid="uid://d3jshksn78v6r"]
+
+[ext_resource type="Script" uid="uid://djeev1jhalfah" path="res://scripts/character/enemy/enemy_action.gd" id="1_0s6uj"]
+[ext_resource type="Script" uid="uid://dv6r7tro15lnf" path="res://scripts/character/enemy/enemy_data.gd" id="2_yuxsa"]
+[ext_resource type="Texture2D" uid="uid://cyu7b2gkgq3hl" path="res://assets/ai/characters/d6.png" id="3_6rx4t"]
+
+[sub_resource type="Resource" id="Resource_c2rxr"]
+script = ExtResource("1_0s6uj")
+action_name = "I 6ot you"
+action_type = 3
+dice_count = 1
+
+[resource]
+script = ExtResource("2_yuxsa")
+enemy_name = "D6"
+sprite_texture = ExtResource("3_6rx4t")
+minimum_hp = 0
+gold_minimum = 1
+hp_dice_count = 6
+hp_dice_sides = 1
+action_pool = Array[ExtResource("1_0s6uj")]([SubResource("Resource_c2rxr")])

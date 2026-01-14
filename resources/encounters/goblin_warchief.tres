@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="EncounterData" load_steps=4 format=3 uid="uid://6nnlu63p0rvi"]
+
+[ext_resource type="Resource" uid="uid://mxdbguridwuc" path="res://resources/enemies/goblin_warchief.tres" id="1_ssd0u"]
+[ext_resource type="Resource" uid="uid://btp545hyphd1x" path="res://resources/enemies/ogre_bodyguard.tres" id="2_73sqt"]
+[ext_resource type="Script" uid="uid://ck2drfaun3f25" path="res://scripts/encounter_data.gd" id="4_hvy8j"]
+
+[resource]
+script = ExtResource("4_hvy8j")
+enemies = Array[Dictionary]([{
+"data": ExtResource("1_ssd0u"),
+"max": 1.0,
+"min": 1.0
+}, {
+"data": ExtResource("2_73sqt"),
+"max": 3.0,
+"min": 2.0
+}])

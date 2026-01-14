@@ -1,0 +1,28 @@
+[gd_resource type="Resource" script_class="EnemyData" load_steps=6 format=3 uid="uid://cu56enl8kc803"]
+
+[ext_resource type="Script" uid="uid://djeev1jhalfah" path="res://scripts/character/enemy/enemy_action.gd" id="1_us7bc"]
+[ext_resource type="Script" uid="uid://dv6r7tro15lnf" path="res://scripts/character/enemy/enemy_data.gd" id="2_e2j4v"]
+[ext_resource type="Texture2D" uid="uid://d0pbkap4a87fs" path="res://assets/ai/characters/d10.png" id="3_knlj2"]
+
+[sub_resource type="Resource" id="Resource_dredu"]
+script = ExtResource("1_us7bc")
+action_name = "Flip f10p"
+dice_count = 1
+dice_sides = 10
+
+[sub_resource type="Resource" id="Resource_juu6b"]
+script = ExtResource("1_us7bc")
+action_name = "F10p Flip"
+action_type = 1
+dice_count = 1
+dice_sides = 10
+
+[resource]
+script = ExtResource("2_e2j4v")
+enemy_name = "D10"
+sprite_texture = ExtResource("3_knlj2")
+minimum_hp = 0
+gold_minimum = 3
+hp_dice_count = 10
+hp_dice_sides = 1
+action_pool = Array[ExtResource("1_us7bc")]([SubResource("Resource_dredu"), SubResource("Resource_juu6b")])

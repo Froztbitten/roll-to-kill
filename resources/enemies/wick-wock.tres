@@ -1,0 +1,19 @@
+[gd_resource type="Resource" script_class="EnemyData" load_steps=4 format=3 uid="uid://pya7mnncit50"]
+
+[ext_resource type="Script" uid="uid://djeev1jhalfah" path="res://scripts/character/enemy/enemy_action.gd" id="1_vsbam"]
+[ext_resource type="Script" uid="uid://dv6r7tro15lnf" path="res://scripts/character/enemy/enemy_data.gd" id="2_6c63f"]
+
+[sub_resource type="Resource" id="Resource_vsbam"]
+script = ExtResource("1_vsbam")
+action_name = "...Damned if You Don't"
+base_value = -2
+dice_count = 2
+dice_sides = 8
+
+[resource]
+script = ExtResource("2_6c63f")
+enemy_name = "Wick-wock"
+minimum_hp = 4
+hp_dice_count = 0
+hp_dice_sides = 1
+action_pool = Array[ExtResource("1_vsbam")]([SubResource("Resource_vsbam")])

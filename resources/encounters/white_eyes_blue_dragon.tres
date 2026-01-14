@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="EncounterData" load_steps=3 format=3 uid="uid://c1dguepp7x2tr"]
+
+[ext_resource type="Resource" uid="uid://b51jn5e5dlsfq" path="res://resources/enemies/white_eyes_blue_dragon.tres" id="1_inmgv"]
+[ext_resource type="Script" uid="uid://ck2drfaun3f25" path="res://scripts/encounter_data.gd" id="3_yyhm4"]
+
+[resource]
+script = ExtResource("3_yyhm4")
+enemies = Array[Dictionary]([{
+"data": ExtResource("1_inmgv"),
+"max": 1.0,
+"min": 1.0
+}])

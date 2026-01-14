@@ -1,0 +1,38 @@
+[gd_resource type="Resource" script_class="EnemyData" load_steps=7 format=3 uid="uid://xmj8jpj4gtlf"]
+
+[ext_resource type="Script" uid="uid://djeev1jhalfah" path="res://scripts/character/enemy/enemy_action.gd" id="1_ndbdj"]
+[ext_resource type="Script" uid="uid://dv6r7tro15lnf" path="res://scripts/character/enemy/enemy_data.gd" id="2_qjwpt"]
+
+[sub_resource type="Resource" id="Resource_n4sma"]
+script = ExtResource("1_ndbdj")
+action_name = "Roadrage"
+dice_count = 1
+dice_sides = 8
+
+[sub_resource type="Resource" id="Resource_3ygrd"]
+script = ExtResource("1_ndbdj")
+action_name = "Roadrage 2"
+dice_count = 1
+dice_sides = 10
+
+[sub_resource type="Resource" id="Resource_jxvr4"]
+script = ExtResource("1_ndbdj")
+action_name = "Roadrage 3"
+dice_count = 1
+dice_sides = 12
+
+[sub_resource type="Resource" id="Resource_6mxi3"]
+script = ExtResource("1_ndbdj")
+action_name = "Roadrage 4"
+dice_count = 1
+dice_sides = 20
+
+[resource]
+script = ExtResource("2_qjwpt")
+enemy_name = "Altimate Driver"
+minimum_hp = 24
+gold_minimum = 2
+gold_dice = 9
+hp_dice_count = 12
+hp_dice_sides = 4
+action_pool = Array[ExtResource("1_ndbdj")]([SubResource("Resource_n4sma"), SubResource("Resource_3ygrd"), SubResource("Resource_jxvr4"), SubResource("Resource_6mxi3")])

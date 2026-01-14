@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="EnemyData" load_steps=3 format=3 uid="uid://dl0014bgf3tbo"]
+
+[ext_resource type="Script" uid="uid://djeev1jhalfah" path="res://scripts/character/enemy/enemy_action.gd" id="1_wfvp3"]
+[ext_resource type="Script" uid="uid://dv6r7tro15lnf" path="res://scripts/character/enemy/enemy_data.gd" id="2_l20ki"]
+
+[resource]
+script = ExtResource("2_l20ki")
+enemy_name = "Medic"
+minimum_hp = 0
+hp_dice_count = 0
+hp_dice_sides = 0

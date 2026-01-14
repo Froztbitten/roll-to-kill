@@ -1,0 +1,34 @@
+[gd_resource type="Resource" script_class="EnemyData" load_steps=7 format=3 uid="uid://cdf4884tottvc"]
+
+[ext_resource type="Script" uid="uid://djeev1jhalfah" path="res://scripts/character/enemy/enemy_action.gd" id="1_ob3xt"]
+[ext_resource type="Script" uid="uid://dv6r7tro15lnf" path="res://scripts/character/enemy/enemy_data.gd" id="2_6xkhj"]
+[ext_resource type="Texture2D" uid="uid://n1vu2prqedip" path="res://assets/ai/characters/drunkard.png" id="3_3rrek"]
+
+[sub_resource type="Resource" id="Resource_dmn7q"]
+script = ExtResource("1_ob3xt")
+action_name = "Dizzying Swipe"
+dice_count = 1
+dice_sides = 12
+
+[sub_resource type="Resource" id="Resource_exahq"]
+script = ExtResource("1_ob3xt")
+action_name = "All Offense"
+dice_count = 3
+dice_sides = 4
+
+[sub_resource type="Resource" id="Resource_x3in5"]
+script = ExtResource("1_ob3xt")
+action_name = "Too much to drink"
+action_type = 7
+dice_sides = 0
+
+[resource]
+script = ExtResource("2_6xkhj")
+enemy_name = "Drunkard"
+sprite_texture = ExtResource("3_3rrek")
+minimum_hp = 4
+gold_minimum = 3
+gold_dice = 1
+hp_dice_count = 6
+hp_dice_sides = 3
+action_pool = Array[ExtResource("1_ob3xt")]([SubResource("Resource_dmn7q"), SubResource("Resource_exahq"), SubResource("Resource_x3in5")])

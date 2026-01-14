@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="EncounterData" load_steps=5 format=3 uid="uid://bxavi2nnag02o"]
+
+[ext_resource type="Resource" uid="uid://dm02l6hlaoe8g" path="res://resources/enemies/firefighter.tres" id="1_aam6h"]
+[ext_resource type="Script" uid="uid://ck2drfaun3f25" path="res://scripts/encounter_data.gd" id="2_quun2"]
+[ext_resource type="Resource" uid="uid://b2vg4ak3mnlef" path="res://resources/enemies/logger.tres" id="2_yxi6w"]
+[ext_resource type="Resource" uid="uid://dl0014bgf3tbo" path="res://resources/enemies/medic.tres" id="3_3bhve"]
+
+[resource]
+script = ExtResource("2_quun2")
+enemies = Array[Dictionary]([{
+"data": ExtResource("1_aam6h"),
+"max": 0.0,
+"min": 0.0
+}, {
+"data": ExtResource("2_yxi6w"),
+"max": 0.0,
+"min": 0.0
+}, {
+"data": ExtResource("3_3bhve"),
+"max": 0.0,
+"min": 0.0
+}])

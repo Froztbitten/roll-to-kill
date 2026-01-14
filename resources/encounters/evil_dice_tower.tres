@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="EncounterData" load_steps=3 format=3 uid="uid://dmij8nj6ewgjv"]
+
+[ext_resource type="Resource" uid="uid://nuoxudbbe41l" path="res://resources/enemies/evil_dice_tower.tres" id="1_t5rm1"]
+[ext_resource type="Script" uid="uid://ck2drfaun3f25" path="res://scripts/encounter_data.gd" id="3_x2sg0"]
+
+[resource]
+script = ExtResource("3_x2sg0")
+enemies = Array[Dictionary]([{
+"data": ExtResource("1_t5rm1"),
+"max": 1.0,
+"min": 1.0
+}])

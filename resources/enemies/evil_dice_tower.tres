@@ -1,42 +1,40 @@
 [gd_resource type="Resource" script_class="EnemyData" load_steps=8 format=3 uid="uid://nuoxudbbe41l"]
 
-[ext_resource type="Script" uid="uid://djeev1jhalfah" path="res://scripts/character/enemy/enemy_action.gd" id="1_na7ep"]
-[ext_resource type="Texture2D" uid="uid://bksvsd5olmcb3" path="res://assets/ai/characters/evil_dice_tower.png" id="3_mpbxs"]
-[ext_resource type="Script" uid="uid://dv6r7tro15lnf" path="res://scripts/character/enemy/enemy_data.gd" id="3_sayl4"]
+[ext_resource type="Script" uid="uid://djeev1jhalfah" path="res://scripts/character/enemy/enemy_action.gd" id="1_mpbxs"]
+[ext_resource type="Script" uid="uid://dv6r7tro15lnf" path="res://scripts/character/enemy/enemy_data.gd" id="2_na7ep"]
+[ext_resource type="Texture2D" uid="uid://bksvsd5olmcb3" path="res://assets/ai/characters/evil_dice_tower.png" id="3_fgw5n"]
 
-[sub_resource type="Resource" id="sub_spawn_action"]
-script = ExtResource("1_na7ep")
+[sub_resource type="Resource" id="Resource_sayl4"]
+script = ExtResource("1_mpbxs")
 action_name = "Summon Minions"
 action_type = 5
 dice_sides = 0
 
-[sub_resource type="Resource" id="sub_shield_action"]
-script = ExtResource("1_na7ep")
-action_name = "Withdrawl Bridge"
-action_type = 1
-dice_count = 4
+[sub_resource type="Resource" id="Resource_owyre"]
+script = ExtResource("1_mpbxs")
+action_name = "Die Cast"
+dice_count = 1
+dice_sides = 20
 
-[sub_resource type="Resource" id="sub_buff_action"]
-script = ExtResource("1_na7ep")
+[sub_resource type="Resource" id="Resource_pxbtf"]
+script = ExtResource("1_mpbxs")
 action_name = "Inspiration"
 action_type = 6
 dice_sides = 0
 
-[sub_resource type="Resource" id="Resource_mpbxs"]
-script = ExtResource("1_na7ep")
-action_name = "Die Cast"
-dice_count = 1
-dice_sides = 20
-metadata/_custom_type_script = "uid://djeev1jhalfah"
+[sub_resource type="Resource" id="Resource_x6d88"]
+script = ExtResource("1_mpbxs")
+action_name = "Withdrawl-bridge"
+action_type = 1
+dice_count = 4
 
 [resource]
-script = ExtResource("3_sayl4")
+script = ExtResource("2_na7ep")
 enemy_name = "Evil Dice Tower"
-sprite_texture = ExtResource("3_mpbxs")
+sprite_texture = ExtResource("3_fgw5n")
 minimum_hp = 75
-gold_minimum = 50
-gold_dice = 10
-gold_dice_sides = 10
-hp_dice_count = 5
-hp_dice_sides = 10
-action_pool = Array[ExtResource("1_na7ep")]([SubResource("sub_spawn_action"), SubResource("sub_shield_action"), SubResource("sub_buff_action"), SubResource("Resource_mpbxs")])
+gold_minimum = 3
+gold_dice = 26
+hp_dice_count = 10
+hp_dice_sides = 5
+action_pool = Array[ExtResource("1_mpbxs")]([SubResource("Resource_sayl4"), SubResource("Resource_owyre"), SubResource("Resource_pxbtf"), SubResource("Resource_x6d88")])

@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="EncounterData" load_steps=4 format=3 uid="uid://c8hhciv733xti"]
+
+[ext_resource type="Resource" uid="uid://c7wihocwcp3ub" path="res://resources/enemies/chicken-less_jockey.tres" id="1_1grhl"]
+[ext_resource type="Script" uid="uid://ck2drfaun3f25" path="res://scripts/encounter_data.gd" id="2_1grhl"]
+[ext_resource type="Resource" uid="uid://bl5un6w53yk3n" path="res://resources/enemies/femus.tres" id="2_htext"]
+
+[resource]
+script = ExtResource("2_1grhl")
+enemies = Array[Dictionary]([{
+"data": ExtResource("1_1grhl"),
+"max": 3.0,
+"min": 2.0
+}, {
+"data": ExtResource("2_htext"),
+"max": 3.0,
+"min": 2.0
+}])

@@ -235,9 +235,9 @@ func _generate_die_mesh(sides: int):
 				label.text = str(val)
 				label.font_size = 96
 				label.modulate = Color.BLACK
-				label.double_sided = false
+				label.double_sided = true
 				
-				var label_pos = center.lerp(v, 0.65) + normal * 0.002
+				var label_pos = center.lerp(v, 0.65) + normal * 0.02
 				label.look_at_from_position(label_pos, label_pos - normal, (v - center).normalized())
 				labels_root.add_child(label)
 		else:
@@ -247,11 +247,11 @@ func _generate_die_mesh(sides: int):
 			label.text = str(i + 1)
 			label.font_size = 128
 			label.modulate = Color.BLACK
-			label.double_sided = false
-			var label_pos = center + normal * 0.002
+			label.double_sided = true
+			var label_pos = center + normal * 0.02
 			# Orient label to face outward
 			var up_vector = ((face_verts[0] + face_verts[1]) / 2.0 - center).normalized()
-			label.look_at_from_position(label_pos, center - normal, up_vector)
+			label.look_at_from_position(label_pos, label_pos - normal, up_vector)
 			labels_root.add_child(label)
 		
 		for j in range(1, face_verts.size() - 1):
@@ -282,29 +282,36 @@ func roll(value: int, _duration: float = 1.0):
 	rigid_body.sleeping = false
 	
 	# Spawn high up, slightly offset from center
-	var spawn_offset = Vector3(randf_range(-2, 2), 0, randf_range(-2, 2))
+	var spawn_offset = Vector3(randf_range(-0.1, 0.1), 0, randf_range(-0.1, 0.1))
 	rigid_body.transform.origin = Vector3(0, 8, 0) + spawn_offset
 	
 	rigid_body.linear_velocity = Vector3.ZERO
 	rigid_body.angular_velocity = Vector3.ZERO
-	rigid_body.rotation = Vector3(randf()*TAU, randf()*TAU, randf()*TAU)
+	rigid_body.rotation = Vector3(randf() * TAU, randf() * TAU, randf() * TAU)
 	
 	# Throw towards the center (opposite of offset)
 	var throw_dir = -spawn_offset.normalized()
 	# Add some randomness to throw
-	throw_dir = (throw_dir + Vector3(randf_range(-0.8, 0.8), 0, randf_range(-0.8, 0.8))).normalized()
+	throw_dir = (throw_dir + Vector3(randf_range(-0.2, 0.2), 0, randf_range(-0.2, 0.2))).normalized()
 	
 	# Impulse: Down and Across
-	var force = randf_range(5.0, 25.0) * rigid_body.mass
+	var force = randf_range(2.0, 10.0) * rigid_body.mass
 	var down_force = randf_range(-5.0, -20.0) * rigid_body.mass
 	rigid_body.apply_impulse(throw_dir * force + Vector3(0, down_force, 0))
 	
-	# Spin
-	var spin_speed = randf_range(20.0, 50.0)
-	var spin_dir = Vector3([-1, 1].pick_random(), [-1, 1].pick_random(), [-1, 1].pick_random()).normalized()
+	# Spin with random axis
+	var spin_speed = randf_range(10.0, 30.0)
+	var spin_dir = Vector3(randf() - 0.5, randf() - 0.5, randf() - 0.5).normalized()
 	rigid_body.angular_velocity = spin_dir * spin_speed
 	
 	set_process(true)
+	
+	# Failsafe: Force finish after max duration if physics never settles
+	get_tree().create_timer(3.0).timeout.connect(func():
+		if is_instance_valid(self) and _is_rolling:
+			_settling = true
+			_snap_to_result()
+	)
 
 func _process(_delta):
 	if _is_rolling and not _settling:
@@ -316,7 +323,7 @@ func _process(_delta):
 			return
 
 		# Check if settled
-		if rigid_body.linear_velocity.length() < 0.1 and rigid_body.angular_velocity.length() < 0.5:
+		if rigid_body.linear_velocity.length() < 0.2 and rigid_body.angular_velocity.length() < 1.0:
 			# Ensure it's near the floor (y approx -1 to -2 depending on size)
 			if rigid_body.transform.origin.y < 0: 
 				_settling = true
@@ -344,6 +351,7 @@ func _snap_to_result():
 			
 	if best_face:
 		_target_value = best_face.value
+		emit_signal("roll_finished", _target_value)
 		var target_normal = best_face.normal
 		
 		var current_basis = rigid_body.transform.basis
@@ -355,10 +363,7 @@ func _snap_to_result():
 		if angle > 0.001 and axis.is_normalized():
 			var tween = create_tween()
 			var end_basis = current_basis.rotated(axis, angle).orthonormalized()
-			tween.tween_method(func(b): rigid_body.transform.basis = b.orthonormalized(), current_basis, end_basis, 0.5).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
-			tween.tween_callback(func(): emit_signal("roll_finished", _target_value))
-		else:
-			emit_signal("roll_finished", _target_value)
+			tween.tween_method(func(b): rigid_body.transform.basis = b.orthonormalized(), current_basis, end_basis, 0.2).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 
 func _gui_input(event):
 	if _is_rolling and event is InputEventMouseButton:

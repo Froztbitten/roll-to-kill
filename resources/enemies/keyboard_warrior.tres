@@ -1,19 +1,19 @@
 [gd_resource type="Resource" script_class="EnemyData" load_steps=6 format=3 uid="uid://fltcag5u4y6d"]
 
-[ext_resource type="Script" uid="uid://djeev1jhalfah" path="res://scripts/character/enemy/enemy_action.gd" id="1_action"]
-[ext_resource type="Texture2D" uid="uid://bvc73ewu1nlcy" path="res://assets/ai/characters/keyboard_warrior.png" id="3_cj5mh"]
-[ext_resource type="Script" uid="uid://dv6r7tro15lnf" path="res://scripts/character/enemy/enemy_data.gd" id="3_data"]
+[ext_resource type="Script" uid="uid://djeev1jhalfah" path="res://scripts/character/enemy/enemy_action.gd" id="1_cj5mh"]
+[ext_resource type="Script" uid="uid://dv6r7tro15lnf" path="res://scripts/character/enemy/enemy_data.gd" id="2_q5f4f"]
+[ext_resource type="Texture2D" uid="uid://bvc73ewu1nlcy" path="res://assets/ai/characters/keyboard_warrior.png" id="3_p5usx"]
 
-[sub_resource type="Resource" id="action_vibe_killer"]
-script = ExtResource("1_action")
+[sub_resource type="Resource" id="Resource_ydafe"]
+script = ExtResource("1_cj5mh")
 action_name = "Vibe Killer"
 action_type = 9
 dice_count = 2
 status_id = "bleeding"
 charges = 1
 
-[sub_resource type="Resource" id="action_ragebait"]
-script = ExtResource("1_action")
+[sub_resource type="Resource" id="Resource_bnqk0"]
+script = ExtResource("1_cj5mh")
 action_name = "Ragebait"
 action_type = 9
 dice_count = 2
@@ -21,13 +21,12 @@ status_id = "taunting"
 duration = 1
 
 [resource]
-script = ExtResource("3_data")
+script = ExtResource("2_q5f4f")
 enemy_name = "Keyboard Warrior"
-sprite_texture = ExtResource("3_cj5mh")
+sprite_texture = ExtResource("3_p5usx")
 minimum_hp = 15
-gold_minimum = 5
-gold_dice = 3
-gold_dice_sides = 8
-hp_dice_count = 2
-hp_dice_sides = 10
-action_pool = Array[ExtResource("1_action")]([SubResource("action_vibe_killer"), SubResource("action_ragebait")])
+gold_minimum = 2
+gold_dice = 7
+hp_dice_count = 10
+hp_dice_sides = 2
+action_pool = Array[ExtResource("1_cj5mh")]([SubResource("Resource_ydafe"), SubResource("Resource_bnqk0")])

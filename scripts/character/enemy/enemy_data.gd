@@ -10,3 +10,4 @@ class_name EnemyData
 @export var hp_dice_count: int = 1
 @export var hp_dice_sides: int = 6
 @export var action_pool: Array[EnemyAction]
+@export var passives: Array[EnemyAction]

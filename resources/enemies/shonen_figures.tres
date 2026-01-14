@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="EnemyData" load_steps=3 format=3 uid="uid://btw2utvc0cctp"]
+
+[ext_resource type="Script" uid="uid://djeev1jhalfah" path="res://scripts/character/enemy/enemy_action.gd" id="1_r1kjp"]
+[ext_resource type="Script" uid="uid://dv6r7tro15lnf" path="res://scripts/character/enemy/enemy_data.gd" id="2_nfi1w"]
+
+[resource]
+script = ExtResource("2_nfi1w")
+enemy_name = "Shonen Figures"
+minimum_hp = 0
+hp_dice_count = 0
+hp_dice_sides = 0

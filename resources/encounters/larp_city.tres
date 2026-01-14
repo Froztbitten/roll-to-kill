@@ -1,15 +1,25 @@
-[gd_resource type="Resource" script_class="EncounterData" load_steps=6 format=3 uid="uid://u88b8jhtquam"]
+[gd_resource type="Resource" script_class="EncounterData" load_steps=5 format=3 uid="uid://u88b8jhtquam"]
 
-[ext_resource type="Script" uid="uid://dv6r7tro15lnf" path="res://scripts/character/enemy/enemy_data.gd" id="1_data"]
-[ext_resource type="Resource" uid="uid://b41n35hoc8dbr" path="res://resources/enemies/larp-y.tres" id="2_larpy"]
-[ext_resource type="Resource" uid="uid://dll6mcbs150uq" path="res://resources/enemies/foam_wizard.tres" id="3_fw"]
-[ext_resource type="Resource" uid="uid://b6e7c620xv032" path="res://resources/enemies/plot_armorer.tres" id="4_pa"]
+[ext_resource type="Resource" uid="uid://b41n35hoc8dbr" path="res://resources/enemies/larp-y.tres" id="1_qas4q"]
+[ext_resource type="Resource" uid="uid://b6e7c620xv032" path="res://resources/enemies/plot_armorer.tres" id="2_2dwub"]
+[ext_resource type="Resource" uid="uid://dll6mcbs150uq" path="res://resources/enemies/foam_wizard.tres" id="3_43sjv"]
 [ext_resource type="Script" uid="uid://ck2drfaun3f25" path="res://scripts/encounter_data.gd" id="5_encounter"]
 
 [resource]
 script = ExtResource("5_encounter")
 encounter_type = 1
-enemy_types = Array[ExtResource("1_data")]([ExtResource("2_larpy"), ExtResource("3_fw"), ExtResource("4_pa")])
-max_count = 4
+enemies = Array[Dictionary]([{
+"data": ExtResource("1_qas4q"),
+"max": 2.0,
+"min": 1.0
+}, {
+"data": ExtResource("2_2dwub"),
+"max": 1.0,
+"min": 1.0
+}, {
+"data": ExtResource("3_43sjv"),
+"max": 1.0,
+"min": 1.0
+}])
 node_type = "dragons_roost"
 region = "rpg"

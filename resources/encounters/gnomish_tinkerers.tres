@@ -1,0 +1,27 @@
+[gd_resource type="Resource" script_class="EncounterData" load_steps=6 format=3 uid="uid://bn0q1nusder5j"]
+
+[ext_resource type="Resource" uid="uid://cd1ujv6828j7y" path="res://resources/enemies/gnomish_tinkerer.tres" id="1_jcr15"]
+[ext_resource type="Resource" uid="uid://col6a6b6pdty6" path="res://resources/enemies/koko_the_pelican.tres" id="2_qw04m"]
+[ext_resource type="Script" uid="uid://ck2drfaun3f25" path="res://scripts/encounter_data.gd" id="3_jcr15"]
+[ext_resource type="Resource" uid="uid://pya7mnncit50" path="res://resources/enemies/wick-wock.tres" id="3_kcxwf"]
+[ext_resource type="Resource" uid="uid://dp6fmnsnttd7i" path="res://resources/enemies/shield_generator.tres" id="4_naunp"]
+
+[resource]
+script = ExtResource("3_jcr15")
+enemies = Array[Dictionary]([{
+"data": ExtResource("1_jcr15"),
+"max": 3.0,
+"min": 2.0
+}, {
+"data": ExtResource("2_qw04m"),
+"max": 0.16666666666666666,
+"min": 0.16666666666666666
+}, {
+"data": ExtResource("3_kcxwf"),
+"max": 0.16666666666666666,
+"min": 0.16666666666666666
+}, {
+"data": ExtResource("4_naunp"),
+"max": 0.16666666666666666,
+"min": 0.16666666666666666
+}])

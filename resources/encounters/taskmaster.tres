@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="EncounterData" load_steps=4 format=3 uid="uid://dkbkv312x6mse"]
+
+[ext_resource type="Resource" uid="uid://408g5ol0u3j8" path="res://resources/enemies/taskmaster.tres" id="1_dq5rv"]
+[ext_resource type="Script" uid="uid://ck2drfaun3f25" path="res://scripts/encounter_data.gd" id="2_dq5rv"]
+[ext_resource type="Resource" uid="uid://b7cx1ja6ji6ra" path="res://resources/enemies/trusty_hound.tres" id="2_s5ot4"]
+
+[resource]
+script = ExtResource("2_dq5rv")
+enemies = Array[Dictionary]([{
+"data": ExtResource("1_dq5rv"),
+"max": 1.0,
+"min": 1.0
+}, {
+"data": ExtResource("2_s5ot4"),
+"max": 2.0,
+"min": 2.0
+}])

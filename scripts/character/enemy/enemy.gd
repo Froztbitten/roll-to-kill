@@ -65,10 +65,15 @@ func setup():
 	update_health_display()
 	call_deferred("_center_intent_display")
 
-	if enemy_data.enemy_name == "White Knight":
-		apply_duration_status("crash_out", -1)
-	elif enemy_data.enemy_name == "Plot Armorer":
-		apply_charges_status("main_character_energy", 1)
+	if enemy_data.passives:
+		for passive in enemy_data.passives:
+			if passive.status_id != "":
+				if passive.charges > -1:
+					apply_charges_status(passive.status_id, passive.charges)
+				elif passive.duration > -1:
+					apply_duration_status(passive.status_id, passive.duration)
+				else:
+					apply_duration_status(passive.status_id, -1)
 
 func declare_intent(active_enemies: Array):
 	_turn_count += 1

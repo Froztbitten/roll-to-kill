@@ -1,0 +1,31 @@
+[gd_resource type="Resource" script_class="EnemyData" load_steps=6 format=3 uid="uid://b3aoaxmitnawg"]
+
+[ext_resource type="Script" uid="uid://djeev1jhalfah" path="res://scripts/character/enemy/enemy_action.gd" id="1_uoukq"]
+[ext_resource type="Script" uid="uid://dv6r7tro15lnf" path="res://scripts/character/enemy/enemy_data.gd" id="2_o65tw"]
+
+[sub_resource type="Resource" id="Resource_8urd2"]
+script = ExtResource("1_uoukq")
+action_name = "Boosters"
+action_type = 6
+dice_sides = 0
+
+[sub_resource type="Resource" id="Resource_ay5kb"]
+script = ExtResource("1_uoukq")
+action_name = "Loop De Loop"
+action_type = 7
+dice_sides = 0
+
+[sub_resource type="Resource" id="Resource_02u5y"]
+script = ExtResource("1_uoukq")
+action_name = "Criss Cross Crash"
+dice_count = 3
+dice_sides = 10
+
+[resource]
+script = ExtResource("2_o65tw")
+enemy_name = "Speed Demon"
+minimum_hp = 20
+gold_minimum = 1
+gold_dice = 7
+hp_dice_count = 8
+action_pool = Array[ExtResource("1_uoukq")]([SubResource("Resource_8urd2"), SubResource("Resource_ay5kb"), SubResource("Resource_02u5y")])

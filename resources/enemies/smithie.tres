@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="EnemyData" load_steps=4 format=3 uid="uid://8r2athy4mppm"]
+
+[ext_resource type="Script" uid="uid://djeev1jhalfah" path="res://scripts/character/enemy/enemy_action.gd" id="1_4gesu"]
+[ext_resource type="Script" uid="uid://dv6r7tro15lnf" path="res://scripts/character/enemy/enemy_data.gd" id="2_k56tw"]
+
+[sub_resource type="Resource" id="Resource_s15g3"]
+script = ExtResource("1_4gesu")
+action_name = "Sharpening Sparks"
+dice_count = 3
+dice_sides = 4
+status_id = "dazed"
+charges = 1
+
+[resource]
+script = ExtResource("2_k56tw")
+enemy_name = "Smithie"
+minimum_hp = 10
+gold_minimum = 2
+gold_dice = 7
+hp_dice_count = 6
+hp_dice_sides = 5
+action_pool = Array[ExtResource("1_4gesu")]([SubResource("Resource_s15g3")])

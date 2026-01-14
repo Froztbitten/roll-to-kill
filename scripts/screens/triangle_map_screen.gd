@@ -76,6 +76,10 @@ var spell_shop_charms_grid: GridContainer
 var reroll_charms_button: Button
 var reroll_charms_cost = 25
 var spell_shop_generated = false
+var view_only = false
+var close_map_button: Button
+var limit_container: MarginContainer
+var log_margin: MarginContainer
 
 func _input(event):
 	if not visible: return
@@ -106,9 +110,17 @@ func _ready():
 	visibility_changed.connect(func(): 
 		if ui_layer: ui_layer.visible = visible
 		# Auto-start turn if we return to map with no moves (e.g. after combat)
-		if visible and moves_remaining == 0 and not is_rolling and not is_moving and current_node and current_node.type != "town":
+		if visible and not view_only and moves_remaining == 0 and not is_rolling and not is_moving and current_node and current_node.type != "town":
 			start_turn()
 	)
+	
+	# Wrap MapContainer in a CenterContainer to handle centering and resizing
+	var center_container = CenterContainer.new()
+	center_container.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	center_container.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	map_container.get_parent().remove_child(map_container)
+	center_container.add_child(map_container)
+	scroll_container.add_child(center_container)
 	
 	# Setup Static UI
 	ui_layer = Control.new()
@@ -118,10 +130,10 @@ func _ready():
 	add_child(ui_layer)
 	
 	# Turn Limit Label (Top Right)
-	var limit_container = MarginContainer.new()
+	limit_container = MarginContainer.new()
 	limit_container.set_anchors_preset(Control.PRESET_TOP_RIGHT)
 	limit_container.grow_horizontal = Control.GROW_DIRECTION_BEGIN
-	limit_container.add_theme_constant_override("margin_top", 20)
+	# Margin updated in _on_viewport_size_changed
 	limit_container.add_theme_constant_override("margin_right", 80)
 	ui_layer.add_child(limit_container)
 	
@@ -133,9 +145,9 @@ func _ready():
 	limit_container.add_child(turn_limit_label)
 	
 	# Quest Log (Top Left)
-	var log_margin = MarginContainer.new()
+	log_margin = MarginContainer.new()
 	log_margin.set_anchors_preset(Control.PRESET_TOP_LEFT)
-	log_margin.add_theme_constant_override("margin_top", 20)
+	# Margin updated in _on_viewport_size_changed
 	log_margin.add_theme_constant_override("margin_left", 20)
 	ui_layer.add_child(log_margin)
 	
@@ -198,6 +210,23 @@ func _ready():
 	_create_dice_shop_ui()
 	_create_forge_ui()
 	_create_spell_shop_ui()
+	
+	# Create Close Button for view-only mode
+	close_map_button = Button.new()
+	close_map_button.text = "Close Map"
+	close_map_button.custom_minimum_size = Vector2(200, 60)
+	close_map_button.add_theme_font_size_override("font_size", 24)
+	close_map_button.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
+	close_map_button.offset_left = -220
+	close_map_button.offset_top = -80
+	close_map_button.offset_right = -20
+	close_map_button.offset_bottom = -20
+	close_map_button.pressed.connect(func(): visible = false)
+	close_map_button.visible = false
+	ui_layer.add_child(close_map_button)
+	
+	get_viewport().size_changed.connect(_on_viewport_size_changed)
+	_on_viewport_size_changed()
 
 func _create_noise_texture(noise: FastNoiseLite, gradient: Gradient) -> ImageTexture:
 	var size = 512
@@ -1001,11 +1030,9 @@ func generate_new_map():
 	turns_left = 21
 	var height = triangle_size * sqrt(3) / 2.0
 	var total_grid_width = (grid_width * triangle_size / 2.0) + (triangle_size / 2.0)
-	var viewport_size = get_viewport_rect().size
-	var min_width = max(total_grid_width + 100, viewport_size.x)
-	map_container.custom_minimum_size = Vector2(min_width, grid_height * height + 100)
-	var x_offset = (min_width - total_grid_width) / 2.0
-	var y_offset = 50.0
+	map_container.custom_minimum_size = Vector2(total_grid_width, grid_height * height)
+	var x_offset = 0.0
+	var y_offset = 0.0
 	
 	for row in range(grid_height):
 		for col in range(grid_width):
@@ -1922,27 +1949,39 @@ func start_turn():
 	
 	# Wait for physics results
 	var results_map = {}
-	var finished_count = 0
 	var on_finished = func(val, source): 
 		results_map[source] = val
-		finished_count += 1
 		# Update pending result immediately if we have all dice, to prevent race condition on skip
-		if finished_count == 2:
+		if results_map.size() == 2:
 			pending_roll_result = results_map.get(disp1, 0) + results_map.get(disp2, 0)
 			
 	disp1.roll_finished.connect(on_finished.bind(disp1))
 	disp2.roll_finished.connect(on_finished.bind(disp2))
 	
-	while finished_count < 2 and is_rolling and roll_id == my_roll_id:
+	var timeout_frames = 600 # 10 seconds safety timeout
+	while results_map.size() < 2 and is_rolling and roll_id == my_roll_id and timeout_frames > 0:
 		await get_tree().process_frame
+		timeout_frames -= 1
+	
+	if timeout_frames <= 0 and is_rolling:
+		print("Dice roll timed out in TriangleMapScreen")
+		if not results_map.has(disp1): results_map[disp1] = disp1._target_value if disp1._target_value > 0 else 1
+		if not results_map.has(disp2): results_map[disp2] = disp2._target_value if disp2._target_value > 0 else 1
 		
 	if not is_rolling or roll_id != my_roll_id: return
 	
-	# Sync pending result with actual physics result so skipping later uses the correct value
+	# Sync pending result so skipping logic has the right value
 	var val1 = results_map.get(disp1, 1)
 	var val2 = results_map.get(disp2, 1)
 	pending_roll_result = val1 + val2
 	
+	# Small pause to let the player see the result on the dice
+	var pause_tween = create_tween()
+	current_tween = pause_tween
+	pause_tween.tween_interval(0.5)
+	await pause_tween.finished
+	if not is_rolling or roll_id != my_roll_id: return
+
 	# --- Floating Numbers Animation ---
 	var label1 = Label.new()
 	var label2 = Label.new()
@@ -1961,31 +2000,33 @@ func start_turn():
 		lbl.z_index = 300 # Above overlay
 		add_child(lbl)
 	
-	# Wait for labels to resize based on text
+	# Wait for layout
 	await get_tree().process_frame
 	if not is_rolling or roll_id != my_roll_id: return
 
-	# Start at dice positions
 	label1.pivot_offset = label1.size / 2.0
 	label2.pivot_offset = label2.size / 2.0
 	
-	# Start at dice positions
+	# Position labels at the dice center
 	label1.global_position = disp1.get_die_screen_position() - label1.pivot_offset
 	label2.global_position = disp2.get_die_screen_position() - label2.pivot_offset
 	
 	var anim_tween = create_tween()
 	current_tween = anim_tween
-	
-	# 1. Fade In & Float Up
 	anim_tween.set_parallel(true)
+	
+	# 1. Fade OUT the dice display & Fade IN the numbers + Float Up
+	anim_tween.tween_property(disp1, "modulate:a", 0.0, 0.4)
+	anim_tween.tween_property(disp2, "modulate:a", 0.0, 0.4)
+	
 	for lbl in temp_labels:
 		anim_tween.tween_property(lbl, "modulate:a", 1.0, 0.3)
-		anim_tween.tween_property(lbl, "global_position:y", lbl.global_position.y - 50, 0.4).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
+		anim_tween.tween_property(lbl, "global_position:y", lbl.global_position.y - 80, 0.5).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_BACK)
 	
 	await anim_tween.finished
-	if not is_rolling or roll_id != my_roll_id: return # Check if skipped
+	if not is_rolling or roll_id != my_roll_id: return
 	
-	# 2. Move to Player
+	# 2. Move numbers to Player Movement label
 	var move_tween = create_tween()
 	current_tween = move_tween
 	move_tween.set_parallel(true)
@@ -1996,8 +2037,12 @@ func start_turn():
 		var lbl = temp_labels[i]
 		var delay = i * 0.1
 		var target_pos = target_center - lbl.pivot_offset
+		
+		# Move to player's counter
 		move_tween.tween_property(lbl, "global_position", target_pos, 0.5).set_delay(delay).set_ease(Tween.EASE_IN_OUT).set_trans(Tween.TRANS_CUBIC)
+		# Shrink as it arrives
 		move_tween.tween_property(lbl, "scale", Vector2(0.5, 0.5), 0.5).set_delay(delay)
+		# Fade out at the end
 		move_tween.tween_property(lbl, "modulate:a", 0.0, 0.2).set_delay(delay + 0.3)
 	
 	await move_tween.finished
@@ -2008,10 +2053,11 @@ func start_turn():
 	
 	if not is_rolling or roll_id != my_roll_id: return
 	
+	# Apply final value
 	moves_remaining = val1 + val2
 	moves_label.text = "%d" % moves_remaining
 	
-	# Fade out overlay
+	# Fade out overlay background (dice are already gone)
 	var out_tween = create_tween()
 	current_tween = out_tween
 	out_tween.tween_property(roll_overlay, "modulate:a", 0.0, 0.3)
@@ -2064,6 +2110,7 @@ func get_best_path_to(target_node):
 	return best_path
 
 func _on_node_hover(node):
+	if view_only: return
 	if is_moving: return
 	if not current_node or node == current_node: return
 	if node.type == "mountain" or node.type == "water": return
@@ -2117,6 +2164,7 @@ func _on_node_exit():
 	full_distance_label.visible = false
 
 func _on_node_pressed(node):
+	if view_only: return
 	if is_moving: return
 	if node == current_node: return
 	if moves_remaining <= 0: return
@@ -2227,7 +2275,12 @@ func _skip_movement_animation():
 	if current_tween and current_tween.is_valid():
 		current_tween.kill()
 	
-	if pending_movement_path.is_empty(): return
+	if pending_movement_path.is_empty():
+		is_moving = false
+		# If we were waiting for the end turn timer (path empty but is_moving true), trigger it now
+		if moves_remaining == 0 and current_node and current_node.type != "town" and visible:
+			start_turn()
+		return
 	
 	moves_remaining = final_moves_remaining
 	if moves_remaining > 0:
@@ -2255,6 +2308,28 @@ func _skip_movement_animation():
 	
 	if moves_remaining == 0 and current_node.type != "town" and visible:
 		start_turn()
+
+func set_view_only(val: bool):
+	view_only = val
+	if close_map_button:
+		close_map_button.visible = val
+
+func _on_viewport_size_changed():
+	var viewport_size = get_viewport().get_visible_rect().size
+	var base_height = 648.0
+	var scale_factor = viewport_size.y / base_height
+	
+	# Top bar is roughly 60px base.
+	var top_margin = 60 * scale_factor
+	
+	if limit_container:
+		limit_container.add_theme_constant_override("margin_top", int(top_margin))
+	
+	if log_margin:
+		log_margin.add_theme_constant_override("margin_top", int(top_margin))
+		
+	if scroll_container:
+		scroll_container.offset_top = top_margin
 
 func close_town_menu():
 	if town_ui:

@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="EncounterData" load_steps=3 format=3 uid="uid://cdg3ucl5i6fxy"]
+
+[ext_resource type="Resource" uid="uid://dqdge1wabaoxh" path="res://resources/enemies/cryptologist.tres" id="1_p4ric"]
+[ext_resource type="Script" uid="uid://ck2drfaun3f25" path="res://scripts/encounter_data.gd" id="2_gvhxn"]
+
+[resource]
+script = ExtResource("2_gvhxn")
+enemies = Array[Dictionary]([{
+"data": ExtResource("1_p4ric"),
+"max": 1.0,
+"min": 1.0
+}])

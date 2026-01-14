@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="EncounterData" load_steps=3 format=3 uid="uid://cqkhock2aemoh"]
+
+[ext_resource type="Resource" uid="uid://bb76l5cv88y5y" path="res://resources/enemies/spinning_top_of_doom.tres" id="1_xb1c2"]
+[ext_resource type="Script" uid="uid://ck2drfaun3f25" path="res://scripts/encounter_data.gd" id="2_fn3qs"]
+
+[resource]
+script = ExtResource("2_fn3qs")
+enemies = Array[Dictionary]([{
+"data": ExtResource("1_xb1c2"),
+"max": 3.0,
+"min": 2.0
+}])

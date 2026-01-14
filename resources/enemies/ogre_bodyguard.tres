@@ -1,21 +1,22 @@
 [gd_resource type="Resource" script_class="EnemyData" load_steps=5 format=3 uid="uid://btp545hyphd1x"]
 
-[ext_resource type="Script" uid="uid://djeev1jhalfah" path="res://scripts/character/enemy/enemy_action.gd" id="1_action"]
-[ext_resource type="Texture2D" uid="uid://cqq45pu7wl6o4" path="res://assets/ai/characters/ogre.png" id="3_6kc1j"]
-[ext_resource type="Script" uid="uid://dv6r7tro15lnf" path="res://scripts/character/enemy/enemy_data.gd" id="3_data"]
+[ext_resource type="Script" uid="uid://djeev1jhalfah" path="res://scripts/character/enemy/enemy_action.gd" id="1_6kc1j"]
+[ext_resource type="Script" uid="uid://dv6r7tro15lnf" path="res://scripts/character/enemy/enemy_data.gd" id="2_x8db1"]
+[ext_resource type="Texture2D" uid="uid://43ixe2pxpi3" path="res://assets/ai/characters/ogre_bodyguard.png" id="3_7ek6i"]
 
-[sub_resource type="Resource" id="smash_action"]
-script = ExtResource("1_action")
+[sub_resource type="Resource" id="Resource_ld6ng"]
+script = ExtResource("1_6kc1j")
 action_name = "Smash"
 dice_count = 1
 dice_sides = 10
 
 [resource]
-script = ExtResource("3_data")
+script = ExtResource("2_x8db1")
 enemy_name = "Ogre Bodyguard"
-sprite_texture = ExtResource("3_6kc1j")
+sprite_texture = ExtResource("3_7ek6i")
 minimum_hp = 12
-gold_dice = 1
-gold_dice_sides = 2
-hp_dice_count = 3
-action_pool = Array[ExtResource("1_action")]([SubResource("smash_action")])
+gold_minimum = 2
+gold_dice = 3
+hp_dice_count = 6
+hp_dice_sides = 3
+action_pool = Array[ExtResource("1_6kc1j")]([SubResource("Resource_ld6ng")])

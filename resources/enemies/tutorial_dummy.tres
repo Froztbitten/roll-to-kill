@@ -1,20 +1,34 @@
-[gd_resource type="Resource" script_class="EnemyData" load_steps=5 format=3 uid="uid://jpuh7rdydb3o"]
+[gd_resource type="Resource" script_class="EnemyData" load_steps=7 format=3 uid="uid://jpuh7rdydb3o"]
 
-[ext_resource type="Script" uid="uid://djeev1jhalfah" path="res://scripts/character/enemy/enemy_action.gd" id="1_action"]
-[ext_resource type="Script" uid="uid://dv6r7tro15lnf" path="res://scripts/character/enemy/enemy_data.gd" id="2_data"]
-[ext_resource type="Texture2D" uid="uid://b80ne2bp1rrex" path="res://assets/ai/characters/tutorial_dummy.png" id="3_icon"]
+[ext_resource type="Script" uid="uid://djeev1jhalfah" path="res://scripts/character/enemy/enemy_action.gd" id="1_nod3o"]
+[ext_resource type="Script" uid="uid://dv6r7tro15lnf" path="res://scripts/character/enemy/enemy_data.gd" id="2_0k5e7"]
+[ext_resource type="Texture2D" uid="uid://b80ne2bp1rrex" path="res://assets/ai/characters/tutorial_dummy.png" id="3_llb3a"]
 
-[sub_resource type="Resource" id="action_stare"]
-script = ExtResource("1_action")
-action_name = "Attack"
-base_value = 5
+[sub_resource type="Resource" id="Resource_2q47u"]
+script = ExtResource("1_nod3o")
+action_name = "Nothing"
+action_type = 7
 dice_sides = 0
 
+[sub_resource type="Resource" id="Resource_bwol0"]
+script = ExtResource("1_nod3o")
+action_name = "Example Attack"
+dice_count = 4
+dice_sides = 1
+
+[sub_resource type="Resource" id="Resource_oq874"]
+script = ExtResource("1_nod3o")
+action_name = "Example Block"
+action_type = 1
+dice_count = 4
+dice_sides = 1
+
 [resource]
-script = ExtResource("2_data")
+script = ExtResource("2_0k5e7")
 enemy_name = "Tutorial Dummy"
-sprite_texture = ExtResource("3_icon")
-minimum_hp = 20
-gold_minimum = 100
+sprite_texture = ExtResource("3_llb3a")
+minimum_hp = 4
+gold_minimum = 1
 hp_dice_count = 0
-action_pool = Array[ExtResource("1_action")]([SubResource("action_stare")])
+hp_dice_sides = 0
+action_pool = Array[ExtResource("1_nod3o")]([SubResource("Resource_2q47u"), SubResource("Resource_bwol0"), SubResource("Resource_oq874")])

@@ -1,11 +1,10 @@
-[gd_resource type="Resource" script_class="EnemyData" load_steps=6 format=3 uid="uid://b41n35hoc8dbr"]
+[gd_resource type="Resource" script_class="EnemyData" load_steps=5 format=3 uid="uid://b41n35hoc8dbr"]
 
-[ext_resource type="Script" uid="uid://djeev1jhalfah" path="res://scripts/character/enemy/enemy_action.gd" id="1_action"]
-[ext_resource type="Script" uid="uid://dv6r7tro15lnf" path="res://scripts/character/enemy/enemy_data.gd" id="3_data"]
-[ext_resource type="Texture2D" uid="uid://bguloru54xtwp" path="res://assets/ai/characters/larp_y.png" id="3_mscxu"]
+[ext_resource type="Script" uid="uid://djeev1jhalfah" path="res://scripts/character/enemy/enemy_action.gd" id="1_r281f"]
+[ext_resource type="Script" uid="uid://dv6r7tro15lnf" path="res://scripts/character/enemy/enemy_data.gd" id="2_mscxu"]
 
-[sub_resource type="Resource" id="action_deafening_shriek"]
-script = ExtResource("1_action")
+[sub_resource type="Resource" id="Resource_s1381"]
+script = ExtResource("1_r281f")
 action_name = "Deafening Shriek"
 action_type = 9
 dice_count = 1
@@ -13,23 +12,21 @@ dice_sides = 8
 status_id = "silence"
 duration = 1
 
-[sub_resource type="Resource" id="Resource_mscxu"]
-script = ExtResource("1_action")
+[sub_resource type="Resource" id="Resource_bk0tr"]
+script = ExtResource("1_r281f")
 action_name = "Razer Blade Talons"
 action_type = 9
 dice_count = 1
 dice_sides = 8
 status_id = "bleeding"
 charges = 1
-metadata/_custom_type_script = "uid://djeev1jhalfah"
 
 [resource]
-script = ExtResource("3_data")
-enemy_name = "Larp-y"
-sprite_texture = ExtResource("3_mscxu")
+script = ExtResource("2_mscxu")
+enemy_name = "LARP-y"
 minimum_hp = 10
-gold_minimum = 4
-gold_dice = 3
-hp_dice_count = 4
-hp_dice_sides = 8
-action_pool = Array[ExtResource("1_action")]([SubResource("action_deafening_shriek"), SubResource("Resource_mscxu")])
+gold_minimum = 1
+gold_dice = 5
+hp_dice_count = 8
+hp_dice_sides = 4
+action_pool = Array[ExtResource("1_r281f")]([SubResource("Resource_s1381"), SubResource("Resource_bk0tr")])

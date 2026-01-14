@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="EncounterData" load_steps=5 format=3 uid="uid://b680mm1vqcnxw"]
+
+[ext_resource type="Resource" uid="uid://ciq2fl5oi25ns" path="res://resources/enemies/labubu.tres" id="1_mc03r"]
+[ext_resource type="Resource" uid="uid://2rx5f70q2aih" path="res://resources/enemies/funko_pop.tres" id="2_gxaqu"]
+[ext_resource type="Script" uid="uid://ck2drfaun3f25" path="res://scripts/encounter_data.gd" id="2_pdwq3"]
+[ext_resource type="Resource" uid="uid://btw2utvc0cctp" path="res://resources/enemies/shonen_figures.tres" id="3_vponw"]
+
+[resource]
+script = ExtResource("2_pdwq3")
+enemies = Array[Dictionary]([{
+"data": ExtResource("1_mc03r"),
+"max": 0.0,
+"min": 0.0
+}, {
+"data": ExtResource("2_gxaqu"),
+"max": 0.0,
+"min": 0.0
+}, {
+"data": ExtResource("3_vponw"),
+"max": 0.0,
+"min": 0.0
+}])

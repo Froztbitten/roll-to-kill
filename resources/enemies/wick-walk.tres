@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="EnemyData" load_steps=5 format=3 uid="uid://bt0sdirxcdqf8"]
+
+[ext_resource type="Script" uid="uid://djeev1jhalfah" path="res://scripts/character/enemy/enemy_action.gd" id="1_kvu4a"]
+[ext_resource type="Script" uid="uid://dv6r7tro15lnf" path="res://scripts/character/enemy/enemy_data.gd" id="2_rfdkb"]
+[ext_resource type="Texture2D" uid="uid://dgwrxfq1wr8w" path="res://assets/ai/characters/wick-walk.png" id="3_4kulr"]
+
+[sub_resource type="Resource" id="Resource_2ckmg"]
+script = ExtResource("1_kvu4a")
+action_name = "...Damned if You Don't"
+dice_count = 2
+dice_sides = 8
+self_destructs = true
+
+[resource]
+script = ExtResource("2_rfdkb")
+enemy_name = "Wick-walk"
+sprite_texture = ExtResource("3_4kulr")
+minimum_hp = 0
+gold_minimum = 2
+hp_dice_count = 4
+hp_dice_sides = 1
+action_pool = Array[ExtResource("1_kvu4a")]([SubResource("Resource_2ckmg")])

@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="EncounterData" load_steps=5 format=3 uid="uid://tjc51yvqgbqr"]
+
+[ext_resource type="Resource" uid="uid://cos8o5uu1d6f5" path="res://resources/enemies/pump_operator.tres" id="1_w8vgx"]
+[ext_resource type="Resource" uid="uid://y1lx12517e64" path="res://resources/enemies/crucible_runner.tres" id="2_1cngs"]
+[ext_resource type="Script" uid="uid://ck2drfaun3f25" path="res://scripts/encounter_data.gd" id="2_87m2r"]
+[ext_resource type="Resource" uid="uid://8r2athy4mppm" path="res://resources/enemies/smithie.tres" id="3_a0wdj"]
+
+[resource]
+script = ExtResource("2_87m2r")
+enemies = Array[Dictionary]([{
+"data": ExtResource("1_w8vgx"),
+"max": 1.3333333333333333,
+"min": 1.0
+}, {
+"data": ExtResource("2_1cngs"),
+"max": 1.3333333333333333,
+"min": 1.0
+}, {
+"data": ExtResource("3_a0wdj"),
+"max": 1.3333333333333333,
+"min": 1.0
+}])

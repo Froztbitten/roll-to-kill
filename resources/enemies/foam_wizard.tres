@@ -1,21 +1,20 @@
 [gd_resource type="Resource" script_class="EnemyData" load_steps=5 format=3 uid="uid://dll6mcbs150uq"]
 
-[ext_resource type="Script" uid="uid://djeev1jhalfah" path="res://scripts/character/enemy/enemy_action.gd" id="1_action"]
-[ext_resource type="Texture2D" uid="uid://durd4tcoqodg7" path="res://assets/ai/characters/foam_wizard.png" id="3_bj3wa"]
-[ext_resource type="Script" uid="uid://dv6r7tro15lnf" path="res://scripts/character/enemy/enemy_data.gd" id="3_data"]
+[ext_resource type="Script" uid="uid://djeev1jhalfah" path="res://scripts/character/enemy/enemy_action.gd" id="1_bj3wa"]
+[ext_resource type="Script" uid="uid://dv6r7tro15lnf" path="res://scripts/character/enemy/enemy_data.gd" id="2_qbgdc"]
+[ext_resource type="Texture2D" uid="uid://durd4tcoqodg7" path="res://assets/ai/characters/foam_wizard.png" id="3_cajbx"]
 
-[sub_resource type="Resource" id="action_lightning_bolt"]
-script = ExtResource("1_action")
-action_name = "Lightning Bolt!"
+[sub_resource type="Resource" id="Resource_34epe"]
+script = ExtResource("1_bj3wa")
+action_name = "Lightning Bolt"
 dice_count = 8
 
 [resource]
-script = ExtResource("3_data")
+script = ExtResource("2_qbgdc")
 enemy_name = "Foam Wizard"
-sprite_texture = ExtResource("3_bj3wa")
+sprite_texture = ExtResource("3_cajbx")
 minimum_hp = 10
-gold_minimum = 30
-gold_dice = 8
+gold_dice = 16
 hp_dice_count = 4
 hp_dice_sides = 4
-action_pool = Array[ExtResource("1_action")]([SubResource("action_lightning_bolt")])
+action_pool = Array[ExtResource("1_bj3wa")]([SubResource("Resource_34epe")])

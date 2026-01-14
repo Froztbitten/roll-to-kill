@@ -1,36 +1,44 @@
-[gd_resource type="Resource" script_class="EnemyData" load_steps=7 format=3 uid="uid://b2cv5v5icd0fu"]
+[gd_resource type="Resource" script_class="EnemyData" load_steps=8 format=3 uid="uid://b2cv5v5icd0fu"]
 
-[ext_resource type="Script" uid="uid://djeev1jhalfah" path="res://scripts/character/enemy/enemy_action.gd" id="1_action"]
-[ext_resource type="Texture2D" uid="uid://dj4i2eipee563" path="res://assets/ai/characters/white_knight.png" id="3_6io7g"]
-[ext_resource type="Script" uid="uid://dv6r7tro15lnf" path="res://scripts/character/enemy/enemy_data.gd" id="3_data"]
+[ext_resource type="Script" uid="uid://djeev1jhalfah" path="res://scripts/character/enemy/enemy_action.gd" id="1_6io7g"]
+[ext_resource type="Script" uid="uid://dv6r7tro15lnf" path="res://scripts/character/enemy/enemy_data.gd" id="2_74g23"]
+[ext_resource type="Texture2D" uid="uid://dj4i2eipee563" path="res://assets/ai/characters/white_knight.png" id="3_asck8"]
 
-[sub_resource type="Resource" id="action_defend_milady"]
-script = ExtResource("1_action")
+[sub_resource type="Resource" id="Resource_jspo1"]
+script = ExtResource("1_6io7g")
 action_name = "M'lady"
 action_type = 3
 dice_count = 4
 dice_sides = 8
 
-[sub_resource type="Resource" id="action_chivalry"]
-script = ExtResource("1_action")
-action_name = "Chivalry isn't Dead"
-action_type = 2
+[sub_resource type="Resource" id="Resource_srm2n"]
+script = ExtResource("1_6io7g")
+action_name = "Chilvalry isn't Dead"
+action_type = 1
 dice_count = 8
 dice_sides = 8
 
-[sub_resource type="Resource" id="action_incel_sior"]
-script = ExtResource("1_action")
+[sub_resource type="Resource" id="Resource_5hhvp"]
+script = ExtResource("1_6io7g")
 action_name = "Incel-sior"
 dice_count = 2
 dice_sides = 12
 
+[sub_resource type="Resource" id="Resource_yucyx"]
+script = ExtResource("1_6io7g")
+action_name = "Crash Out"
+action_type = 6
+dice_sides = 0
+status_id = "crash_out"
+
 [resource]
-script = ExtResource("3_data")
+script = ExtResource("2_74g23")
 enemy_name = "White Knight"
-sprite_texture = ExtResource("3_6io7g")
+sprite_texture = ExtResource("3_asck8")
 minimum_hp = 20
-gold_minimum = 20
-gold_dice = 25
-gold_dice_sides = 2
-hp_dice_count = 4
-action_pool = Array[ExtResource("1_action")]([SubResource("action_defend_milady"), SubResource("action_chivalry"), SubResource("action_incel_sior")])
+gold_minimum = 2
+gold_dice = 16
+hp_dice_count = 6
+hp_dice_sides = 4
+action_pool = Array[ExtResource("1_6io7g")]([SubResource("Resource_jspo1"), SubResource("Resource_srm2n"), SubResource("Resource_5hhvp")])
+passives = Array[ExtResource("1_6io7g")]([SubResource("Resource_yucyx")])

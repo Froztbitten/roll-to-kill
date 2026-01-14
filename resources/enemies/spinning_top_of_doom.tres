@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="EnemyData" load_steps=4 format=3 uid="uid://bb76l5cv88y5y"]
+
+[ext_resource type="Script" uid="uid://djeev1jhalfah" path="res://scripts/character/enemy/enemy_action.gd" id="1_f7dlt"]
+[ext_resource type="Script" uid="uid://dv6r7tro15lnf" path="res://scripts/character/enemy/enemy_data.gd" id="2_rhk23"]
+
+[sub_resource type="Resource" id="Resource_4a5u4"]
+script = ExtResource("1_f7dlt")
+action_name = "Let it rip!"
+dice_count = 6
+dice_sides = 4
+
+[resource]
+script = ExtResource("2_rhk23")
+enemy_name = "Spinning top of doom"
+minimum_hp = 10
+gold_minimum = 2
+gold_dice = 11
+hp_dice_count = 10
+hp_dice_sides = 8
+action_pool = Array[ExtResource("1_f7dlt")]([SubResource("Resource_4a5u4")])

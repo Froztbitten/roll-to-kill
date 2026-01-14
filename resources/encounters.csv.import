@@ -1,0 +1,15 @@
+[remap]
+
+importer="csv_translation"
+type="Translation"
+uid="uid://bnbvdd28bta0x"
+valid=false
+
+[deps]
+
+source_file="res://resources/encounters.csv"
+
+[params]
+
+compress=true
+delimiter=0

@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="EnemyData" load_steps=5 format=3 uid="uid://c2di3hvxn1jyg"]
+
+[ext_resource type="Script" uid="uid://djeev1jhalfah" path="res://scripts/character/enemy/enemy_action.gd" id="1_evcjw"]
+[ext_resource type="Script" uid="uid://dv6r7tro15lnf" path="res://scripts/character/enemy/enemy_data.gd" id="2_qs75t"]
+[ext_resource type="Texture2D" uid="uid://ew07qfryc5ta" path="res://assets/ai/characters/d12.png" id="3_rql4j"]
+
+[sub_resource type="Resource" id="Resource_xnp7h"]
+script = ExtResource("1_evcjw")
+action_name = "12oll to kill"
+dice_count = 1
+dice_sides = 12
+
+[resource]
+script = ExtResource("2_qs75t")
+enemy_name = "D12"
+sprite_texture = ExtResource("3_rql4j")
+minimum_hp = 0
+gold_minimum = 1
+gold_dice = 1
+hp_dice_count = 12
+hp_dice_sides = 1
+action_pool = Array[ExtResource("1_evcjw")]([SubResource("Resource_xnp7h")])
