@@ -42,11 +42,10 @@ func _ready():
 
 		if is_debug:
 			# Testing: Apply a random effect to every face
-			for face in new_die.faces:
-				var effect = EffectLibrary.get_random_effect_for_die(side_count, 3)
-				if effect:
-					print("Adding effect %s to D%d face value %d" % [effect.name, side_count, face.value])
-					face.effects.append(effect)
+			var effect = EffectLibrary.get_random_effect_for_die(side_count, 3)
+			if effect:
+				print("Adding effect %s to D%d" % [effect.name, side_count])
+				new_die.effect = effect
 
 		add_to_game_bag([new_die])
 	print("added default dice bag of size: ", _game_dice_bag.size())
@@ -191,6 +190,7 @@ func shrink_die(original_die: Die) -> Die:
 	# Tag the new die with metadata so we can identify it later and revert it.
 	shrunken_die.set_meta("is_shrunken", true)
 	shrunken_die.set_meta("original_die", original_die)
+	shrunken_die.effect = original_die.effect
 	
 	# Copy over the faces that still exist on the smaller die.
 	for i in range(new_sides):
@@ -201,8 +201,6 @@ func shrink_die(original_die: Die) -> Die:
 			var new_face = shrunken_die.faces[i]
 			
 			new_face.value = original_face.value
-			# Shallow copy the effects array to share the effect resources.
-			new_face.effects = original_face.effects.duplicate()
 
 	print("Shrunk a D%d to a D%d" % [original_sides, new_sides])
 	return shrunken_die
@@ -256,5 +254,4 @@ func apply_effect_to_random_dice(effect: DieFaceEffect, count: int = 3):
 	
 	for i in range(min(count, candidates.size())):
 		var die_candidate = candidates[i]
-		var face = die_candidate.faces.pick_random()
-		face.effects.append(effect)
+		die_candidate.effect = effect

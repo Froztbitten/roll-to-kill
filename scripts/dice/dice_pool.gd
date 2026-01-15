@@ -36,9 +36,15 @@ func _add_die_to_pool(die_data: Die, invisible: bool) -> DieDisplay:
 	dice_pool_display.append(die_display)
 	return die_display
 
-func animate_add_dice(dice_to_draw: Array[Die], start_pos_data: Variant):
+func animate_add_dice(dice_to_draw: Array[Die], start_pos_data: Variant, roll_overlay: Control = null):
 	if dice_to_draw.is_empty():
 		return
+		
+	# If we have an overlay from the 3D roll, fade it out while the UI dice slide in
+	if roll_overlay:
+		var fade_tween = create_tween()
+		fade_tween.tween_property(roll_overlay, "modulate:a", 0.0, 0.3)
+		fade_tween.tween_callback(roll_overlay.queue_free)
 
 	# 1. Add the dice to the pool invisibly to let the container arrange them.
 	var displays_to_animate: Array[DieDisplay] = []
@@ -76,8 +82,6 @@ func animate_add_dice(dice_to_draw: Array[Die], start_pos_data: Variant):
 			
 		display.global_position = start_pos - (display.size / 2.0)
 		display.pivot_offset = display.size / 2.0 # Set pivot for scaling from the center
-		display.rotation = final_rotation
-		display.scale = Vector2.ZERO
 		display.modulate.a = 1.0 # Make it visible just before the animation starts
 		
 		# Ensure it renders above other UI elements (like overlays) during animation
@@ -90,8 +94,19 @@ func animate_add_dice(dice_to_draw: Array[Die], start_pos_data: Variant):
 		
 		var duration = 0.4
 		var delay = i * 0.07
+		
+		if roll_overlay:
+			# Start at a slightly larger scale to simulate the 3D die being "closer"
+			display.scale = final_scale * 1.5
+			display.rotation = randf_range(-0.2, 0.2) # Slight random rotation for natural feel
+			tween.tween_property(display, "rotation", final_rotation, duration).set_delay(delay).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+			tween.tween_property(display, "scale", final_scale, duration).set_delay(delay).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+		else:
+			display.rotation = final_rotation
+			display.scale = Vector2.ZERO
+			tween.tween_property(display, "scale", final_scale, duration * 0.75).set_delay(delay).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+			
 		tween.tween_property(display, "global_position", final_pos, duration).set_delay(delay).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
-		tween.tween_property(display, "scale", final_scale, duration * 0.75).set_delay(delay).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 		tween.chain().tween_callback(func(): if is_instance_valid(display): display.z_index = original_z)
 
 	if not tweens.is_empty():

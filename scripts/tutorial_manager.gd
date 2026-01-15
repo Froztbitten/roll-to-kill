@@ -199,12 +199,20 @@ func start_tutorial():
 	main_game.get_node("UI").add_child(combined_highlight)
 	highlight_targets = [ability_ui, die_heal_display]
 	
+	# Disable normal die clicking (selection for attack/block) to force drag-and-drop
+	if main_game.dice_pool_ui.die_clicked.is_connected(main_game._on_die_clicked):
+		main_game.dice_pool_ui.die_clicked.disconnect(main_game._on_die_clicked)
+	
 	overlay.show_message("It's your turn again!\n\nYou have received the HEAL ability.\nDrag the die into the ability slot to heal yourself.", combined_highlight, false)
 	
 	# Wait for ability usage
 	action_data = await main_game.player_performed_action
 	while action_data[0] != "ability":
 		action_data = await main_game.player_performed_action
+		
+	# Re-enable die clicking
+	if not main_game.dice_pool_ui.die_clicked.is_connected(main_game._on_die_clicked):
+		main_game.dice_pool_ui.die_clicked.connect(main_game._on_die_clicked)
 		
 	combined_highlight.queue_free()
 	combined_highlight = null
@@ -231,8 +239,7 @@ func start_tutorial():
 		bleed_effect = DieFaceEffect.new("Bleed", "If used to attack, apply [color=yellow]{value}[/color] [b]Bleed[/b].", 1, Color("#a12020"))
 		bleed_effect.process_effect = EffectLogic.bleed
 		
-	for face in die_bleed.faces:
-		face.effects.append(bleed_effect)
+	die_bleed.effect = bleed_effect
 	
 	var tutorial_dice_bleed: Array[Die] = [die_bleed]
 	dice_pool.add_dice_instantly(tutorial_dice_bleed)
@@ -287,4 +294,5 @@ func start_tutorial():
 	overlay.show_message("Tutorial Complete!\n\nYou are now ready to face the dungeon.")
 	await overlay.next_step
 	
+	get_tree().root.set_meta("tutorial_mode", false)
 	get_tree().change_scene_to_file("res://scenes/screens/main_menu.tscn")

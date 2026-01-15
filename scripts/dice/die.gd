@@ -3,7 +3,6 @@ class_name Die
 
 class DieFace extends Resource:
 	@export var value: int = 1
-	@export var effects: Array[DieFaceEffect]
 
 @export var sides: int = 6:
 	set(value):
@@ -15,6 +14,8 @@ class DieFace extends Resource:
 		faces = value
 		if faces:
 			sides = faces.size()
+
+@export var effect: DieFaceEffect
 
 var icon_path: String:
 	get:

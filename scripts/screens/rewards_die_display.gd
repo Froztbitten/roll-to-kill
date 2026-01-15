@@ -83,7 +83,7 @@ func _process(_delta):
 		average_label.visible = false
 
 
-func set_die(die_data: Die, force_grid: bool = false, is_upgrade_reward: bool = false, upgraded_faces_info: Array = [], show_status_text: bool = false):
+func set_die(die_data: Die, force_grid: bool = false, is_upgrade_reward: bool = false, _upgraded_faces_info: Array = [], show_status_text: bool = false):
 	deselect()
 	
 	self.die = die_data
@@ -136,8 +136,8 @@ func set_die(die_data: Die, force_grid: bool = false, is_upgrade_reward: bool = 
 			face_grid.add_child(cell)
 			
 			# If the face has an effect, highlight it
-			if not face_data.effects.is_empty():
-				var effect: DieFaceEffect = face_data.effects[0]
+			if die.effect:
+				var effect: DieFaceEffect = die.effect
 				var style = cell.get_theme_stylebox("panel").duplicate() as StyleBoxFlat
 				style.bg_color = effect.highlight_color
 				cell.add_theme_stylebox_override("panel", style)
@@ -155,52 +155,11 @@ func set_die(die_data: Die, force_grid: bool = false, is_upgrade_reward: bool = 
 				die_label.remove_theme_font_size_override("font_size")
 				
 			status_label.text = "(Upgrade)" if show_status_text else ""
-			for face_info in upgraded_faces_info:
-				var face_value = face_info["face_value"]
-				var effect_name = face_info["effect_name"]
-				var effect_color = face_info["effect_color"]
-				
-				# Highlight the corresponding cell in the grid
-				for cell_idx in range(face_grid.get_child_count()):
-					var cell = face_grid.get_child(cell_idx)
-					if cell.get_node("Label").text == str(face_value):
-						var style = cell.get_theme_stylebox("panel").duplicate() as StyleBoxFlat
-						style.border_color = Color(effect_color)
-						style.border_width_left = 3
-						style.border_width_top = 3
-						style.border_width_right = 3
-						style.border_width_bottom = 3
-						cell.add_theme_stylebox_override("panel", style)
-						break
-						
-				var panel = PanelContainer.new()
-				var style = StyleBoxFlat.new()
-				style.bg_color = Color(0.15, 0.15, 0.15, 0.9)
-				style.border_width_bottom = 2
-				style.border_color = Color(effect_color)
-				style.content_margin_left = 6
-				style.content_margin_right = 6
-				style.content_margin_top = 2
-				style.content_margin_bottom = 2
-				panel.add_theme_stylebox_override("panel", style)
-				panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-				
-				panel.mouse_filter = MOUSE_FILTER_PASS
-				panel.mouse_default_cursor_shape = Control.CURSOR_HELP
-				# Need to get the actual effect description from EffectLibrary
-				var actual_effect = EffectLibrary.get_effect_by_name(effect_name)
-				if actual_effect:
-					var tooltip_text = _clean_bbcode(actual_effect.description.replace("{value}", str(face_value)).replace("{value / 2}", str(ceili(face_value / 2.0))))
-					panel.mouse_entered.connect(_on_control_hover_entered.bind(panel, tooltip_text))
-				
-				var label = Label.new()
-				label.text = "Face %d: %s" % [face_value, effect_name]
-				label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-				label.autowrap_mode = TextServer.AUTOWRAP_WORD
-				label.add_theme_color_override("font_color", Color(effect_color))
-				panel.add_child(label)
-				upgrades_list.add_child(panel)
-			upgrades_list.visible = not upgraded_faces_info.is_empty()
+			
+			if die.effect:
+				_add_effect_panel_to_list(upgrades_list, die.effect, "Face Value")
+				upgrades_list.visible = true
+			
 		else: # New Die
 			var d_name = _get_die_name(die)
 			die_label.text = d_name
@@ -211,14 +170,9 @@ func set_die(die_data: Die, force_grid: bool = false, is_upgrade_reward: bool = 
 				die_label.remove_theme_font_size_override("font_size")
 				
 			status_label.text = "(New)" if show_status_text else ""
-			var unique_effects = []
-			for face_data in die_object.faces:
-				if not face_data.effects.is_empty():
-					for effect in face_data.effects:
-						if not unique_effects.has(effect.name):
-							unique_effects.append(effect.name)
-							_add_effect_panel_to_list(upgrades_list, effect, "Face Value") # Re-use existing helper
-			upgrades_list.visible = not unique_effects.is_empty()
+			if die.effect:
+				_add_effect_panel_to_list(upgrades_list, die.effect, "Face Value")
+				upgrades_list.visible = true
 
 		# Show promotion count
 		var upgrades = die.get_meta("upgrade_count", 0)
@@ -337,7 +291,7 @@ func _get_die_name(d: Die) -> String:
 			
 	if is_custom: parts.append("Customized")
 	elif is_promoted: parts.append("Promoted")
-	if d.faces.any(func(f): return not f.effects.is_empty()): parts.append("Special")
+	if d.effect: parts.append("Special")
 	parts.append("D%d" % d.sides)
 	return " ".join(parts)
 

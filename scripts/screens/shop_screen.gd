@@ -121,7 +121,6 @@ func _generate_offer(existing_container: VBoxContainer = null):
 		return
 
 	var random_die = player._game_dice_bag.pick_random()
-	var random_face = random_die.faces.pick_random()
 	
 	# Use EffectLibrary to get a compatible effect
 	var effect = EffectLibrary.get_random_effect_for_die(random_die.sides)
@@ -141,12 +140,7 @@ func _generate_offer(existing_container: VBoxContainer = null):
 		var die_display = preload("res://scenes/screens/rewards_die_display.tscn").instantiate()
 		offer_vbox.add_child(die_display)
 		
-		var upgraded_faces_info = [{
-			"face_value": random_face.value,
-			"effect_name": effect.name,
-			"effect_color": effect.highlight_color.to_html()
-		}]
-		die_display.set_die(random_die, true, true, upgraded_faces_info)
+		die_display.set_die(random_die, true, true)
 		die_display.size_flags_horizontal = SIZE_SHRINK_CENTER
 		die_display.disabled = true
 		die_display.mouse_filter = Control.MOUSE_FILTER_PASS
@@ -164,23 +158,23 @@ func _generate_offer(existing_container: VBoxContainer = null):
 		desc_container.alignment = FlowContainer.ALIGNMENT_CENTER
 		offer_vbox.add_child(desc_container)
 		
-		if random_face.effects.is_empty():
+		if not random_die.effect:
 			_add_text_label(desc_container, "Add")
-			_add_effect_label(desc_container, effect, random_face.value)
-			_add_text_label(desc_container, "to Face %d" % random_face.value)
+			_add_effect_label(desc_container, effect, 0) # 0 means "Face Value"
+			_add_text_label(desc_container, "to Die")
 		else:
-			var old_effect = random_face.effects[0]
+			var old_effect = random_die.effect
 			_add_text_label(desc_container, "Replace")
-			_add_effect_label(desc_container, old_effect, random_face.value)
+			_add_effect_label(desc_container, old_effect, 0)
 			_add_text_label(desc_container, "with")
-			_add_effect_label(desc_container, effect, random_face.value)
-			_add_text_label(desc_container, "on Face %d" % random_face.value)
+			_add_effect_label(desc_container, effect, 0)
+			_add_text_label(desc_container, "on Die")
 		
 		var btn = Button.new()
 		btn.text = "Buy (50g)"
 		btn.custom_minimum_size = Vector2(100, 40)
 		_style_shop_button(btn)
-		btn.pressed.connect(_on_buy_specific_upgrade_pressed.bind(random_die, random_face, effect, 50, btn, die_display))
+		btn.pressed.connect(_on_buy_specific_upgrade_pressed.bind(random_die, effect, 50, btn, die_display))
 		offer_vbox.add_child(btn)
 
 func _on_remove_die_pressed():
@@ -250,14 +244,13 @@ func _on_die_selected(die: Die):
 		else:
 			print("Not enough gold!")
 
-func _on_buy_specific_upgrade_pressed(die: Die, face, effect: DieFaceEffect, cost: int, button: Button, die_display: Control):
+func _on_buy_specific_upgrade_pressed(die: Die, effect: DieFaceEffect, cost: int, button: Button, die_display: Control):
 	if player.gold >= cost:
 		player.add_gold(-cost)
 		if has_node("/root/GameAnalyticsManager"):
 			get_node("/root/GameAnalyticsManager").track_gold_sink(cost, "upgrade", effect.name)
 
-		face.effects.clear()
-		face.effects.append(effect)
+		die.effect = effect
 		button.disabled = true
 		button.text = "Sold"
 		_update_ui()
@@ -317,8 +310,12 @@ func _add_effect_label(parent: Control, effect: DieFaceEffect, face_value: int):
 	panel.add_child(label)
 	
 	var tooltip_desc = effect.description
-	tooltip_desc = tooltip_desc.replace("{value}", str(face_value))
-	tooltip_desc = tooltip_desc.replace("{value / 2}", str(ceili(face_value / 2.0)))	
+	if face_value > 0:
+		tooltip_desc = tooltip_desc.replace("{value}", str(face_value))
+		tooltip_desc = tooltip_desc.replace("{value / 2}", str(ceili(face_value / 2.0)))
+	else:
+		tooltip_desc = tooltip_desc.replace("{value}", "Face Value")
+		tooltip_desc = tooltip_desc.replace("{value / 2}", "Half Value")
 	panel.mouse_entered.connect(_on_control_hover_entered.bind(panel, _clean_bbcode(tooltip_desc)))
 	panel.mouse_default_cursor_shape = Control.CURSOR_HELP
 	

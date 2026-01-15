@@ -44,6 +44,7 @@ const ABILITY_UI_SCENE = preload("res://scenes/ui/ability.tscn")
 const DIE_DISPLAY_SCENE = preload("res://scenes/dice/die_display.tscn")
 const DIE_GRID_CELL_SCENE = preload("res://scenes/dice/die_grid_cell.tscn")
 const ARROW_SCENE = preload("res://scenes/ui/arrow.tscn")
+const DIE_3D_RENDERER_SCENE = preload("res://scenes/ui/die_3d_renderer.tscn")
 const RHYTHM_GAME_UI_SCENE = preload("res://scenes/ui/rhythm_game_ui.tscn")
 var selected_dice_display: Array[DieDisplay] = []
 var current_incoming_damage: int = 0
@@ -119,6 +120,7 @@ func _ready() -> void:
 	
 	# Ensure GameInfo (TopBar) is always on top of other screens (Map, Shop, etc.)
 	$UI/GameInfo.z_index = 400
+	$UI.move_child($UI/GameInfo, -1)
 	
 	# --- Analytics Debug Check ---
 	if has_node("/root/GameAnalyticsManager"):
@@ -364,11 +366,18 @@ func player_turn() -> void:
 		seed(Time.get_ticks_usec() + steam_manager.get_my_id())
 
 	var new_dice: Array[Die] = player.draw_hand()
-	for die: Die in new_dice:
-		die.roll()
+	
+	# Roll dice using 3D renderer
+	var roll_result = await _roll_dice_3d(new_dice)
+	var start_positions = roll_result.positions
+	var overlay = roll_result.overlay
+	
+	if start_positions.is_empty():
+		start_positions = dice_bag_icon.get_global_rect().get_center()
+		if overlay: overlay.queue_free()
 	
 	# Animate the new dice into the pool
-	await dice_pool_ui.animate_add_dice(new_dice, dice_bag_icon.get_global_rect().get_center())
+	await dice_pool_ui.animate_add_dice(new_dice, start_positions, overlay)
 	
 	if game_state and game_state.is_multiplayer:
 		_send_dice_to_all_remotes(new_dice)
@@ -800,11 +809,9 @@ func _on_character_clicked(character: Character) -> void:
 		var is_piercing = false
 		# Pierce effect should only be excluded from the main damage roll if targeting an enemy.
 		if not is_targeting_player:
-			if die_display.die.result_face:
-				for effect in die_display.die.result_face.effects:
-					if effect.process_effect == EffectLogic.pierce:
-						is_piercing = true
-						break
+			if die_display.die.effect:
+				if die_display.die.effect.process_effect == EffectLogic.pierce:
+					is_piercing = true
 		
 		if not is_piercing:
 			total_roll += die_display.die.result_value
@@ -822,23 +829,23 @@ func _on_character_clicked(character: Character) -> void:
 		player.update_health_display(net_damage)
 
 		for die in dice_to_discard:
-			if die.result_face and not die.result_face.effects.is_empty():
-				for effect in die.result_face.effects:
-					# Pierce effect should not damage the player, it just acts as a normal block die.
-					# The value was already added to total_roll, so we just skip the effect processing.
-					if effect.process_effect == EffectLogic.pierce:
-						continue
-					# For self-targeted block+damage effects, the block value is already in total_roll.
-					# We must skip the effect to prevent adding block twice and taking damage,
-					# but manually trigger any other parts of the effect, like healing.
-					if effect.process_effect == EffectLogic.ss:
-						# Sword+Shield: Block is handled, no other effect to apply.
-						continue
-					if effect.process_effect == EffectLogic.ssh:
-						# Sword+Shield+Heal: Block is handled, just apply heal.
-						player.heal(die.result_value)
-						continue
-					_process_die_face_effect(effect, die.result_value, player, die)
+			if die.effect:
+				var effect = die.effect
+				# Pierce effect should not damage the player, it just acts as a normal block die.
+				# The value was already added to total_roll, so we just skip the effect processing.
+				if effect.process_effect == EffectLogic.pierce:
+					continue
+				# For self-targeted block+damage effects, the block value is already in total_roll.
+				# We must skip the effect to prevent adding block twice and taking damage,
+				# but manually trigger any other parts of the effect, like healing.
+				if effect.process_effect == EffectLogic.ss:
+					# Sword+Shield: Block is handled, no other effect to apply.
+					continue
+				if effect.process_effect == EffectLogic.ssh:
+					# Sword+Shield+Heal: Block is handled, just apply heal.
+					player.heal(die.result_value)
+					continue
+				_process_die_face_effect(effect, die.result_value, player, die)
 	else: # It's an enemy
 		var enemy_target: Enemy = character
 		emit_signal("player_performed_action", "attack", enemy_target)
@@ -850,12 +857,12 @@ func _on_character_clicked(character: Character) -> void:
 		# because `used_dice_displays` contains references to nodes that were freed
 		# inside `_animate_dice_to_target`.
 		for die in dice_to_discard:
-			if die.result_face and not die.result_face.effects.is_empty():
-				for effect in die.result_face.effects:
-					# Spikes is a self-buff, it should not be applied to enemies.
-					if effect.name == "Spikes":
-						continue
-					_process_die_face_effect(effect, die.result_value, enemy_target, die)
+			if die.effect:
+				var effect = die.effect
+				# Spikes is a self-buff, it should not be applied to enemies.
+				if effect.name == "Spikes":
+					continue
+				_process_die_face_effect(effect, die.result_value, enemy_target, die)
 
 	# Broadcast action to multiplayer peers
 	_broadcast_player_action(dice_to_discard, character, total_roll if not is_targeting_player else 0, total_roll if is_targeting_player else 0)
@@ -1114,8 +1121,8 @@ func _update_higher_lower_grid():
 			label.modulate = Color(0.5, 0.5, 0.5)
 		else:
 			style.bg_color = Color(0.2, 0.6, 0.8, 0.8)
-			if not face.effects.is_empty():
-				style.bg_color = face.effects[0].highlight_color
+			if die.effect:
+				style.bg_color = die.effect.highlight_color
 			
 			if face == die.result_face:
 				style.border_color = Color.GOLD
@@ -1411,8 +1418,8 @@ func _update_even_odd_grid():
 			label.modulate = Color(0.5, 0.5, 0.5)
 		else:
 			style.bg_color = Color(0.7, 0.3, 0.8, 0.8) # Purple-ish
-			if not face.effects.is_empty():
-				style.bg_color = face.effects[0].highlight_color
+			if die.effect:
+				style.bg_color = die.effect.highlight_color
 			
 			if face == die.result_face:
 				style.border_color = Color.GOLD
@@ -1575,16 +1582,73 @@ func _on_rhythm_game_finished(successful_hits: int):
 	
 	active_targeting_ability = null
 
-func _apply_all_die_effects(die: Die, target: Character, value: int, force_face: Resource = null):
-	var face = force_face if force_face else die.result_face
+func _roll_dice_3d(dice: Array[Die]) -> Dictionary:
+	if dice.is_empty(): return {"positions": [], "overlay": null}
+
+	var roll_overlay = Control.new()
+	roll_overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
+	roll_overlay.z_index = 300
+	$UI.add_child(roll_overlay)
 	
-	if face and not face.effects.is_empty():
-		for effect in face.effects:
-			# Spikes is a self-buff, it should not be applied to enemies.
-			if effect.name == "Spikes":
-				continue
-			print("Applying effect '%s' (Value: %d) to %s" % [effect.name, value, target.name])
-			await _process_die_face_effect(effect, value, target, die)
+	var dimmer = ColorRect.new()
+	dimmer.color = Color(0, 0, 0, 0.5)
+	dimmer.set_anchors_preset(Control.PRESET_FULL_RECT)
+	roll_overlay.add_child(dimmer)
+	
+	var results_map = {}
+	
+	var viewport_size = get_viewport_rect().size
+	
+	var r = DIE_3D_RENDERER_SCENE.instantiate()
+	roll_overlay.add_child(r)
+	r.custom_minimum_size = viewport_size
+	r.size = viewport_size
+	
+	r.roll_finished.connect(func(die, val):
+		results_map[die] = val
+	)
+
+	for i in range(dice.size()):
+		var die = dice[i]
+		r.add_die(die, die.sides, 0, die.effect.highlight_color if die.effect else Color.WHITE)
+	
+	r.roll_all()
+
+	# Wait for finish signal or timeout
+	# The timer calls skip_animation, which forces the signal to emit, breaking the await.
+	var safety_timer = get_tree().create_timer(10.0)
+	safety_timer.timeout.connect(func(): if is_instance_valid(r): r.skip_animation())
+	
+	await r.all_dice_settled
+		
+	# Process results
+	for die in dice:
+		if results_map.has(die):
+			var face_val = results_map[die]
+			if face_val > 0 and face_val <= die.faces.size():
+				die.result_face = die.faces[face_val - 1]
+			else:
+				die.result_face = die.faces.pick_random()
+			
+			var bonus = die.get_meta("upgrade_count", 0)
+			die.result_value = die.result_face.value + bonus
+		else:
+			die.roll() # Fallback
+			
+	var positions = []
+	for die in dice:
+		positions.append(r.get_die_screen_position(die))
+		
+	return {"positions": positions, "overlay": roll_overlay}
+
+func _apply_all_die_effects(die: Die, target: Character, value: int, _force_face: Resource = null):
+	if die.effect:
+		var effect = die.effect
+		# Spikes is a self-buff, it should not be applied to enemies.
+		if effect.name == "Spikes":
+			return
+		print("Applying effect '%s' (Value: %d) to %s" % [effect.name, value, target.name])
+		await _process_die_face_effect(effect, value, target, die)
 
 func _process_die_face_effect(effect: DieFaceEffect, value: int, target: Character = null, die: Die = null):
 	var context = {
@@ -1690,9 +1754,9 @@ func _animate_dice_to_target(dice_displays: Array[DieDisplay], target: Character
 		var move_duration = 0.4
 		var delay = i * 0.1
 
-		# 1. Reveal Phase: Fade Icon, Pop Number
-		tween.tween_property(icon, "modulate:a", 0.0, reveal_time).set_delay(delay)
-		tween.parallel().tween_property(label, "scale", start_scale * 2.5, reveal_time).set_delay(delay).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+		# 1. Reveal Phase: Pop Die (Icon + Number)
+		tween.tween_property(icon, "scale", start_scale * 1.2, reveal_time).set_delay(delay).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+		tween.parallel().tween_property(label, "scale", start_scale * 1.2, reveal_time).set_delay(delay).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 
 		# 2. Movement Phase: Move Anchor
 		tween.parallel().tween_method(
@@ -1986,12 +2050,10 @@ func _generate_reward_dice() -> Array[Die]:
 		for j in range(sides):
 			new_die.faces[j].value = j + 1
 		
-		# Always add at least one effect
-		var num_effects_to_add = randi_range(1, max_effects)
-		for k in range(num_effects_to_add):
-			var effect = EffectLibrary.get_random_effect_for_die(sides, tier_limit)
-			if effect:
-				new_die.faces.pick_random().effects.append(effect)
+		# Add an effect
+		var effect = EffectLibrary.get_random_effect_for_die(sides, tier_limit)
+		if effect:
+			new_die.effect = effect
 					
 		dice_options.append(new_die)
 
@@ -2003,32 +2065,26 @@ func _generate_reward_dice() -> Array[Die]:
 		var upgrade_offer = Die.new(original_die.sides)
 		for j in range(original_die.faces.size()):
 			upgrade_offer.faces[j].value = original_die.faces[j].value
-			upgrade_offer.faces[j].effects = original_die.faces[j].effects.duplicate()
+		upgrade_offer.effect = original_die.effect
 			
-		# Add new effects (Guaranteed at least 1 for upgrade option)
-		var num_upgrade = randi_range(1, max_effects)
-		var upgraded_faces_info = []
-		for k in range(num_upgrade):
+		# If no effect, add one. If effect exists, maybe replace? 
+		# For now, let's say upgrade adds an effect if missing.
+		if not upgrade_offer.effect:
 			var effect = EffectLibrary.get_random_effect_for_die(upgrade_offer.sides, tier_limit)
 			if effect:
-				var target_face = upgrade_offer.faces.pick_random()
-				target_face.effects.append(effect)
-				upgraded_faces_info.append({"face_value": target_face.value, "effect_name": effect.name, "effect_color": effect.highlight_color.to_html()})
+				upgrade_offer.effect = effect
 		
 		upgrade_offer.set_meta("is_upgrade_reward", true)
 		upgrade_offer.set_meta("upgrade_target", original_die)
-		upgrade_offer.set_meta("upgraded_faces_info", upgraded_faces_info)
 		
 		dice_options.append(upgrade_offer)
 	else:
 		# Fallback if bag is empty
 		var sides = available_sizes.pick_random()
 		var new_die = Die.new(sides)
-		var num_effects_to_add = randi_range(1, max_effects)
-		for k in range(num_effects_to_add):
-			var effect = EffectLibrary.get_random_effect_for_die(sides, tier_limit)
-			if effect:
-				new_die.faces.pick_random().effects.append(effect)
+		var effect = EffectLibrary.get_random_effect_for_die(sides, tier_limit)
+		if effect:
+			new_die.effect = effect
 		dice_options.append(new_die)
 
 	return dice_options
@@ -2043,6 +2099,7 @@ func _on_reward_chosen(chosen_die: Die) -> void:
 			var target_die = chosen_die.get_meta("upgrade_target")
 			# Apply the upgrade: Replace faces of target with chosen
 			target_die.faces = chosen_die.faces
+			target_die.effect = chosen_die.effect
 			print("Upgraded existing die via reward.")
 		else:
 			# Add the chosen die to the player's deck

@@ -1,22 +1,14 @@
 extends SubViewportContainer
 class_name Die3DRenderer
 
-signal roll_finished(result_value: int)
+signal roll_finished(die_id, result_value: int)
+signal all_dice_settled
 
 @onready var sub_viewport = $SubViewport
 @onready var world_node = $SubViewport/World3D
 
-var rigid_body: RigidBody3D
-var die_mesh_instance: MeshInstance3D
-var die_edges_instance: MeshInstance3D
-var die_collision: CollisionShape3D
-var labels_root: Node3D
-
-var _target_value: int = 1
-var _sides: int = 6
+var _dice_bodies: Array[RigidBody3D] = []
 var _is_rolling: bool = false
-var _settling: bool = false
-var _face_data = [] # Array of {normal: Vector3, value: int}
 var _camera: Camera3D
 
 func _ready():
@@ -32,7 +24,7 @@ func _setup_environment():
 	# Camera - Top down view
 	_camera = Camera3D.new()
 	# Position camera high enough to see the whole box
-	_camera.transform.origin = Vector3(0, 25, 0)
+	_camera.transform.origin = Vector3(0, 18, 0)
 	_camera.rotation_degrees = Vector3(-90, 0, 0) # Ensure perfect top-down
 	_camera.fov = 35
 	world_node.add_child(_camera)
@@ -49,11 +41,13 @@ func _setup_environment():
 	
 	# Invisible Walls Cage
 	# Box area is roughly -3 to 3 in X and Z
-	var wall_dist = 6.0
+	var wall_dist_x = 5.5
+	var wall_dist_z_bottom = 5.5
+	var wall_dist_z_top = 3.5 # Avoid top bar
 	var wall_height = 20.0
 	var walls = [
-		Vector3(wall_dist, 0, 0), Vector3(-wall_dist, 0, 0),
-		Vector3(0, 0, wall_dist), Vector3(0, 0, -wall_dist)
+		Vector3(wall_dist_x, 0, 0), Vector3(-wall_dist_x, 0, 0),
+		Vector3(0, 0, wall_dist_z_bottom), Vector3(0, 0, -wall_dist_z_top)
 	]
 	for pos in walls:
 		var wall_body = StaticBody3D.new()
@@ -66,8 +60,22 @@ func _setup_environment():
 		wall_body.transform.origin = pos
 		world_node.add_child(wall_body)
 
-	# RigidBody Die
-	rigid_body = RigidBody3D.new()
+func clear():
+	for b in _dice_bodies:
+		if is_instance_valid(b): b.queue_free()
+	_dice_bodies.clear()
+
+func add_die(id: Variant, sides: int, target_value: int, color: Color = Color.WHITE):
+	var body = _create_die_body(sides, color)
+	body.set_meta("id", id)
+	body.set_meta("target_value", target_value)
+	body.set_meta("sides", sides)
+	body.set_meta("settled", false)
+	_dice_bodies.append(body)
+	world_node.add_child(body)
+
+func _create_die_body(sides: int, color: Color) -> RigidBody3D:
+	var rigid_body = RigidBody3D.new()
 	rigid_body.mass = 1.5
 	var mat = PhysicsMaterial.new()
 	mat.bounce = 0.2
@@ -76,46 +84,35 @@ func _setup_environment():
 	rigid_body.gravity_scale = 5.0
 	rigid_body.angular_damp = 2.0
 	rigid_body.continuous_cd = true # Prevent tunneling
-	world_node.add_child(rigid_body)
 	
-	die_mesh_instance = MeshInstance3D.new()
+	var die_mesh_instance = MeshInstance3D.new()
 	var face_mat = StandardMaterial3D.new()
-	face_mat.albedo_color = Color.WHITE
+	face_mat.albedo_color = color
 	face_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	face_mat.transparency = BaseMaterial3D.TRANSPARENCY_DISABLED
 	die_mesh_instance.material_override = face_mat
 	rigid_body.add_child(die_mesh_instance)
 	
-	die_edges_instance = MeshInstance3D.new()
+	var die_edges_instance = MeshInstance3D.new()
 	var edge_mat = StandardMaterial3D.new()
 	edge_mat.albedo_color = Color.BLACK
 	edge_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	die_edges_instance.material_override = edge_mat
 	rigid_body.add_child(die_edges_instance)
 	
-	die_collision = CollisionShape3D.new()
+	var die_collision = CollisionShape3D.new()
 	rigid_body.add_child(die_collision)
 	
-	labels_root = Node3D.new()
+	var labels_root = Node3D.new()
 	rigid_body.add_child(labels_root)
 	
-	# Default to D6
-	configure(6)
-
-func configure(sides: int):
-	_sides = sides
-	_generate_die_mesh(sides)
-
-func _generate_die_mesh(sides: int):
-	for child in labels_root.get_children():
-		child.queue_free()
-	_face_data.clear()
+	var face_data = []
 	
 	var faces = [] # Array of Arrays of Vector3
 	var d4_vertex_values = {}
 	
 	if sides == 4:
-		var s = 1.5
+		var s = 1.2
 		var v0 = Vector3(1, 1, 1).normalized() * s
 		var v1 = Vector3(1, -1, -1).normalized() * s
 		var v2 = Vector3(-1, 1, -1).normalized() * s
@@ -128,16 +125,16 @@ func _generate_die_mesh(sides: int):
 		d4_vertex_values[v2] = 3
 		d4_vertex_values[v3] = 4
 		
-		_face_data.append({"normal": v0.normalized(), "value": 1})
-		_face_data.append({"normal": v1.normalized(), "value": 2})
-		_face_data.append({"normal": v2.normalized(), "value": 3})
-		_face_data.append({"normal": v3.normalized(), "value": 4})
+		face_data.append({"normal": v0.normalized(), "value": 1})
+		face_data.append({"normal": v1.normalized(), "value": 2})
+		face_data.append({"normal": v2.normalized(), "value": 3})
+		face_data.append({"normal": v3.normalized(), "value": 4})
 	elif sides == 8:
-		var s = 1.3
+		var s = 1.2
 		var v = [Vector3(0, s, 0), Vector3(0, -s, 0), Vector3(s, 0, 0), Vector3(-s, 0, 0), Vector3(0, 0, s), Vector3(0, 0, -s)]
 		faces = [[v[0], v[4], v[2]], [v[0], v[2], v[5]], [v[0], v[5], v[3]], [v[0], v[3], v[4]], [v[1], v[2], v[4]], [v[1], v[5], v[2]], [v[1], v[3], v[5]], [v[1], v[4], v[3]]]
 	elif sides == 10:
-		var s = 1.3
+		var s = 1.1
 		var k = 1.0 * s # Tip height
 		# Calculate h to ensure planarity for a regular pentagonal trapezohedron
 		var cos36 = cos(deg_to_rad(36))
@@ -157,10 +154,10 @@ func _generate_die_mesh(sides: int):
 			
 		for i in range(5):
 			# Ensure CCW winding for outward normals
-			faces.append([top, r1[(i+1)%5], r2[i], r1[i]])
-			faces.append([bottom, r2[i], r1[(i+1)%5], r2[(i+1)%5]])
+			faces.append([top, r1[i], r2[i], r1[(i+1)%5]])
+			faces.append([bottom, r2[(i+1)%5], r1[(i+1)%5], r2[i]])
 	elif sides == 12:
-		var s = 1.0
+		var s = 1.1
 		var t = (1.0 + sqrt(5.0)) / 2.0
 		var one_t = 1.0 / t
 		
@@ -211,7 +208,7 @@ func _generate_die_mesh(sides: int):
 		for idx in indices:
 			faces.append([v[idx[0]], v[idx[1]], v[idx[2]]])
 	else: # Default D6
-		var s = 1.0
+		var s = 0.7
 		var v = [Vector3(-s, s, s), Vector3(s, s, s), Vector3(s, -s, s), Vector3(-s, -s, s), Vector3(-s, s, -s), Vector3(s, s, -s), Vector3(s, -s, -s), Vector3(-s, -s, -s)]
 		faces = [[v[0], v[1], v[2], v[3]], [v[1], v[5], v[6], v[2]], [v[5], v[4], v[7], v[6]], [v[4], v[0], v[3], v[7]], [v[4], v[5], v[1], v[0]], [v[3], v[2], v[6], v[7]]]
 
@@ -226,7 +223,11 @@ func _generate_die_mesh(sides: int):
 		var center = Vector3.ZERO
 		for v in face_verts: center += v
 		center /= face_verts.size()
-		var normal = center.normalized()
+		
+		# Calculate normal from geometry to ensure it's flush with the face plane
+		var normal = (face_verts[1] - face_verts[0]).cross(face_verts[2] - face_verts[0]).normalized()
+		if normal.dot(center) < 0:
+			normal = -normal
 		
 		if sides == 4:
 			for v in face_verts:
@@ -241,16 +242,18 @@ func _generate_die_mesh(sides: int):
 				label.look_at_from_position(label_pos, label_pos - normal, (v - center).normalized())
 				labels_root.add_child(label)
 		else:
-			_face_data.append({"normal": normal, "value": i + 1})
+			face_data.append({"normal": normal, "value": i + 1})
 			
 			var label = Label3D.new()
 			label.text = str(i + 1)
 			label.font_size = 128
 			label.modulate = Color.BLACK
-			label.double_sided = true
+			label.double_sided = false
 			var label_pos = center + normal * 0.02
 			# Orient label to face outward
 			var up_vector = ((face_verts[0] + face_verts[1]) / 2.0 - center).normalized()
+			if sides == 10:
+				up_vector = (face_verts[0] - center).normalized()
 			label.look_at_from_position(label_pos, label_pos - normal, up_vector)
 			labels_root.add_child(label)
 		
@@ -272,14 +275,27 @@ func _generate_die_mesh(sides: int):
 	die_collision.shape = die_mesh_instance.mesh.create_convex_shape()
 	
 	die_edges_instance.mesh = edge_tool.commit()
+	rigid_body.set_meta("face_data", face_data)
+	return rigid_body
 
-func roll(value: int, _duration: float = 1.0):
-	_target_value = value
+func roll_all():
 	_is_rolling = true
-	_settling = false
 	
+	for body in _dice_bodies:
+		_roll_body(body)
+	
+	set_process(true)
+	
+	# Failsafe: Force finish after max duration if physics never settles
+	get_tree().create_timer(4.0).timeout.connect(func():
+		if is_instance_valid(self) and _is_rolling:
+			skip_animation()
+	)
+
+func _roll_body(rigid_body: RigidBody3D):
 	rigid_body.freeze = false
 	rigid_body.sleeping = false
+	rigid_body.set_meta("settled", false)
 	
 	# Spawn high up, slightly offset from center
 	var spawn_offset = Vector3(randf_range(-0.1, 0.1), 0, randf_range(-0.1, 0.1))
@@ -295,7 +311,7 @@ func roll(value: int, _duration: float = 1.0):
 	throw_dir = (throw_dir + Vector3(randf_range(-0.2, 0.2), 0, randf_range(-0.2, 0.2))).normalized()
 	
 	# Impulse: Down and Across
-	var force = randf_range(2.0, 10.0) * rigid_body.mass
+	var force = randf_range(15.0, 35.0) * rigid_body.mass
 	var down_force = randf_range(-5.0, -20.0) * rigid_body.mass
 	rigid_body.apply_impulse(throw_dir * force + Vector3(0, down_force, 0))
 	
@@ -303,46 +319,56 @@ func roll(value: int, _duration: float = 1.0):
 	var spin_speed = randf_range(10.0, 30.0)
 	var spin_dir = Vector3(randf() - 0.5, randf() - 0.5, randf() - 0.5).normalized()
 	rigid_body.angular_velocity = spin_dir * spin_speed
-	
-	set_process(true)
-	
-	# Failsafe: Force finish after max duration if physics never settles
-	get_tree().create_timer(3.0).timeout.connect(func():
-		if is_instance_valid(self) and _is_rolling:
-			_settling = true
-			_snap_to_result()
-	)
 
 func _process(_delta):
-	if _is_rolling and not _settling:
+	if _is_rolling:
+		var all_settled = true
+		for body in _dice_bodies:
+			if body.get_meta("settled", false): continue
+			
+			if not _check_body_settled(body):
+				all_settled = false
+		
+		if all_settled:
+			_is_rolling = false
+			set_process(false)
+			emit_signal("all_dice_settled")
+
+func _check_body_settled(rigid_body: RigidBody3D) -> bool:
 		# Failsafe: If die falls through floor OR flies out of bounds, snap to result immediately
 		var pos = rigid_body.transform.origin
 		if pos.y < -5.0 or abs(pos.x) > 15.0 or abs(pos.z) > 15.0:
-			_settling = true
-			_snap_to_result()
-			return
+			_snap_body_to_result(rigid_body)
+			return true
 
 		# Check if settled
 		if rigid_body.linear_velocity.length() < 0.2 and rigid_body.angular_velocity.length() < 1.0:
 			# Ensure it's near the floor (y approx -1 to -2 depending on size)
 			if rigid_body.transform.origin.y < 0: 
-				_settling = true
-				_snap_to_result()
+				_snap_body_to_result(rigid_body)
+				return true
+		return false
 
 func skip_animation():
 	if _is_rolling:
-		if _settling: return
-		_snap_to_result()
+		for body in _dice_bodies:
+			if not body.get_meta("settled", false):
+				_snap_body_to_result(body)
+			body.visible = false
+		_is_rolling = false
+		set_process(false)
+		emit_signal("all_dice_settled")
 
-func _snap_to_result():
-	_is_rolling = false
+func _snap_body_to_result(rigid_body: RigidBody3D):
+	rigid_body.set_meta("settled", true)
 	rigid_body.freeze = true
 	
 	# Determine result from orientation
 	var max_dot = -2.0
 	var best_face = null
+	var face_data = rigid_body.get_meta("face_data", [])
 	
-	for f in _face_data:
+	for f in face_data:
 		var global_normal = rigid_body.transform.basis * f.normal
 		var dot = global_normal.dot(Vector3.UP)
 		if dot > max_dot:
@@ -350,8 +376,8 @@ func _snap_to_result():
 			best_face = f
 			
 	if best_face:
-		_target_value = best_face.value
-		emit_signal("roll_finished", _target_value)
+		var result_val = best_face.value
+		emit_signal("roll_finished", rigid_body.get_meta("id"), result_val)
 		var target_normal = best_face.normal
 		
 		var current_basis = rigid_body.transform.basis
@@ -364,6 +390,9 @@ func _snap_to_result():
 			var tween = create_tween()
 			var end_basis = current_basis.rotated(axis, angle).orthonormalized()
 			tween.tween_method(func(b): rigid_body.transform.basis = b.orthonormalized(), current_basis, end_basis, 0.2).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	else:
+		# Fallback if something went wrong with face detection
+		emit_signal("roll_finished", rigid_body.get_meta("id"), 1)
 
 func _gui_input(event):
 	if _is_rolling and event is InputEventMouseButton:
@@ -371,9 +400,15 @@ func _gui_input(event):
 			skip_animation()
 			accept_event()
 
-func get_die_screen_position() -> Vector2:
-	if not _camera or not rigid_body:
+func get_die_screen_position(id: Variant) -> Vector2:
+	var target_body = null
+	for b in _dice_bodies:
+		if b.get_meta("id") == id:
+			target_body = b
+			break
+			
+	if not _camera or not target_body:
 		return global_position + size / 2.0
-	var pos_3d = rigid_body.global_position
+	var pos_3d = target_body.global_position
 	var pos_2d = _camera.unproject_position(pos_3d)
 	return global_position + pos_2d

@@ -6,7 +6,7 @@ const DIE_RENDERER_SCENE = preload("res://scenes/ui/die_3d_renderer.tscn")
 @export var die_sides: int = 6 # Ignored
 @export var time_scale: float = 1.0 # Speed up physics for faster testing
 
-var die_renderers: Dictionary = {}
+var renderer: Die3DRenderer
 var results: Dictionary = {} # sides -> {value -> count}
 var roll_count: int = 0
 var start_time: int
@@ -21,24 +21,16 @@ func _ready():
 	print("Rolling 1 of each: %s" % str(die_types_to_test))
 	print("Total Batches: %d, Time Scale: %.1f" % [total_rolls, time_scale])
 	
-	var grid_cols = 3
-	var spacing = Vector2(350, 350)
+	renderer = DIE_RENDERER_SCENE.instantiate()
+	add_child(renderer)
+	renderer.custom_minimum_size = Vector2(1000, 1000)
+	renderer.size = Vector2(1000, 1000)
+	renderer.roll_finished.connect(_on_roll_finished)
 	
 	for i in range(die_types_to_test.size()):
 		var sides = die_types_to_test[i]
-		var renderer = DIE_RENDERER_SCENE.instantiate()
-		add_child(renderer)
-		
-		var col = i % grid_cols
-		var row = i / grid_cols
-		renderer.position = Vector2(50 + col * spacing.x, 50 + row * spacing.y)
-		renderer.custom_minimum_size = Vector2(300, 300)
-		renderer.size = Vector2(300, 300)
-		
-		renderer.configure(sides)
-		renderer.roll_finished.connect(_on_roll_finished.bind(sides))
-		
-		die_renderers[sides] = renderer
+		# Use sides as ID for simplicity in this test
+		renderer.add_die(sides, sides, 0)
 		
 		results[sides] = {}
 		for f in range(1, sides + 1):
@@ -57,10 +49,9 @@ func _roll_batch():
 	roll_count += 1
 	dice_finished_in_batch = 0
 	
-	for sides in die_renderers:
-		die_renderers[sides].roll(0)
+	renderer.roll_all()
 
-func _on_roll_finished(value: int, sides: int):
+func _on_roll_finished(sides: int, value: int):
 	if results[sides].has(value):
 		results[sides][value] += 1
 	else:

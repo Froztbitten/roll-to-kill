@@ -132,12 +132,8 @@ func _show_effect_options(die: Die):
 func _on_effect_chosen(effect: DieFaceEffect):
 	if not selected_die: return
 	
-	# Pick a random face
-	var target_face = selected_die.faces.pick_random()
-	
-	# Apply effect (replace existing)
-	target_face.effects.clear()
-	target_face.effects.append(effect)
+	# Apply effect to die
+	selected_die.effect = effect
 	
 	message_label.text = "Inscribed %s onto D%d." % [effect.name, selected_die.sides]
 	effect_selection_overlay.visible = false

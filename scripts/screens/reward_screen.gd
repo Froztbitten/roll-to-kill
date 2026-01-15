@@ -42,11 +42,8 @@ func display_rewards(dice_options: Array[Die]):
 			var display: RewardsDieDisplay = dice_displays[i]
 			
 			var is_upgrade = die.has_meta("is_upgrade_reward")
-			var upgraded_faces_info = []
-			if is_upgrade:
-				upgraded_faces_info = die.get_meta("upgraded_faces_info", [])
 			
-			display.set_die(die, false, is_upgrade, upgraded_faces_info, true)
+			display.set_die(die, false, is_upgrade, [], true)
 	_on_viewport_size_changed()
 
 func _on_die_display_clicked(display: RewardsDieDisplay):	

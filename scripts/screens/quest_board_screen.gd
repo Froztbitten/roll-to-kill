@@ -204,33 +204,28 @@ func _roll_quest_dice():
 	hbox.add_theme_constant_override("separation", -100)
 	center_cont.add_child(hbox)
 	
-	var renderers = []
-	for i in range(3):
-		var disp = DIE_RENDERER_SCENE.instantiate()
-		disp.custom_minimum_size = Vector2(300, 300)
-		hbox.add_child(disp)
-		disp.configure(6) # Quest dice are d6
-		renderers.append(disp)
-
-	# Connect signals and start rolling immediately
+	var disp = DIE_RENDERER_SCENE.instantiate()
+	disp.custom_minimum_size = Vector2(600, 600)
+	hbox.add_child(disp)
+	
 	var results_map = {}
 	var finished_count = 0
-	for disp in renderers:
-		disp.roll_finished.connect(func(val): 
-			results_map[disp] = val
-			finished_count += 1
-			
-			# If all dice are done, update pending results immediately to prevent race condition
-			if finished_count == 3:
-				var temp_results: Array[int] = []
-				for r in renderers:
-					if results_map.has(r):
-						temp_results.append(results_map[r])
-					else:
-						temp_results.append(1) # Fallback
-				pending_dice_results = temp_results
-		)
-		disp.roll(0, 0.8)
+	
+	disp.roll_finished.connect(func(id, val): 
+		results_map[id] = val
+		finished_count += 1
+		# If all dice are done, update pending results immediately
+		if finished_count == 3:
+			var temp_results: Array[int] = []
+			for i in range(3):
+				temp_results.append(results_map.get(i, 1))
+			pending_dice_results = temp_results
+	)
+
+	for i in range(3):
+		disp.add_die(i, 6, 0) # ID is index, 6 sides
+	
+	disp.roll_all()
 	
 	# Animate in while rolling
 	hbox.scale = Vector2.ZERO
@@ -248,9 +243,7 @@ func _roll_quest_dice():
 	
 	# Force finish any stuck dice
 	if finished_count < 3:
-		for disp in renderers:
-			if not results_map.has(disp):
-				disp.skip_animation()
+		disp.skip_animation()
 		# Allow signals to propagate
 		await get_tree().process_frame
 	
@@ -258,14 +251,9 @@ func _roll_quest_dice():
 	var start_positions = []
 	
 	# Collect results in order of renderers (Left to Right)
-	for disp in renderers:
-		var val = 1
-		if results_map.has(disp):
-			val = results_map[disp]
-		else:
-			val = disp._target_value if disp._target_value > 0 else 1
-		results.append(val)
-		start_positions.append(disp.get_die_screen_position())
+	for i in range(3):
+		results.append(results_map.get(i, 1))
+		start_positions.append(disp.get_die_screen_position(i))
 	
 	pending_dice_results = results.duplicate()
 	

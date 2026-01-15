@@ -61,8 +61,8 @@ func update_display():
 	# By default, turn off the glow by setting its intensity to 0.
 	icon_texture.material.set_shader_parameter("glow_intensity", 0.0)
 	# If the rolled face has an effect, turn on the glow and set its color.
-	if die.result_face and not die.result_face.effects.is_empty():
-		var effect: DieFaceEffect = die.result_face.effects[0]
+	if die.effect:
+		var effect: DieFaceEffect = die.effect
 		icon_texture.material.set_shader_parameter("glow_color", effect.highlight_color)
 		icon_texture.material.set_shader_parameter("glow_intensity", 4.0) # Use the shader's default intensity.
 		effect_name_label.text = effect.name
@@ -111,8 +111,8 @@ func update_display():
 		cell.add_theme_stylebox_override("panel", default_style)
 		
 		# If the face has an effect, give it a special highlight
-		if not face.effects.is_empty():
-			var effect: DieFaceEffect = face.effects[0]
+		if die.effect:
+			var effect: DieFaceEffect = die.effect
 			var effect_style = default_style.duplicate() as StyleBoxFlat
 			effect_style.bg_color = effect.highlight_color
 			cell.add_theme_stylebox_override("panel", effect_style)
@@ -156,8 +156,8 @@ func _on_hover_timer_timeout():
 	# This function is called after the hover delay.
 	# Check if the rolled face has an effect and a description.
 	if not is_inside_tree(): return
-	if die and die.result_face and not die.result_face.effects.is_empty():
-		var effect: DieFaceEffect = die.result_face.effects[0]
+	if die and die.effect:
+		var effect: DieFaceEffect = die.effect
 		if not effect.description.is_empty():
 			var description_text = effect.description
 			# Replace placeholders with actual calculated values.
@@ -194,15 +194,15 @@ func _gui_input(event: InputEvent):
 			emit_signal("die_clicked", self)
 			get_viewport().set_input_as_handled()
 		elif event.button_index == MOUSE_BUTTON_RIGHT and event.is_pressed():
-			if die and die.result_face and not die.result_face.effects.is_empty():
-				for effect in die.result_face.effects:
-					if effect.process_effect == EffectLogic.wormhole:
-						var context = {"die": die}
-						EffectLogic.wormhole(0, player, null, context)
-						update_display()
-						emit_signal("die_value_changed", self)
-						get_viewport().set_input_as_handled()
-						return # Effect triggered, stop processing.
+			if die and die.effect:
+				var effect = die.effect
+				if effect.process_effect == EffectLogic.wormhole:
+					var context = {"die": die}
+					EffectLogic.wormhole(0, player, null, context)
+					update_display()
+					emit_signal("die_value_changed", self)
+					get_viewport().set_input_as_handled()
+					return # Effect triggered, stop processing.
 
 func _notification(what):
 	if what == NOTIFICATION_MOUSE_ENTER:

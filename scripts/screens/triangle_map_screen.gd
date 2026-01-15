@@ -571,8 +571,7 @@ func _generate_dice_shop_inventory():
 		elif type == "effect":
 			var effect = EffectLibrary.get_random_effect_for_die(sides)
 			if effect:
-				for face in die.faces:
-					face.effects.append(effect)
+				die.effect = effect
 				cost += 75 * effect.tier # More expensive for better effects on all faces
 				
 				# Rare chance for custom values AND effect
@@ -781,10 +780,8 @@ func _on_forge_die_clicked(die: Die):
 	
 	# Get existing effects on this die to disable duplicates
 	var existing_effect_names = []
-	for face in die.faces:
-		for eff in face.effects:
-			if not existing_effect_names.has(eff.name):
-				existing_effect_names.append(eff.name)
+	if die.effect:
+		existing_effect_names.append(die.effect.name)
 	
 	# Get 3 random effects suitable for this die
 	var available_effects = []
@@ -827,8 +824,7 @@ func _on_forge_promote_confirm(die: Die, cost: int):
 func _on_forge_effect_chosen(effect: DieFaceEffect, cost: int):
 	if player.gold >= cost:
 		player.add_gold(-cost)
-		for face in selected_forge_die.faces:
-			face.effects.append(effect)
+		selected_forge_die.effect = effect
 		forge_action_overlay.visible = false
 		_refresh_forge_grid()
 
@@ -1921,42 +1917,35 @@ func start_turn():
 	hbox.add_theme_constant_override("separation", 30)
 	center_cont.add_child(hbox)
 	
-	var disp1 = DIE_RENDERER_SCENE.instantiate()
-	var disp2 = DIE_RENDERER_SCENE.instantiate()
+	var disp = DIE_RENDERER_SCENE.instantiate()
+	disp.custom_minimum_size = Vector2(800, 800)
+	hbox.add_child(disp)
 	
-	disp1.custom_minimum_size = Vector2(500, 500)
-	disp2.custom_minimum_size = Vector2(500, 500)
+	# Add 2 d4s
+	disp.add_die(0, 4, 0)
+	disp.add_die(1, 4, 0)
 	
-	hbox.add_child(disp1)
-	hbox.add_child(disp2)
-	
-	disp1.configure(4)
-	disp2.configure(4)
-	disp1.roll(0, 0.8) # Value ignored, physics decides
-	disp2.roll(0, 0.8)
-	
+	disp.roll_all()
+
 	# Animate dice appearing
-	disp1.scale = Vector2.ZERO
-	disp2.scale = Vector2.ZERO
+	disp.scale = Vector2.ZERO
 	
 	var tween = create_tween()
 	current_tween = tween
-	tween.tween_property(disp1, "scale", Vector2(1.5, 1.5), 0.4).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
-	tween.parallel().tween_property(disp2, "scale", Vector2(1.5, 1.5), 0.4).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	tween.tween_property(disp, "scale", Vector2(1.5, 1.5), 0.4).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 	
 	await tween.finished
 	if not is_rolling or roll_id != my_roll_id: return
 	
 	# Wait for physics results
 	var results_map = {}
-	var on_finished = func(val, source): 
-		results_map[source] = val
+	var on_finished = func(id, val): 
+		results_map[id] = val
 		# Update pending result immediately if we have all dice, to prevent race condition on skip
 		if results_map.size() == 2:
-			pending_roll_result = results_map.get(disp1, 0) + results_map.get(disp2, 0)
+			pending_roll_result = results_map.get(0, 0) + results_map.get(1, 0)
 			
-	disp1.roll_finished.connect(on_finished.bind(disp1))
-	disp2.roll_finished.connect(on_finished.bind(disp2))
+	disp.roll_finished.connect(on_finished)
 	
 	var timeout_frames = 600 # 10 seconds safety timeout
 	while results_map.size() < 2 and is_rolling and roll_id == my_roll_id and timeout_frames > 0:
@@ -1965,14 +1954,14 @@ func start_turn():
 	
 	if timeout_frames <= 0 and is_rolling:
 		print("Dice roll timed out in TriangleMapScreen")
-		if not results_map.has(disp1): results_map[disp1] = disp1._target_value if disp1._target_value > 0 else 1
-		if not results_map.has(disp2): results_map[disp2] = disp2._target_value if disp2._target_value > 0 else 1
+		if not results_map.has(0): results_map[0] = 1
+		if not results_map.has(1): results_map[1] = 1
 		
 	if not is_rolling or roll_id != my_roll_id: return
 	
 	# Sync pending result so skipping logic has the right value
-	var val1 = results_map.get(disp1, 1)
-	var val2 = results_map.get(disp2, 1)
+	var val1 = results_map.get(0, 1)
+	var val2 = results_map.get(1, 1)
 	pending_roll_result = val1 + val2
 	
 	# Small pause to let the player see the result on the dice
@@ -2008,16 +1997,15 @@ func start_turn():
 	label2.pivot_offset = label2.size / 2.0
 	
 	# Position labels at the dice center
-	label1.global_position = disp1.get_die_screen_position() - label1.pivot_offset
-	label2.global_position = disp2.get_die_screen_position() - label2.pivot_offset
+	label1.global_position = disp.get_die_screen_position(0) - label1.pivot_offset
+	label2.global_position = disp.get_die_screen_position(1) - label2.pivot_offset
 	
 	var anim_tween = create_tween()
 	current_tween = anim_tween
 	anim_tween.set_parallel(true)
 	
 	# 1. Fade OUT the dice display & Fade IN the numbers + Float Up
-	anim_tween.tween_property(disp1, "modulate:a", 0.0, 0.4)
-	anim_tween.tween_property(disp2, "modulate:a", 0.0, 0.4)
+	anim_tween.tween_property(disp, "modulate:a", 0.0, 0.4)
 	
 	for lbl in temp_labels:
 		anim_tween.tween_property(lbl, "modulate:a", 1.0, 0.3)
