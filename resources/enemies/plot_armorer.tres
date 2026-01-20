@@ -7,14 +7,17 @@
 [sub_resource type="Resource" id="Resource_ipti5"]
 script = ExtResource("1_tbf7h")
 action_name = "Plot Twist"
-action_type = 4
 dice_count = 1
+status_id = "piercing"
+duration = 1
 
 [sub_resource type="Resource" id="Resource_ngoro"]
 script = ExtResource("1_tbf7h")
 action_name = "Monologue"
 action_type = 6
 dice_sides = 0
+status_id = "inspired"
+duration = 1
 
 [sub_resource type="Resource" id="Resource_qwx8c"]
 script = ExtResource("1_tbf7h")
@@ -25,8 +28,7 @@ dice_sides = 12
 [sub_resource type="Resource" id="Resource_aj3ev"]
 script = ExtResource("1_tbf7h")
 action_name = "Main Character Energy"
-action_type = 3
-dice_sides = 0
+action_type = 6
 status_id = "main_character_energy"
 charges = 1
 
@@ -34,10 +36,11 @@ charges = 1
 script = ExtResource("2_tbcas")
 enemy_name = "Plot Armorer"
 sprite_texture = ExtResource("3_nqgan")
-minimum_hp = 10
-gold_minimum = 2
-gold_dice = 6
-hp_dice_count = 10
-hp_dice_sides = 4
+minimum_hp = 5
+gold_minimum = 12
+gold_dice = 4
+gold_dice_sides = 12
+hp_dice_count = 4
+hp_dice_sides = 10
 action_pool = Array[ExtResource("1_tbf7h")]([SubResource("Resource_ipti5"), SubResource("Resource_ngoro"), SubResource("Resource_qwx8c")])
 passives = Array[ExtResource("1_tbf7h")]([SubResource("Resource_aj3ev")])

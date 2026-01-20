@@ -10,3 +10,5 @@ enemies = Array[Dictionary]([{
 "max": 1.0,
 "min": 1.0
 }])
+node_type = "tutorial"
+region = "rpg"

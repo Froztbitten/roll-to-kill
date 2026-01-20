@@ -1,0 +1,39 @@
+[gd_resource type="Resource" script_class="EnemyData" load_steps=8 format=3 uid="uid://bwr5g3ijk151i"]
+
+[ext_resource type="Script" uid="uid://djeev1jhalfah" path="res://scripts/character/enemy/enemy_action.gd" id="1_lxilf"]
+[ext_resource type="Script" uid="uid://dv6r7tro15lnf" path="res://scripts/character/enemy/enemy_data.gd" id="2_llmkn"]
+[ext_resource type="Texture2D" uid="uid://bslv2gdd45abe" path="res://assets/ai/characters/greedy_gluttonous_gourmand.png" id="3_j6en8"]
+
+[sub_resource type="Resource" id="Resource_ts1yo"]
+script = ExtResource("1_lxilf")
+action_name = "Belly Flop"
+dice_count = 1
+
+[sub_resource type="Resource" id="Resource_h3b0j"]
+script = ExtResource("1_lxilf")
+action_name = "Roly-Poly"
+dice_count = 1
+dice_sides = 4
+
+[sub_resource type="Resource" id="Resource_ce0bk"]
+script = ExtResource("1_lxilf")
+action_name = "Shock Absorb"
+action_type = 1
+dice_count = 2
+dice_sides = 4
+
+[sub_resource type="Resource" id="Resource_vnxsn"]
+script = ExtResource("1_lxilf")
+action_name = "Gluttony"
+action_type = 6
+
+[resource]
+script = ExtResource("2_llmkn")
+enemy_name = "Greedy Gluttonous Gourmand"
+sprite_texture = ExtResource("3_j6en8")
+minimum_hp = 10
+gold_dice_sides = 0
+hp_dice_count = 5
+hp_dice_sides = 10
+action_pool = Array[ExtResource("1_lxilf")]([SubResource("Resource_ts1yo"), SubResource("Resource_h3b0j"), SubResource("Resource_ce0bk")])
+passives = Array[ExtResource("1_lxilf")]([SubResource("Resource_vnxsn")])

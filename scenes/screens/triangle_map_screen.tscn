@@ -1,7 +1,7 @@
 [gd_scene load_steps=3 format=3]
 
 [ext_resource type="Script" path="res://scripts/screens/triangle_map_screen.gd" id="1_script"]
-[ext_resource type="Texture2D" uid="uid://bulxxtlabqtiy" path="res://assets/ai/characters/icon.svg" id="2_icon"]
+[ext_resource type="Texture2D" path="res://assets/ai/characters/player.png" id="2_icon"]
 
 [node name="TriangleMapScreen" type="Control"]
 layout_mode = 3
@@ -34,9 +34,9 @@ custom_minimum_size = Vector2(1200, 1200)
 layout_mode = 2
 
 [node name="PlayerIcon" type="TextureRect" parent="ScrollContainer/MapContainer"]
-custom_minimum_size = Vector2(30, 30)
-offset_right = 30.0
-offset_bottom = 30.0
+custom_minimum_size = Vector2(60, 60)
+offset_right = 60.0
+offset_bottom = 60.0
 texture = ExtResource("2_icon")
 expand_mode = 1
 stretch_mode = 5

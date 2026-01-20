@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="EncounterData" load_steps=4 format=3 uid="uid://oeh2qtm11qhx"]
+
+[ext_resource type="Resource" uid="uid://bwr5g3ijk151i" path="res://resources/enemies/greedy_gluttonous_gourmand.tres" id="1_dobbj"]
+[ext_resource type="Resource" uid="uid://mnbpg1j1f15f" path="res://resources/enemies/gastrognome.tres" id="2_ivod2"]
+[ext_resource type="Script" uid="uid://ck2drfaun3f25" path="res://scripts/encounter_data.gd" id="3_33c8a"]
+
+[resource]
+script = ExtResource("3_33c8a")
+encounter_type = 1
+enemies = Array[Dictionary]([{
+"data": ExtResource("1_dobbj"),
+"max": 3.0,
+"min": 2.0
+}, {
+"data": ExtResource("2_ivod2"),
+"max": 1.0,
+"min": 1.0
+}])
+node_type = "goblin_camp"
+region = "rpg"

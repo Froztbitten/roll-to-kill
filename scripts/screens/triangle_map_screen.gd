@@ -80,6 +80,12 @@ var view_only = false
 var close_map_button: Button
 var limit_container: MarginContainer
 var log_margin: MarginContainer
+var current_highlighted_nodes = {} # node -> original_color
+var current_highlighted_visuals = {} # "icon" -> icon_node, "label" -> label_node
+var current_highlight_identifier = null
+var highlight_clear_timer: Timer
+var boss_room_nodes = []
+var decayed_nodes = {}
 
 func _input(event):
 	if not visible: return
@@ -141,7 +147,7 @@ func _ready():
 	turn_limit_label.add_theme_font_size_override("font_size", 32)
 	turn_limit_label.add_theme_color_override("font_outline_color", Color.BLACK)
 	turn_limit_label.add_theme_constant_override("outline_size", 4)
-	turn_limit_label.text = "Turns: 20"
+	turn_limit_label.text = "Turn: 0"
 	limit_container.add_child(turn_limit_label)
 	
 	# Quest Log (Top Left)
@@ -224,6 +230,12 @@ func _ready():
 	close_map_button.pressed.connect(func(): visible = false)
 	close_map_button.visible = false
 	ui_layer.add_child(close_map_button)
+	
+	highlight_clear_timer = Timer.new()
+	highlight_clear_timer.wait_time = 0.05
+	highlight_clear_timer.one_shot = true
+	highlight_clear_timer.timeout.connect(_perform_clear_highlights)
+	add_child(highlight_clear_timer)
 	
 	get_viewport().size_changed.connect(_on_viewport_size_changed)
 	_on_viewport_size_changed()
@@ -1006,17 +1018,13 @@ func _process(delta):
 							uvs[i] += Vector2(delta * 0.1, delta * 0.05)
 						sub.uv = uvs
 	
-	# Animate Turn Limit Warning
-	if turns_left <= 5 and turn_limit_label:
-		var intensity = (6.0 - float(turns_left)) * 0.5
-		turn_limit_label.pivot_offset = turn_limit_label.size / 2.0
-		turn_limit_label.rotation_degrees = randf_range(-1.0, 1.0) * intensity
-		# Note: Scale and Color are set in start_turn()
 
 func generate_new_map():
 	grid_data.clear()
 	current_node = null
 	explored_nodes.clear()
+	boss_room_nodes.clear()
+	decayed_nodes.clear()
 	
 	# 1. Initialize Grid
 	for child in map_container.get_children():
@@ -1047,6 +1055,7 @@ func generate_new_map():
 				"pos": Vector2(x_pos, y_pos),
 				"points_up": points_up,
 				"cleared": false,
+				"defeated": false,
 				"button": null
 			}
 			grid_data[Vector2(row, col)] = node
@@ -1095,6 +1104,28 @@ func generate_new_map():
 	var dwarven_forge_nodes = _pick_random_cluster(2, ["start", "town", "goblin_camp", "dragon_roost", "crypt", "safe_path"], valid_forge_starts)
 	for n in dwarven_forge_nodes: n.type = "dwarven_forge"
 
+	# 7.5 Place Boss Room (2 triangles, near corners)
+	var corners = [
+		grid_data[Vector2(0, 0)],
+		grid_data[Vector2(0, grid_width - 1)],
+		grid_data[Vector2(grid_height - 1, 0)],
+		grid_data[Vector2(grid_height - 1, grid_width - 1)]
+	]
+	var valid_boss_starts = []
+	for corner in corners:
+		var near_corner = _get_nodes_in_radius([corner], 3)
+		for n in near_corner:
+			valid_boss_starts.append(n)
+	var boss_room_nodes = _pick_random_cluster(2, ["start", "town", "goblin_camp", "dragon_roost", "crypt", "dwarven_forge", "safe_path"], valid_boss_starts)
+	
+	# Fallback: If corner placement fails, place randomly anywhere valid
+	if boss_room_nodes.is_empty():
+		print("Warning: Could not place Boss Room near corners. Placing randomly.")
+		boss_room_nodes = _pick_random_cluster(2, ["start", "town", "goblin_camp", "dragon_roost", "crypt", "dwarven_forge", "safe_path"])
+	
+	for n in boss_room_nodes: n.type = "final_boss"
+	self.boss_room_nodes = boss_room_nodes
+
 	# 8. Generate Terrain & Enforce Constraints
 	var goblin_zone = _get_nodes_in_radius(goblin_nodes, 2)
 	var dragon_zone = _get_nodes_in_radius(dragon_nodes, 2)
@@ -1102,6 +1133,7 @@ func generate_new_map():
 	var dwarven_forge_zone = _get_nodes_in_radius(dwarven_forge_nodes, 2)
 	
 	# Fill constraints first
+	# Note: Boss Room has no specific terrain constraints other than location
 	# Goblin: Need 1 water (clump of 3)
 	# Ensure we don't place water in the crypt zone
 	var water_candidates = goblin_zone.filter(func(n): return n.type == "normal" and not n in crypt_zone)
@@ -1159,6 +1191,7 @@ func draw_map():
 	var dragon_nodes_for_visuals = []
 	var town_nodes_for_visuals = []
 	var dwarven_forge_nodes_for_visuals = []
+	var boss_room_nodes_for_visuals = []
 	
 	var shadow_container = CanvasGroup.new()
 	shadow_container.modulate = Color(1, 1, 1, 0.3)
@@ -1282,8 +1315,11 @@ func draw_map():
 		elif node.type == "dwarven_forge":
 			poly.color = Color(0.55, 0.27, 0.07, 1.0) # Bronze/SaddleBrown
 			dwarven_forge_nodes_for_visuals.append(node)
+		elif node.type == "final_boss":
+			poly.color = Color(0.5, 0.0, 0.5, 1.0) # Purple
+			boss_room_nodes_for_visuals.append(node)
 		
-		if node.type == "crypt" or node.type == "goblin_camp" or node.type == "dragon_roost" or node.type == "town" or node.type == "mountain" or node.type == "dwarven_forge":
+		if node.type == "crypt" or node.type == "goblin_camp" or node.type == "dragon_roost" or node.type == "town" or node.type == "mountain" or node.type == "dwarven_forge" or node.type == "final_boss":
 				# Draw outlines only on edges NOT shared with another node of the same type
 				var r = node.row
 				var c = node.col
@@ -1318,22 +1354,35 @@ func draw_map():
 							line.default_color = Color(0.2, 0.2, 0.2, 1.0) # Dark grey border
 						elif node.type == "dwarven_forge":
 							line.default_color = Color(0.3, 0.1, 0.0, 1.0) # Dark Rust border
+						elif node.type == "final_boss":
+							line.default_color = Color.BLACK # Black border
 						line.position = center_offset
 						btn.add_child(line)
-		elif node.type == "start":
-			poly.color = Color(1.0, 1.0, 1.0, 1.0)
-			var lbl = Label.new()
-			lbl.text = node.type.capitalize().replace("_", " ")
-			lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-			lbl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-			lbl.add_theme_font_size_override("font_size", 14)
-			lbl.add_theme_color_override("font_outline_color", Color.BLACK)
-			lbl.add_theme_constant_override("outline_size", 4)
-			lbl.position = center_offset - Vector2(50, 15)
-			lbl.size = Vector2(100, 30)
-			lbl.z_index = 10
-			btn.add_child(lbl)
-		elif node.type == "road":
+		
+		# Defeated Visual (X)
+		if node.type in ["crypt", "goblin_camp", "dragon_roost", "dwarven_forge", "rare_combat", "boss", "final_boss"]:
+			var x_node = Node2D.new()
+			x_node.name = "DefeatedX"
+			x_node.visible = node.get("defeated", false)
+			x_node.position = center_offset
+			x_node.z_index = 25
+			
+			var l1 = Line2D.new()
+			l1.points = [Vector2(-25, -25), Vector2(25, 25)]
+			l1.width = 6
+			l1.default_color = Color(0.9, 0.1, 0.1, 0.8)
+			x_node.add_child(l1)
+			
+			var l2 = Line2D.new()
+			l2.points = [Vector2(25, -25), Vector2(-25, 25)]
+			l2.width = 6
+			l2.default_color = Color(0.9, 0.1, 0.1, 0.8)
+			x_node.add_child(l2)
+			
+			btn.add_child(x_node)
+			node["defeated_visual"] = x_node
+
+		elif node.type == "start" or node.type == "road":
 			poly.color = Color.WHITE
 			poly.texture = dirt_texture
 			poly.texture_repeat = CanvasItem.TEXTURE_REPEAT_ENABLED
@@ -1378,6 +1427,7 @@ func draw_map():
 		icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 		icon.size = Vector2(40, 40)
+		icon.pivot_offset = icon.size / 2.0
 		icon.position = center_pos - Vector2(20, 20)
 		icon.z_index = 20
 		icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -1391,6 +1441,7 @@ func draw_map():
 		lbl.add_theme_color_override("font_outline_color", Color.BLACK)
 		lbl.add_theme_constant_override("outline_size", 4)
 		lbl.size = Vector2(100, 30)
+		lbl.pivot_offset = lbl.size / 2.0
 		lbl.position = center_pos - Vector2(50, -15) # Centered on icon
 		lbl.z_index = 21
 		map_container.add_child(lbl)
@@ -1408,6 +1459,7 @@ func draw_map():
 		icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 		icon.size = Vector2(40, 40)
+		icon.pivot_offset = icon.size / 2.0
 		icon.position = center_pos - Vector2(20, 20)
 		icon.z_index = 20
 		icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -1421,6 +1473,7 @@ func draw_map():
 		lbl.add_theme_color_override("font_outline_color", Color.BLACK)
 		lbl.add_theme_constant_override("outline_size", 4)
 		lbl.size = Vector2(100, 30)
+		lbl.pivot_offset = lbl.size / 2.0
 		lbl.position = center_pos - Vector2(50, -15) # Centered on icon
 		lbl.z_index = 21
 		map_container.add_child(lbl)
@@ -1438,6 +1491,7 @@ func draw_map():
 		icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 		icon.size = Vector2(40, 40)
+		icon.pivot_offset = icon.size / 2.0
 		icon.position = center_pos - Vector2(20, 20)
 		icon.z_index = 20
 		icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -1451,6 +1505,7 @@ func draw_map():
 		lbl.add_theme_color_override("font_outline_color", Color.BLACK)
 		lbl.add_theme_constant_override("outline_size", 4)
 		lbl.size = Vector2(100, 30)
+		lbl.pivot_offset = lbl.size / 2.0
 		lbl.position = center_pos - Vector2(50, -15) # Centered on icon
 		lbl.z_index = 21
 		map_container.add_child(lbl)
@@ -1468,6 +1523,7 @@ func draw_map():
 		icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 		icon.size = Vector2(40, 40)
+		icon.pivot_offset = icon.size / 2.0
 		icon.position = center_pos - Vector2(20, 20)
 		icon.z_index = 20
 		icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -1481,6 +1537,7 @@ func draw_map():
 		lbl.add_theme_color_override("font_outline_color", Color.BLACK)
 		lbl.add_theme_constant_override("outline_size", 4)
 		lbl.size = Vector2(100, 30)
+		lbl.pivot_offset = lbl.size / 2.0
 		lbl.position = center_pos - Vector2(50, -15) # Centered on icon
 		lbl.z_index = 21
 		map_container.add_child(lbl)
@@ -1498,6 +1555,7 @@ func draw_map():
 		icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 		icon.size = Vector2(40, 40)
+		icon.pivot_offset = icon.size / 2.0
 		icon.position = center_pos - Vector2(20, 20)
 		icon.z_index = 20
 		icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -1511,10 +1569,43 @@ func draw_map():
 		lbl.add_theme_color_override("font_outline_color", Color.BLACK)
 		lbl.add_theme_constant_override("outline_size", 4)
 		lbl.size = Vector2(120, 30)
+		lbl.pivot_offset = lbl.size / 2.0
 		lbl.position = center_pos - Vector2(60, -15) # Centered on icon
 		lbl.z_index = 21
 		map_container.add_child(lbl)
 		special_visuals["dwarven_forge"] = {"icon": icon, "label": lbl, "nodes": dwarven_forge_nodes_for_visuals}
+
+	# Draw Boss Room Icon and Title centered
+	if not boss_room_nodes_for_visuals.is_empty():
+		var center_pos = Vector2.ZERO
+		for n in boss_room_nodes_for_visuals:
+			center_pos += n.pos
+		center_pos /= boss_room_nodes_for_visuals.size()
+		
+		var icon = TextureRect.new()
+		icon.texture = load("res://assets/ai/ui/boss_encounter.svg")
+		icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		icon.size = Vector2(40, 40)
+		icon.pivot_offset = icon.size / 2.0
+		icon.position = center_pos - Vector2(20, 20)
+		icon.z_index = 20
+		icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		map_container.add_child(icon)
+		
+		var lbl = Label.new()
+		lbl.text = "Boss Room"
+		lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		lbl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		lbl.add_theme_font_size_override("font_size", 14)
+		lbl.add_theme_color_override("font_outline_color", Color.BLACK)
+		lbl.add_theme_constant_override("outline_size", 4)
+		lbl.size = Vector2(100, 30)
+		lbl.pivot_offset = lbl.size / 2.0
+		lbl.position = center_pos - Vector2(50, -15) # Centered on icon
+		lbl.z_index = 21
+		map_container.add_child(lbl)
+		special_visuals["final_boss"] = {"icon": icon, "label": lbl, "nodes": boss_room_nodes_for_visuals}
 		
 	update_visuals()
 
@@ -1536,6 +1627,8 @@ func update_visuals():
 			btn.disabled = true
 		else:
 			btn.disabled = false
+			if node.has("defeated_visual"):
+				node["defeated_visual"].visible = node.get("defeated", false)
 
 func is_neighbor(node_a, node_b):
 	var r1 = node_a.row
@@ -1786,7 +1879,7 @@ func find_path(from_node, to_node):
 			if next.type == "mountain" or next.type == "water":
 				continue
 			
-			if next.type != "normal" and next.type != "road" and next.type != "start" and next != to_node:
+			if next.type != "normal" and next.type != "road" and next.type != "start" and next != to_node and not next.get("defeated", false):
 				continue
 
 			if not came_from.has(next):
@@ -1818,7 +1911,7 @@ func get_quest_directions() -> Dictionary:
 		if node.type == "town":
 			town_center += node.pos
 			town_count += 1
-		elif node.type in ["goblin_camp", "crypt", "dragon_roost", "dwarven_forge"]:
+		elif node.type in ["goblin_camp", "crypt", "dragon_roost", "dwarven_forge", "final_boss"]:
 			if not type_centers.has(node.type):
 				type_centers[node.type] = Vector2.ZERO
 				type_counts[node.type] = 0
@@ -1873,22 +1966,16 @@ func start_turn():
 	
 	if current_roll_overlay and is_instance_valid(current_roll_overlay):
 		current_roll_overlay.queue_free()
+	
+	turns_left -= 1
+	
+	turn_limit_label.text = "Turns: %d" % max(0, turns_left)
+	turn_limit_label.modulate = Color.WHITE
+	turn_limit_label.scale = Vector2.ONE
 
 	if turns_left <= 0:
-		print("Game Over - Out of turns")
-		# Handle game over logic here if needed
-		return
-
-	turns_left -= 1
-	turn_limit_label.text = "Turns: %d" % turns_left
-	
-	if turns_left <= 5:
-		var t = 1.0 - (float(turns_left) / 5.0)
-		turn_limit_label.modulate = Color.WHITE.lerp(Color(1, 0, 0), t)
-		turn_limit_label.scale = Vector2.ONE * (1.0 + t * 0.5)
-	else:
-		turn_limit_label.modulate = Color.WHITE
-		turn_limit_label.scale = Vector2.ONE
+		await _process_decay()
+		if not visible: return
 
 	roll_id += 1
 	var my_roll_id = roll_id
@@ -2056,12 +2143,92 @@ func start_turn():
 	current_roll_overlay = null
 	is_rolling = false
 
+func _process_decay():
+	var new_decayed = []
+	
+	if decayed_nodes.is_empty():
+		# Initial Decay: 3 furthest tiles from boss room
+		if boss_room_nodes.is_empty(): return
+		
+		# Calculate distances from boss room
+		var distances = {}
+		var queue = []
+		for bn in boss_room_nodes:
+			queue.append({"node": bn, "dist": 0})
+			distances[bn] = 0
+			
+		var head = 0
+		while head < queue.size():
+			var curr = queue[head]
+			head += 1
+			
+			var neighbors = get_neighbors(curr.node)
+			for n in neighbors:
+				if not distances.has(n):
+					distances[n] = curr.dist + 1
+					queue.append({"node": n, "dist": curr.dist + 1})
+		
+		# Sort nodes by distance descending
+		var sorted_nodes = distances.keys()
+		sorted_nodes.sort_custom(func(a, b): return distances[a] > distances[b])
+		
+		# Pick top 3 valid nodes (not mountains/water/boss)
+		var count = 0
+		for n in sorted_nodes:
+			if n.type != "final_boss":
+				new_decayed.append(n)
+				count += 1
+				if count >= 3: break
+	else:
+		# Spread Decay: All tiles 3 tiles away from existing decayed
+		var spread_sources = decayed_nodes.keys()
+		var candidates = _get_nodes_in_radius(spread_sources, 3)
+		
+		for n in candidates:
+			if not decayed_nodes.has(n) and n.type != "final_boss":
+				new_decayed.append(n)
+
+	# Apply Decay
+	for n in new_decayed:
+		decayed_nodes[n] = true
+		_animate_decay(n)
+	
+	if not new_decayed.is_empty():
+		await get_tree().create_timer(1.0).timeout
+		
+	# Check if player is caught
+	if current_node and decayed_nodes.has(current_node):
+		print("Player caught in decay! Triggering boss fight.")
+		# Find a boss room node to trigger the encounter
+		var boss_node = null
+		if not boss_room_nodes.is_empty():
+			boss_node = boss_room_nodes[0]
+		else:
+			# Fallback data if boss room nodes are missing
+			boss_node = {"type": "final_boss", "pos": Vector2.ZERO, "row": 0, "col": 0}
+		
+		if boss_node:
+			emit_signal("node_selected", boss_node)
+
+func _animate_decay(node):
+	if not node.has("bg") or not node.bg: return
+	
+	var poly = node.bg
+	var tween = create_tween()
+	
+	# Flash purple then turn dark
+	tween.tween_property(poly, "color", Color(0.8, 0.0, 0.8), 0.5).set_trans(Tween.TRANS_SINE)
+	tween.tween_property(poly, "color", Color(0.1, 0.0, 0.1), 0.5).set_trans(Tween.TRANS_SINE)
+	
+	# Add a visual marker if needed, or just rely on color
+	# Do NOT change node.type here, as it breaks MainGame logic. Rely on decayed_nodes set.
+
 func _on_end_turn_pressed():
 	start_turn()
 
 func get_best_path_to(target_node):
 	var source_nodes = [current_node]
-	if current_node and current_node.type in ["town", "goblin_camp", "dragon_roost", "crypt", "dwarven_forge"]:
+	if current_node and current_node.type in ["town", "goblin_camp", "dragon_roost", "crypt", "dwarven_forge", "final_boss"]:
 		source_nodes = []
 		for pos in grid_data:
 			var n = grid_data[pos]
@@ -2069,7 +2236,7 @@ func get_best_path_to(target_node):
 				source_nodes.append(n)
 
 	var target_nodes = [target_node]
-	if target_node.type in ["town", "goblin_camp", "dragon_roost", "crypt", "dwarven_forge"]:
+	if target_node.type in ["town", "goblin_camp", "dragon_roost", "crypt", "dwarven_forge", "final_boss"]:
 		target_nodes = []
 		for pos in grid_data:
 			var n = grid_data[pos]
@@ -2098,6 +2265,7 @@ func get_best_path_to(target_node):
 	return best_path
 
 func _on_node_hover(node):
+	highlight_clear_timer.stop()
 	if view_only: return
 	if is_moving: return
 	if not current_node or node == current_node: return
@@ -2144,12 +2312,12 @@ func _on_node_hover(node):
 		full_distance_label.visible = true
 	else:
 		full_distance_label.visible = false
+		
+	if not display_path.is_empty():
+		_highlight_node_structure(display_path.back())
 
 func _on_node_exit():
-	path_line.clear_points()
-	full_path_line.clear_points()
-	distance_label.visible = false
-	full_distance_label.visible = false
+	highlight_clear_timer.start()
 
 func _on_node_pressed(node):
 	if view_only: return
@@ -2159,6 +2327,8 @@ func _on_node_pressed(node):
 	
 	var path = get_best_path_to(node)
 	if path.is_empty(): return
+	
+	_clear_highlights()
 	
 	var distance = path.size() - 1
 	
@@ -2172,7 +2342,7 @@ func _on_node_pressed(node):
 	
 	# If destination is special, we will lose all remaining moves
 	var destination_node = path.back()
-	if destination_node.type != "normal" and destination_node.type != "road" and destination_node.type != "start":
+	if destination_node.type != "normal" and destination_node.type != "road" and destination_node.type != "start" and not destination_node.get("defeated", false):
 		final_moves_remaining = 0
 	
 	path_line.clear_points()
@@ -2208,8 +2378,21 @@ func _on_node_pressed(node):
 	update_visuals()
 	update_fog()
 	
+	if decayed_nodes.has(current_node):
+		print("Player moved into decay! Triggering boss fight.")
+		var boss_node = null
+		if not boss_room_nodes.is_empty():
+			boss_node = boss_room_nodes[0]
+		else:
+			# Fallback data if boss room nodes are missing
+			boss_node = {"type": "final_boss", "pos": Vector2.ZERO, "row": 0, "col": 0}
+		
+		if boss_node:
+			emit_signal("node_selected", boss_node)
+			return
+	
 	# Apply special node movement penalty
-	if current_node.type != "normal" and current_node.type != "road" and current_node.type != "start":
+	if current_node.type != "normal" and current_node.type != "road" and current_node.type != "start" and not current_node.get("defeated", false):
 		moves_remaining = 0
 		moves_label.text = ""
 	
@@ -2219,7 +2402,7 @@ func _on_node_pressed(node):
 		has_rested_in_town = false
 		spell_shop_generated = false
 		reroll_charms_cost = 25
-	elif current_node.type != "normal" and current_node.type != "road" and current_node.type != "start":
+	elif current_node.type != "normal" and current_node.type != "road" and current_node.type != "start" and not current_node.get("defeated", false):
 		emit_signal("node_selected", current_node)
 	
 	if moves_remaining == 0:
@@ -2232,6 +2415,157 @@ func _on_node_pressed(node):
 			start_turn()
 		
 	is_moving = false
+
+func mark_current_node_defeated():
+	if current_node:
+		current_node.defeated = true
+		update_visuals()
+
+func _highlight_node_structure(target_node):
+	var new_identifier = target_node
+	var structure_found = false
+	
+	# Check special visuals to determine identifier
+	for type in special_visuals:
+		if target_node in special_visuals[type].nodes:
+			new_identifier = type
+			break
+	
+	if typeof(current_highlight_identifier) == typeof(new_identifier) and current_highlight_identifier == new_identifier:
+		return
+
+	_clear_highlights()
+	current_highlight_identifier = new_identifier
+	
+	# Check special visuals
+	for type in special_visuals:
+		var vis = special_visuals[type]
+		if target_node in vis.nodes:
+			structure_found = true
+			
+			# Highlight nodes
+			for n in vis.nodes:
+				if n.has("button") and n.button:
+					current_highlighted_nodes[n] = n.button.modulate
+					n.button.modulate = Color(1.5, 1.5, 1.5) # Brighten
+					_add_highlight_outline(n, vis.nodes)
+			
+			# Enlarge visuals
+			if vis.icon:
+				vis.icon.scale = Vector2(1.3, 1.3)
+				current_highlighted_visuals["icon"] = vis.icon
+			if vis.label:
+				vis.label.scale = Vector2(1.3, 1.3)
+				current_highlighted_visuals["label"] = vis.label
+			break
+	
+	if not structure_found:
+		# Just highlight the single node
+		if target_node.has("button") and target_node.button:
+			current_highlighted_nodes[target_node] = target_node.button.modulate
+			target_node.button.modulate = Color(1.5, 1.5, 1.5)
+			_add_highlight_outline(target_node)
+
+func _clear_highlights():
+	for n in current_highlighted_nodes:
+		if n.has("button") and n.button:
+			n.button.modulate = current_highlighted_nodes[n]
+			_remove_highlight_outline(n)
+			_remove_highlight_outline(n)
+	current_highlighted_nodes.clear()
+	
+	if current_highlighted_visuals.has("icon"):
+		current_highlighted_visuals["icon"].scale = Vector2.ONE
+	if current_highlighted_visuals.has("label"):
+		current_highlighted_visuals["label"].scale = Vector2.ONE
+	current_highlighted_visuals.clear()
+	current_highlight_identifier = null
+
+func _add_highlight_outline(node, group_nodes = []):
+	if not node.has("button") or not node.button: return
+	
+	var btn = node.button
+	if btn.has_node("HighlightContainer"): return
+
+	var container = Node2D.new()
+	container.name = "HighlightContainer"
+	container.position = btn.size / 2.0
+	container.z_index = 10
+	btn.add_child(container)
+
+	var height = triangle_size * sqrt(3) / 2.0
+	var vertices = PackedVector2Array()
+	
+	if node.points_up:
+		vertices = PackedVector2Array([
+			Vector2(0, -2.0 / 3.0 * height),
+			Vector2(triangle_size / 2.0, 1.0 / 3.0 * height),
+			Vector2(-triangle_size / 2.0, 1.0 / 3.0 * height)
+		])
+	else:
+		vertices = PackedVector2Array([
+			Vector2(0, 2.0 / 3.0 * height),
+			Vector2(-triangle_size / 2.0, -1.0 / 3.0 * height),
+			Vector2(triangle_size / 2.0, -1.0 / 3.0 * height)
+		])
+	
+	if group_nodes.is_empty():
+		# Close the loop for single tile
+		var points = vertices.duplicate()
+		points.append(vertices[0])
+		
+		var line = Line2D.new()
+		line.points = points
+		line.width = 4.0
+		line.default_color = Color(1.0, 1.0, 1.0, 0.8)
+		container.add_child(line)
+	else:
+		var r = node.row
+		var c = node.col
+		var neighbors_check = []
+		var edges_indices = []
+		
+		if node.points_up:
+			# Edges: Right (0-1), Bottom (1-2), Left (2-0)
+			neighbors_check = [Vector2(r, c+1), Vector2(r+1, c), Vector2(r, c-1)]
+			edges_indices = [[0, 1], [1, 2], [2, 0]]
+		else:
+			# Edges: Left (0-1), Top (1-2), Right (2-0)
+			neighbors_check = [Vector2(r, c-1), Vector2(r-1, c), Vector2(r, c+1)]
+			edges_indices = [[0, 1], [1, 2], [2, 0]]
+			
+		for i in range(3):
+			var n_pos = neighbors_check[i]
+			var is_shared = false
+			
+			if grid_data.has(n_pos):
+				var neighbor = grid_data[n_pos]
+				if neighbor in group_nodes:
+					is_shared = true
+			
+			if not is_shared:
+				var line = Line2D.new()
+				line.points = PackedVector2Array([vertices[edges_indices[i][0]], vertices[edges_indices[i][1]]])
+				line.width = 4.0
+				line.default_color = Color(1.0, 1.0, 1.0, 0.8)
+				container.add_child(line)
+
+func _remove_highlight_outline(node):
+	if not node.has("button") or not node.button: return
+	var btn = node.button
+	var container = btn.get_node_or_null("HighlightContainer")
+	if container:
+		container.queue_free()
+	var line = btn.get_node_or_null("HighlightOutline") # Legacy cleanup
+	if line:
+		line.queue_free()
+
+func _perform_clear_highlights():
+	path_line.clear_points()
+	full_path_line.clear_points()
+	distance_label.visible = false
+	full_distance_label.visible = false
+	_clear_highlights()
 
 func get_node_by_indices(_layer, _index):
 	return null
@@ -2283,6 +2617,18 @@ func _skip_movement_animation():
 	player_icon.position = current_node.pos - (player_icon.size / 2.0)
 	update_visuals()
 	update_fog()
+	
+	if decayed_nodes.has(current_node):
+		print("Player skipped move into decay! Triggering boss fight.")
+		var boss_node = null
+		if not boss_room_nodes.is_empty():
+			boss_node = boss_room_nodes[0]
+		else:
+			boss_node = {"type": "final_boss", "pos": Vector2.ZERO, "row": 0, "col": 0}
+		
+		if boss_node:
+			emit_signal("node_selected", boss_node)
+			return
 	
 	if current_node.type == "town":
 		town_ui.visible = true

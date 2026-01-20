@@ -6,6 +6,7 @@
 
 [resource]
 script = ExtResource("2_dq5rv")
+encounter_type = 1
 enemies = Array[Dictionary]([{
 "data": ExtResource("1_dq5rv"),
 "max": 1.0,
@@ -15,3 +16,5 @@ enemies = Array[Dictionary]([{
 "max": 2.0,
 "min": 2.0
 }])
+node_type = "dwarven_forge"
+region = "rpg"

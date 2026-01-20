@@ -1,20 +1,22 @@
-Encounter	Enemy	EVal	Min	Max	Enemy	EVal	Min	Max	Enemy	EVal	Min	Max	Enemy	EVal	Min	Max	Enemy	EVal	Min	Max	Enemy	EVal	Min	Max	Enemy	EVal	Min	Max	Min Sum	Max Sum	Avg Sum
-Tutorial	Tutorial Dummy	8.00	1	1																									8.00	8.00	8.00
-Pack O Goblins	Goblin	39.00	2	3	Goblin Archer	34.38	2	3	Gobbo	22.50	1/100	1/100																	146.98	220.35	183.66
-Goblin Warchief	Goblin Warchief	29.90	1	1	Ogre Bodyguard	123.75	2	3																					277.40	401.15	339.28
-Orphanage Memorial	Chicken-less Jockey	38.25	2	3	Femus	33.75	2	3																					144.00	216.00	180.00
-Cryptologist	Cryptologist	345.83	1	1																									345.83	345.83	345.83
-Gnomish Tinkerers	Gnomish Tinkerer	69.75	2	3	Koko the Pelican	16.25	1/6  	1/6  	Wick-wock	#N/A	1/6  	1/6  	Shield Generator	67.50	1/6  	1/6  													#N/A	#N/A	#N/A
-Forge Workers	Pump Operator	155.83	1	1 1/3  	Crucible Runner	110.00	1	1 1/3  	Smithie	261.25	1	1 1/3  																	527.08	702.78	614.93
-Taskmaster	Taskmaster	0.00	1	1	Trusty Hound	0.00	2	2																					0.00	0.00	0.00
-Chivalry Cavalry	White Knight	578.00	1	1	Femme Fatale	74.38	1	1	Keyboard Warrior	260.00	1	1																	912.38	912.38	912.38
-Larp City	LARP-y	182.00	1	2	Plot Armorer	250.67	1	1	Foam Wizard	560.00	1	1																	992.67	1174.67	1083.67
-White Eyes Blue Dragon	White Eyes Blue Dragon	963.33	1	1																									963.33	963.33	963.33
-Evil Dice Tower	Evil Dice Tower	935.31	1	1																									935.31	935.31	935.31
-Back Alley	Drunkard	67.67	1	2	Hobo	36.25	1	2	Mean Mugger	82.17	1	2	Trash Panda	20.25	1/100	1/100													186.29	372.37	279.33
-Vehicular Hiccup	Altimate Driver	337.50	1	1	Drag Racer	354.38	1	1	Speed Demon	387.75	1	1	FAMILY Mechanic	550.00	1	1													1629.63	1629.63	1629.63
-Rippin'	Spinning top of doom	405.00	2	3																									810.00	1215.00	1012.50
-Sentai Soldiers	Sentai Soldier	344.25	5	5																									1721.25	1721.25	1721.25
-Adult Collections	Labubu	#DIV/0!			Funko Pop	#DIV/0!			Shonen Figures	#DIV/0!																			#DIV/0!	#DIV/0!	#DIV/0!
-Occupational Heroes	Firefighter	#DIV/0!			Logger	#DIV/0!			Medic	#DIV/0!																			#DIV/0!	#DIV/0!	#DIV/0!
-Grabby Toddler	Grabby Toddler	#DIV/0!																											#DIV/0!	#DIV/0!	#DIV/0!
+Region	Node Type	Difficulty	Encounter	Enemy	EVal	Min	Max	Enemy	EVal	Min	Max	Enemy	EVal	Min	Max	Enemy	EVal	Min	Max	Enemy	EVal	Min	Max	Enemy	EVal	Min	Max	Enemy	EVal	Min	Max	Min Sum	Max Sum	Avg Sum
+RPG	Tutorial	Tutorial	Tutorial	Tutorial Dummy	8.00	1	1																									8.00	8.00	8.00
+RPG	Goblin Camp	Normal	Pack O Goblins	Goblin	39.00	2	3	Goblin Archer	34.38	2	3	Gobbo	22.50	1/100	1/100																	146.98	220.35	183.66
+RPG	Goblin Camp	Normal	Goblin Warchief	Goblin Warchief	39.65	1	1	Ogre Bodyguard	156.75	2	4																					353.15	666.65	509.90
+RPG	Goblin Camp	Mini-Boss	Goblet Gobblin Goblins	Greedy Gluttonous Gourmand	334.38	2	3	Gastrognome	178.75	1	1			1/100	1/100																	847.50	1181.88	1014.69
+RPG	Crypt	Normal	Orphanage Memorial	Chicken-less Jockey	76.50	2	3	Femus	67.50	2	3																					288.00	432.00	360.00
+RPG	Crypt	Normal	Stereotypical Graveyard	John Smith	121.00	2	3	Jane Doe	132.00	2	3																					506.00	759.00	632.50
+RPG	Crypt	Mini-Boss	Cryptologist	Cryptologist	981.83	1	1																									981.83	981.83	981.83
+RPG	Dwarven Forge	Normal	Gnomish Tinkerers	Gnomish Tinkerer	95.58	2	3	Koko the Pelican	16.25	1/6  	1/6  	Wick-walk	43.75	1/6  	1/6  	Shield Generator	67.50	1/6  	1/6  													212.42	308.00	260.21
+RPG	Dwarven Forge	Normal	Forge Workers	Pump Operator	249.79	1	1 1/3  	Crucible Runner	110.00	1	1 1/3  	Smithie	261.25	1	1 1/3  																	621.04	828.06	724.55
+RPG	Dwarven Forge	Mini-Boss	Taskmaster	Taskmaster	513.00	1	1	Trusty Hound	285.00	2	2																					1083.00	1083.00	1083.00
+RPG	Dragon's Roost	Normal	Chivalry Cavalry	White Knight	656.00	1	1	Femme Fatale	74.38	1	1	Keyboard Warrior	525.00	1	1																	1255.38	1255.38	1255.38
+RPG	Dragon's Roost	Normal	Larp City	LARP-y	244.38	1	2	Plot Armorer	373.50	1	1	Foam Wizard	280.00	1	1																	897.88	1142.25	1020.06
+RPG	Dragon's Roost	Mini-Boss	White Eyes Blue Dragon	White Eyes Blue Dragon	1609.33	1	1																									1609.33	1609.33	1609.33
+RPG	Final Boss	Boss	Evil Dice Tower	Evil Dice Tower	935.31	1	1																									935.31	935.31	935.31
+RPG		Normal	Back Alley	Drunkard	114.79	1	2	Hobo	63.44	1	2	Mean Mugger	82.17	1	2	Trash Panda	20.25	1/100	1/100													260.60	520.99	390.80
+Toy Store		Mini-Boss	Vehicular Hiccup	Altimate Driver	337.50	1	1	Drag Racer	354.38	1	1	Speed Demon	387.75	1	1	FAMILY Mechanic	550.00	1	1													1629.63	1629.63	1629.63
+Toy Store		Normal	Rippin'	Spinning top of doom	405.00	2	3																									810.00	1215.00	1012.50
+Toy Store		Mini-Boss	Sentai Soldiers	Sentai Soldier	344.25	5	5																									1721.25	1721.25	1721.25
+Toy Store		Normal	Adult Collections	Labubu	0.00			Funko Pop	0.00			Shonen Figures	0.00																			0.00	0.00	0.00
+Toy Store		Normal	Occupational Heroes	Firefighter	0.00			Logger	0.00			Medic	0.00																			0.00	0.00	0.00
+Toy Store		Boss	Grabby Toddler	Grabby Toddler	0.00																											0.00	0.00	0.00

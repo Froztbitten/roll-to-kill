@@ -1,0 +1,19 @@
+[gd_resource type="Resource" script_class="EncounterData" load_steps=4 format=3 uid="uid://bstx42movfuv8"]
+
+[ext_resource type="Resource" uid="uid://ceo0r0vrdvapr" path="res://resources/enemies/john_smith.tres" id="1_2rrep"]
+[ext_resource type="Resource" uid="uid://ccnsds57lidp8" path="res://resources/enemies/jane_doe.tres" id="2_ntpgs"]
+[ext_resource type="Script" uid="uid://ck2drfaun3f25" path="res://scripts/encounter_data.gd" id="3_wltyr"]
+
+[resource]
+script = ExtResource("3_wltyr")
+enemies = Array[Dictionary]([{
+"data": ExtResource("1_2rrep"),
+"max": 3.0,
+"min": 2.0
+}, {
+"data": ExtResource("2_ntpgs"),
+"max": 3.0,
+"min": 2.0
+}])
+node_type = "crypt"
+region = "rpg"

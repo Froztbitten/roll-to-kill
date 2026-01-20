@@ -9,6 +9,8 @@ script = ExtResource("1_e360h")
 action_name = "Sly Cooper"
 action_type = 7
 dice_sides = 0
+status_id = "pickpocket"
+duration = 1
 
 [sub_resource type="Resource" id="Resource_bd7nn"]
 script = ExtResource("1_e360h")
@@ -22,7 +24,7 @@ script = ExtResource("2_7bnw4")
 enemy_name = "Trash Panda"
 sprite_texture = ExtResource("3_51w62")
 minimum_hp = 4
-gold_minimum = 2
-hp_dice_count = 4
-hp_dice_sides = 2
+gold_dice_sides = 0
+hp_dice_count = 2
+hp_dice_sides = 4
 action_pool = Array[ExtResource("1_e360h")]([SubResource("Resource_4q23k"), SubResource("Resource_bd7nn")])

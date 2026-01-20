@@ -5,8 +5,11 @@
 
 [resource]
 script = ExtResource("3_x2sg0")
+encounter_type = 2
 enemies = Array[Dictionary]([{
 "data": ExtResource("1_t5rm1"),
 "max": 1.0,
 "min": 1.0
 }])
+node_type = "final_boss"
+region = "rpg"

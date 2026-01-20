@@ -7,16 +7,18 @@
 [sub_resource type="Resource" id="Resource_ybmyu"]
 script = ExtResource("1_405dw")
 action_name = "St4bby stab"
-action_type = 4
 dice_count = 1
 dice_sides = 4
+status_id = "piercing"
+duration = 1
 
 [resource]
 script = ExtResource("2_1rnp1")
 enemy_name = "D4"
 sprite_texture = ExtResource("3_hsm6g")
 minimum_hp = 0
-gold_minimum = 1
-hp_dice_count = 4
-hp_dice_sides = 1
+gold_minimum = 2
+gold_dice = 1
+gold_dice_sides = 10
+hp_dice_sides = 4
 action_pool = Array[ExtResource("1_405dw")]([SubResource("Resource_ybmyu")])

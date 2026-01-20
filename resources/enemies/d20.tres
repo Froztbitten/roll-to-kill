@@ -9,6 +9,8 @@ script = ExtResource("1_wu8oq")
 action_name = "De20nate"
 dice_count = 1
 dice_sides = 20
+status_id = "self-destruct"
+duration = 1
 self_destructs = true
 
 [resource]
@@ -16,8 +18,8 @@ script = ExtResource("2_gwgek")
 enemy_name = "D20"
 sprite_texture = ExtResource("3_yc551")
 minimum_hp = 0
-gold_minimum = 1
-gold_dice = 1
-hp_dice_count = 20
-hp_dice_sides = 1
+gold_minimum = 5
+gold_dice = 3
+gold_dice_sides = 4
+hp_dice_sides = 20
 action_pool = Array[ExtResource("1_wu8oq")]([SubResource("Resource_vtsfh")])

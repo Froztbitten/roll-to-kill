@@ -24,6 +24,5 @@ enemy_name = "Hobo"
 sprite_texture = ExtResource("3_tdwwr")
 minimum_hp = 4
 gold_dice = 1
-hp_dice_count = 6
-hp_dice_sides = 3
+hp_dice_count = 3
 action_pool = Array[ExtResource("1_onflx")]([SubResource("Resource_onv0y"), SubResource("Resource_tqxbc")])

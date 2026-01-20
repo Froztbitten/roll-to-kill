@@ -45,7 +45,8 @@ func update_with_animation(old_hp: int, new_hp: int, old_block: int, new_block: 
 	shield_bar.max_value = display_max
 
 	# Green bar snaps to new health value (since this is for immediate damage/heal, not preview)
-	health_bar_fill.value = new_hp
+	if old_hp != new_hp or new_block < old_block:
+		health_bar_fill.value = new_hp
 
 	# Set animation start points
 	damage_preview_bar.value = old_hp

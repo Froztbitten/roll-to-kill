@@ -28,9 +28,12 @@ func _run():
 
 	while not file.eof_reached():
 		var line = file.get_csv_line("\t")
-		if line.size() < 2: continue
+		if line.size() < 4: continue
 
-		var encounter_name = line[0]
+		var region = line[0]
+		var node_type_str = line[1]
+		var difficulty_str = line[2]
+		var encounter_name = line[3]
 		if encounter_name.is_empty(): continue
 
 		# Try to load existing encounter to preserve other fields (Region, Type), or create new
@@ -44,13 +47,25 @@ func _run():
 		else:
 			encounter = EncounterData.new()
 		
+		encounter.region = region.to_lower()
+		
+		var clean_type = node_type_str.strip_edges().to_lower().replace(" ", "_").replace("'", "")
+		encounter.node_type = clean_type
+		
+		var diff_lower = difficulty_str.to_lower()
+		
+		if "mini-boss" in diff_lower or "mini_boss" in diff_lower:
+			encounter.encounter_type = EncounterData.EncounterType.RARE
+		elif "boss" in diff_lower:
+			encounter.encounter_type = EncounterData.EncounterType.BOSS
+		else:
+			encounter.encounter_type = EncounterData.EncounterType.NORMAL
+		
 		var new_enemies: Array[Dictionary] = []
 		
 		# Iterate over enemy groups (Enemy, EVal, Min, Max)
-		# Starting at index 1. Each group is 4 columns.
-		# The CSV has 7 enemy slots based on the header structure provided.
 		for i in range(7):
-			var base_idx = 1 + (i * 4)
+			var base_idx = 4 + (i * 4)
 			if base_idx + 3 >= line.size(): break
 			
 			var char_name = line[base_idx]

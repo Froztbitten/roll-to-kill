@@ -5,6 +5,7 @@ class_name Enemy
 
 signal exploded(damage, source)
 signal gold_dropped(amount)
+signal intent_changed
 
 var next_action: EnemyAction
 var next_action_value: int = 0
@@ -81,6 +82,10 @@ func declare_intent(active_enemies: Array):
 	if not enemy_data or enemy_data.action_pool.is_empty():
 		return
 
+	if has_status(STATUS_REANIMATING):
+		clear_intent()
+		return
+
 	# --- Special Boss Logic ---
 	if enemy_data.enemy_name == "Evil Dice Tower":
 		next_action = _get_evil_dice_tower_intent(active_enemies)
@@ -130,7 +135,7 @@ func declare_intent(active_enemies: Array):
 		intent_icon_type = "heal"
 
 	# Update the UI to show the intent
-	intent_display.update_display(next_action.action_name, next_action_value, die_sides_for_icon, intent_icon_type, next_action.dice_count)
+	intent_display.update_display(next_action.action_name, next_action_value, die_sides_for_icon, intent_icon_type, next_action.dice_count, next_action.status_id)
 	intent_display.visible = true
 
 
@@ -138,6 +143,7 @@ func clear_intent():
 	next_action_value = 0
 	next_action = null
 	intent_display.visible = false
+	emit_signal("intent_changed")
 
 func _on_statuses_changed(current_statuses: Dictionary):
 	status_display.update_display(current_statuses)
@@ -176,6 +182,9 @@ func die() -> void:
 
 	# If super.die() returned early because of a revive, _is_dead will be false.
 	if not _is_dead:
+		if has_status(STATUS_REANIMATING):
+			_remove_provided_shields()
+			clear_intent()
 		return # Revived, so stop here.
 
 	# If we reach here, the enemy is truly dead.
@@ -198,6 +207,9 @@ func die() -> void:
 		emit_signal("exploded", damage, self)
 
 	# Remove provided shields from allies if this unit dies.
+	_remove_provided_shields()
+
+func _remove_provided_shields():
 	for entry in _provided_shields:
 		var target = entry.target
 		var amount = entry.amount

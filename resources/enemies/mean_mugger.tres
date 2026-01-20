@@ -14,6 +14,8 @@ script = ExtResource("1_dbk4h")
 action_name = "Stand & Deliver!"
 dice_count = 1
 dice_sides = 4
+status_id = "pickpocket"
+duration = 1
 
 [sub_resource type="Resource" id="Resource_gbuwh"]
 script = ExtResource("1_dbk4h")
@@ -26,8 +28,7 @@ dice_sides = 8
 script = ExtResource("2_ygyk5")
 enemy_name = "Mean Mugger"
 minimum_hp = 4
-gold_minimum = 1
+gold_minimum = 2
 gold_dice = 2
-hp_dice_count = 6
-hp_dice_sides = 3
+hp_dice_count = 3
 action_pool = Array[ExtResource("1_dbk4h")]([SubResource("Resource_kl566"), SubResource("Resource_78bg0"), SubResource("Resource_gbuwh")])

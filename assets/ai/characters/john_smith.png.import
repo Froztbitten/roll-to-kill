@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://dca02omkna5w4"
-path="res://.godot/imported/baby_zombie.png-f2ef012d4971295f34feb4c8acf56822.ctex"
+uid="uid://be7s14scrxsqr"
+path="res://.godot/imported/john_smith.png-c509e4f90acdc77a3e9ab59a3e524f27.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/ai/characters/baby_zombie.png"
-dest_files=["res://.godot/imported/baby_zombie.png-f2ef012d4971295f34feb4c8acf56822.ctex"]
+source_file="res://assets/ai/characters/john_smith.png"
+dest_files=["res://.godot/imported/john_smith.png-c509e4f90acdc77a3e9ab59a3e524f27.ctex"]
 
 [params]
 

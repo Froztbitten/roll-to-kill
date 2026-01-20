@@ -12,6 +12,8 @@ enemies = Array[Dictionary]([{
 "min": 1.0
 }, {
 "data": ExtResource("2_73sqt"),
-"max": 3.0,
+"max": 4.0,
 "min": 2.0
 }])
+node_type = "goblin_camp"
+region = "rpg"

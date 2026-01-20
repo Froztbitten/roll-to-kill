@@ -5,13 +5,17 @@
 
 [sub_resource type="Resource" id="Resource_gmtxx"]
 script = ExtResource("1_33xe4")
-action_name = "Taskmaster"
-dice_sides = 0
+action_name = "Sick 'Em"
+action_type = 9
+dice_count = 3
+dice_sides = 4
+status_id = "bleeding"
+charges = 1
 
 [resource]
 script = ExtResource("2_guy78")
 enemy_name = "Trusty Hound"
 minimum_hp = 10
-hp_dice_count = 6
-hp_dice_sides = 8
+gold_dice_sides = 0
+hp_dice_count = 8
 action_pool = Array[ExtResource("1_33xe4")]([SubResource("Resource_gmtxx")])

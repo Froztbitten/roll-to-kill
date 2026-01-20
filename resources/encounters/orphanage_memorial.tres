@@ -15,3 +15,5 @@ enemies = Array[Dictionary]([{
 "max": 3.0,
 "min": 2.0
 }])
+node_type = "crypt"
+region = "rpg"

@@ -14,3 +14,4 @@ enum ActionType { ATTACK, SHIELD, SUPPORT_SHIELD, HEAL_ALLY, PIERCING_ATTACK, SP
 @export var charges: int = -1
 @export var self_destructs: bool = false
 @export var ignore_dice_roll: bool = false
+@export var self_damage: int = 0

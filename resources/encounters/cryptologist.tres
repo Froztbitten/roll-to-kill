@@ -5,8 +5,11 @@
 
 [resource]
 script = ExtResource("2_gvhxn")
+encounter_type = 1
 enemies = Array[Dictionary]([{
 "data": ExtResource("1_p4ric"),
 "max": 1.0,
 "min": 1.0
 }])
+node_type = "crypt"
+region = "rpg"

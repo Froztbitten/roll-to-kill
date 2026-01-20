@@ -7,5 +7,6 @@
 script = ExtResource("2_l20ki")
 enemy_name = "Medic"
 minimum_hp = 0
+gold_dice_sides = 0
 hp_dice_count = 0
 hp_dice_sides = 0

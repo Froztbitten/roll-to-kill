@@ -20,3 +20,5 @@ enemies = Array[Dictionary]([{
 "max": 0.01,
 "min": 0.01
 }])
+node_type = "goblin_camp"
+region = "rpg"

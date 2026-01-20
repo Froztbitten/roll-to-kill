@@ -20,3 +20,4 @@ enemies = Array[Dictionary]([{
 "max": 0.0,
 "min": 0.0
 }])
+region = "toy store"

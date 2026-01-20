@@ -105,6 +105,18 @@ func _define_statuses():
 		-1,
 		1
 	)
+	statuses["reanimate_passive"] = StatusEffect.new(
+		"Reanimate",
+		false,
+		"If defeated, becomes inactive for 2 turns. If not damaged during this time, revives with 50% HP.",
+		load("res://assets/ai/status_icons/reanimate.svg")
+	)
+	statuses["reanimating"] = StatusEffect.new(
+		"Reanimating",
+		false,
+		"Recovering... Taking any damage will cause death.",
+		load("res://assets/ai/status_icons/reanimate.svg")
+	)
 	statuses["burning"] = StatusEffect.new(
 		"Burning",
 		true,
@@ -118,6 +130,14 @@ func _define_statuses():
 		false,
 		"Takes half damage from attacks.",
 		load("res://assets/ai/status_icons/glance_blows.svg")
+	)
+	statuses["decayed"] = StatusEffect.new(
+		"Decayed",
+		true,
+		"Max HP is reduced by X.",
+		load("res://assets/ai/status_icons/decay.svg"),
+		-1,
+		0
 	)
 
 func get_status(id: String) -> StatusEffect:

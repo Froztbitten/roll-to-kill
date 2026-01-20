@@ -95,9 +95,10 @@ var rhythm_game_ui: Control
 var rhythm_game_target: Character
 var rhythm_game_die: Die
 
-# --- Crypt Variables ---
-var is_in_crypt: bool = false
-var current_crypt_stage: int = 0
+# --- Dungeon Variables ---
+var current_dungeon_node = null
+var current_dungeon_stage: int = 0
+var current_encounter_node = null
 
 # --- Multiplayer Variables ---
 var game_state
@@ -121,6 +122,10 @@ func _ready() -> void:
 	# Ensure GameInfo (TopBar) is always on top of other screens (Map, Shop, etc.)
 	$UI/GameInfo.z_index = 400
 	$UI.move_child($UI/GameInfo, -1)
+	
+	# Ensure DiceBagScreen is above TownScreen (z=200 in TriangleMap)
+	if dice_bag_screen:
+		dice_bag_screen.z_index = 300
 	
 	# --- Analytics Debug Check ---
 	if has_node("/root/GameAnalyticsManager"):
@@ -151,6 +156,7 @@ func _ready() -> void:
 
 	# Connect signals
 	player.died.connect(_on_player_died)
+	player.block_changed.connect(_on_player_block_changed)
 	player.gold_changed.connect(_update_gold)
 	player.dice_bag_changed.connect(_update_dice_bag)
 	player.dice_discard_changed.connect(_update_dice_discard)
@@ -235,6 +241,7 @@ func _ready() -> void:
 
 	_update_total_dice_count(player._game_dice_bag.size())
 	_update_selected_value_label()
+	_update_gold(player.gold)
 
 	if get_tree().root.has_meta("experimental_mode") and get_tree().root.get_meta("experimental_mode"):
 		map_screen.queue_free()
@@ -611,9 +618,9 @@ func enemy_turn() -> void:
 					EnemyAction.ActionType.DEBUFF:
 						# If the debuff action has damage associated with it (e.g. Shrink Ray), deal it.
 						var damage_dealt = false
+						var hp_before = player.hp
 						if enemy.next_action_value > 0:
-							var hp_before = player.hp
-							await player.take_damage(enemy.next_action_value, true, enemy, true)
+							var unblocked_damage = await player.take_damage(enemy.next_action_value, true, enemy, true)
 							if player.hp < hp_before:
 								damage_dealt = true
 						
@@ -628,6 +635,10 @@ func enemy_turn() -> void:
 									if enemy.next_action.duration > -1:
 										value = enemy.next_action.duration
 								
+								# Special logic for Decayed: apply charges equal to unblocked damage
+								if enemy.next_action.status_id == "decayed" and damage_dealt:
+									value = hp_before - player.hp # Use actual HP loss as decay amount
+
 								# Special logic for Charm and Ragebait: only apply if damage was dealt
 								if (enemy.next_action.action_name == "Charm" or enemy.next_action.action_name == "Ragebait") and not damage_dealt:
 									print("%s failed: Player took no damage." % enemy.next_action.action_name)
@@ -644,6 +655,9 @@ func enemy_turn() -> void:
 							if enemy_idx != -1:
 								steam_manager.send_p2p_packet_to_all({"type": "enemy_fled", "index": enemy_idx})
 						enemy.die()
+
+				if enemy.next_action.self_damage > 0:
+					await enemy.take_damage(enemy.next_action.self_damage, true, enemy, false)
 
 				if enemy.next_action.self_destructs:
 					enemy.die()
@@ -690,6 +704,7 @@ func _spawn_boss_minions(count: int) -> Array[Enemy]:
 		new_enemy.died.connect(_on_enemy_died)
 		new_enemy.exploded.connect(_on_enemy_exploded)
 		new_enemy.gold_dropped.connect(_on_enemy_gold_dropped.bind(new_enemy))
+		new_enemy.intent_changed.connect(_update_incoming_damage_prediction)
 		spawned_enemies.append(new_enemy)
 	
 	enemy_container.call_deferred("arrange_enemies")
@@ -712,6 +727,7 @@ func _spawn_gnomish_invention() -> Array[Enemy]:
 	new_enemy.died.connect(_on_enemy_died)
 	new_enemy.exploded.connect(_on_enemy_exploded)
 	new_enemy.gold_dropped.connect(_on_enemy_gold_dropped.bind(new_enemy))
+	new_enemy.intent_changed.connect(_update_incoming_damage_prediction)
 	# Defer arrangement to prevent physics race conditions.
 	enemy_container.call_deferred("arrange_enemies")
 	print("Eureka! A %s has been summoned!" % invention_data.enemy_name)
@@ -1786,7 +1802,9 @@ func _on_map_node_selected(node_data):
 			# Client should not trigger this via UI (input disabled), but if called via code, proceed.
 			pass
 
+	print("Map node selected: ", node_data.type)
 	map_screen.visible = false
+	current_encounter_node = node_data
 	
 	player.reset_for_new_round()
 	enemy_container.clear_everything()
@@ -1800,27 +1818,16 @@ func _on_map_node_selected(node_data):
 	elif node_data.type == "boss":
 		var spawned_enemies = enemy_spawner.spawn_random_encounter(EncounterData.EncounterType.BOSS)
 		await _setup_round(spawned_enemies)
-	elif node_data.type == "goblin_camp":
-		var encounter = load("res://resources/encounters/pack_o_goblins.tres")
-		var spawned_enemies = enemy_spawner.spawn_specific_encounter(encounter)
-		_apply_quest_modifiers(spawned_enemies, "goblin_camp")
-		await _setup_round(spawned_enemies)
-	elif node_data.type == "dragon_roost":
-		var encounter = load("res://resources/encounters/white_eyes_blue_dragon.tres")
-		var spawned_enemies = enemy_spawner.spawn_specific_encounter(encounter)
-		_apply_quest_modifiers(spawned_enemies, "dragons_roost")
-		await _setup_round(spawned_enemies)
-	elif node_data.type == "dwarven_forge":
-		var encounter = load("res://resources/encounters/gnomish_tinkerers.tres")
-		var spawned_enemies = enemy_spawner.spawn_specific_encounter(encounter)
-		_apply_quest_modifiers(spawned_enemies, "dwarven_forge")
+	elif node_data.type == "final_boss":
+		var spawned_enemies = enemy_spawner.spawn_node_encounter(node_data.type, EncounterData.EncounterType.BOSS)
 		await _setup_round(spawned_enemies)
 	elif node_data.type == "campfire":
 		campfire_screen.open()
-	elif node_data.type == "crypt":
-		is_in_crypt = true
-		current_crypt_stage = 0
-		_advance_crypt_stage()
+	elif node_data.type in ["crypt", "goblin_camp", "dragon_roost", "dwarven_forge"]:
+		# Start generic dungeon logic
+		current_dungeon_node = node_data
+		current_dungeon_stage = 0
+		_advance_dungeon_stage()
 	else:
 		print("Unknown node type selected: ", node_data.type)
 
@@ -1833,13 +1840,15 @@ func _on_enemy_died(dead_enemy: Character):
 				print("White Knight becomes enraged!")
 				enemy.remove_status("crash_out")
 				enemy.apply_duration_status("raging", -1)
+	
+	_update_incoming_damage_prediction()
 
 	if get_active_enemies().is_empty():
 		if get_tree().root.has_meta("tutorial_mode") and get_tree().root.get_meta("tutorial_mode"):
 			return
 
 		# All enemies for the round are defeated
-		if map_screen.current_node and map_screen.current_node.type == "boss":
+		if current_encounter_node and (current_encounter_node.type == "boss" or current_encounter_node.type == "final_boss"):
 			victory_screen.visible = true
 		else:
 			_show_reward_screen()
@@ -1848,29 +1857,39 @@ func _on_enemy_died(dead_enemy: Character):
 		# shape position doesn't update in the same frame as the visual position.
 		enemy_container.call_deferred("arrange_enemies")
 
-func _advance_crypt_stage():
-	# Stages: 0, 1, 2 = Normal. 3 = Campfire. 4 = Mini-boss (Rare).
-	if current_crypt_stage < 3:
-		print("Crypt Stage %d: Normal Encounter" % current_crypt_stage)
-		if current_crypt_stage > 0:
+func _advance_dungeon_stage():
+	# Logic: 2 Waves of Normal, then 1 Wave of Mini-Boss (Rare)
+	# Stage 0: Normal
+	# Stage 1: Normal
+	# Stage 2: Mini-Boss
+	
+	var node_type = current_dungeon_node.type
+	
+	if current_dungeon_stage < 2:
+		print("%s Stage %d: Normal Encounter" % [node_type, current_dungeon_stage])
+		if current_dungeon_stage > 0:
 			player.reset_for_new_round()
 			enemy_container.clear_everything()
-		var spawned_enemies = enemy_spawner.spawn_random_encounter(EncounterData.EncounterType.NORMAL)
-		_apply_quest_modifiers(spawned_enemies, "crypt")
+		var spawned_enemies = enemy_spawner.spawn_node_encounter(node_type, EncounterData.EncounterType.NORMAL)
+		_apply_quest_modifiers(spawned_enemies, node_type)
 		await _setup_round(spawned_enemies)
-	elif current_crypt_stage == 3:
-		print("Crypt Stage %d: Rest Area" % current_crypt_stage)
-		campfire_screen.open()
-	elif current_crypt_stage == 4:
-		print("Crypt Stage %d: Mini-Boss" % current_crypt_stage)
+	elif current_dungeon_stage == 2:
+		print("%s Stage %d: Mini-Boss" % [node_type, current_dungeon_stage])
 		player.reset_for_new_round()
 		enemy_container.clear_everything()
-		var spawned_enemies = enemy_spawner.spawn_random_encounter(EncounterData.EncounterType.RARE)
-		_apply_quest_modifiers(spawned_enemies, "crypt")
+		var spawned_enemies = enemy_spawner.spawn_node_encounter(node_type, EncounterData.EncounterType.RARE)
+		_apply_quest_modifiers(spawned_enemies, node_type)
 		await _setup_round(spawned_enemies)
 	else:
-		print("Crypt Completed")
-		is_in_crypt = false
+		print("%s Completed" % node_type)
+		current_dungeon_node = null
+		
+		if map_screen.has_method("set_view_only"):
+			map_screen.set_view_only(false)
+		
+		if map_screen.has_method("mark_current_node_defeated"):
+			map_screen.mark_current_node_defeated()
+			
 		map_screen.visible = true
 
 func start_new_round() -> void:
@@ -1903,6 +1922,7 @@ func _setup_round(spawned_enemies: Array) -> void:
 		enemy.died.connect(_on_enemy_died)
 		enemy.exploded.connect(_on_enemy_exploded)
 		enemy.gold_dropped.connect(_on_enemy_gold_dropped.bind(enemy))
+		enemy.intent_changed.connect(_update_incoming_damage_prediction)
 	
 	# Defer positioning and scaling to ensure physics bodies are ready.
 	call_deferred("_on_viewport_size_changed")
@@ -2111,15 +2131,19 @@ func _on_reward_chosen(chosen_die: Die) -> void:
 	round_number += 1
 	reward_screen.visible = false
 	
-	if is_in_crypt:
-		current_crypt_stage += 1
-		_advance_crypt_stage()
+	if current_dungeon_node:
+		current_dungeon_stage += 1
+		_advance_dungeon_stage()
 	elif debug_mode:
 		await start_new_round()
 	else:
 		# Return to map
 		if map_screen.has_method("set_view_only"):
 			map_screen.set_view_only(false)
+		
+		if map_screen.has_method("mark_current_node_defeated"):
+			map_screen.mark_current_node_defeated()
+			
 		map_screen.visible = true
 
 func _on_play_again_button_pressed():
@@ -2127,18 +2151,25 @@ func _on_play_again_button_pressed():
 	get_tree().reload_current_scene()
 
 func _on_leave_campfire():
-	if is_in_crypt:
-		current_crypt_stage += 1
-		_advance_crypt_stage()
+	if current_dungeon_node:
+		current_dungeon_stage += 1
+		_advance_dungeon_stage()
 	else:
 		if map_screen.has_method("set_view_only"):
 			map_screen.set_view_only(false)
+		
+		if map_screen.has_method("mark_current_node_defeated"):
+			map_screen.mark_current_node_defeated()
+			
 		map_screen.visible = true
 
 func _on_player_died():
 	if has_node("/root/GameAnalyticsManager"):
 		get_node("/root/GameAnalyticsManager").fail_round(round_number)
 	defeat_screen.visible = true
+
+func _on_player_block_changed(_new_block):
+	_update_incoming_damage_prediction()
 
 func next_turn():
 	if current_turn == Turn.PLAYER:
@@ -2377,6 +2408,10 @@ func _on_viewport_size_changed():
 		if dice_bag_screen.visible:
 			call_deferred("_recalculate_dice_bag_columns")
 
+	var top_bar_height = 55.0 * scale_factor
+	var available_height = viewport_size.y - top_bar_height
+	var center_y = top_bar_height + (available_height / 2.0)
+
 	player.update_scale(scale_factor)
 	if game_state and game_state.is_multiplayer:
 		for p in remote_players.values():
@@ -2384,16 +2419,15 @@ func _on_viewport_size_changed():
 		_reposition_players()
 	elif is_instance_valid(player):
 		player.position.x = viewport_size.x * 0.25
-		player.position.y = viewport_size.y * 0.5
+		# Align player visually with enemies. Player sprite is offset by -20, enemies are at 0.
+		player.position.y = center_y + (20.0 * scale_factor)
 		player.update_resting_state()
 
 	if is_instance_valid(enemy_container):
-		var top_bar_height = 55.0 * scale_factor
-		var available_height = viewport_size.y - top_bar_height
 		var available_width = viewport_size.x * 0.5 # Use half the screen width for enemies
 		
 		enemy_container.position.x = viewport_size.x * 0.75
-		enemy_container.position.y = top_bar_height + (available_height / 2.0)
+		enemy_container.position.y = center_y
 		enemy_container.spawn_area_width = available_width
 		
 		for enemy in enemy_container.get_children():
@@ -2418,8 +2452,8 @@ func _on_viewport_size_changed():
 		abilities_ui.offset_left = base_left_margin
 		abilities_ui.offset_right = base_left_margin + (base_width * scale_factor)
 
-		var top_bar_height = 70.0 * scale_factor
-		abilities_ui.offset_top = top_bar_height
+		var abilities_top_margin = 70.0 * scale_factor
+		abilities_ui.offset_top = abilities_top_margin
 		abilities_ui.offset_bottom = -150.0 * scale_factor
 		for ability in abilities_ui.get_children():
 			if ability.has_method("update_scale"):
@@ -2814,13 +2848,21 @@ func _check_all_turns_ended():
 	next_turn()
 	await enemy_turn()
 
-func _process_enemy_intents(active_enemies: Array):
+func _update_incoming_damage_prediction():
 	current_incoming_damage = 0
+	var active_enemies = get_active_enemies()
 	for enemy in active_enemies:
 		if enemy.next_action and (enemy.next_action.action_type == EnemyAction.ActionType.ATTACK or \
 			enemy.next_action.action_type == EnemyAction.ActionType.PIERCING_ATTACK or \
 			(enemy.next_action.action_type == EnemyAction.ActionType.DEBUFF and enemy.next_action_value > 0)):
 			current_incoming_damage += enemy.next_action_value
+	
+	if player:
+		var net_damage = max(0, current_incoming_damage - player.block)
+		player.update_health_display(net_damage)
+
+func _process_enemy_intents(active_enemies: Array):
+	_update_incoming_damage_prediction()
 	
 	# Proactively apply shields that are meant to be active for the player's turn
 	for enemy: Enemy in active_enemies:
@@ -2861,8 +2903,6 @@ func _process_enemy_intents(active_enemies: Array):
 						random_ally.add_block(enemy.next_action_value)
 						enemy.register_provided_shield(random_ally, enemy.next_action_value)
 						print("%s shields self and %s for %d" % [enemy.name, random_ally.name, enemy.next_action_value])
-	
-	player.update_health_display(current_incoming_damage)
 
 func _handle_remote_spawn(paths: Array):
 	if not (game_state and game_state.is_multiplayer and not steam_manager.is_host):
@@ -2877,6 +2917,7 @@ func _handle_remote_spawn(paths: Array):
 			new_enemy.died.connect(_on_enemy_died)
 			new_enemy.exploded.connect(_on_enemy_exploded)
 			new_enemy.gold_dropped.connect(_on_enemy_gold_dropped.bind(new_enemy))
+			new_enemy.intent_changed.connect(_update_incoming_damage_prediction)
 	
 	enemy_container.call_deferred("arrange_enemies")
 

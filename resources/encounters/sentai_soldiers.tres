@@ -5,8 +5,10 @@
 
 [resource]
 script = ExtResource("2_cfykt")
+encounter_type = 1
 enemies = Array[Dictionary]([{
 "data": ExtResource("1_2p8f3"),
 "max": 5.0,
 "min": 5.0
 }])
+region = "toy store"

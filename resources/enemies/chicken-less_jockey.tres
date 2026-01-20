@@ -1,28 +1,36 @@
-[gd_resource type="Resource" script_class="EnemyData" load_steps=5 format=3 uid="uid://c7wihocwcp3ub"]
+[gd_resource type="Resource" script_class="EnemyData" load_steps=7 format=3 uid="uid://c7wihocwcp3ub"]
 
-[ext_resource type="Script" uid="uid://djeev1jhalfah" path="res://scripts/character/enemy/enemy_action.gd" id="1_kkyi5"]
-[ext_resource type="Script" uid="uid://dv6r7tro15lnf" path="res://scripts/character/enemy/enemy_data.gd" id="2_kwjg4"]
+[ext_resource type="Script" uid="uid://djeev1jhalfah" path="res://scripts/character/enemy/enemy_action.gd" id="1_kwjg4"]
+[ext_resource type="Script" uid="uid://dv6r7tro15lnf" path="res://scripts/character/enemy/enemy_data.gd" id="2_nanye"]
+[ext_resource type="Texture2D" uid="uid://dca02omkna5w4" path="res://assets/ai/characters/chicken-less_jockey.png" id="3_p8p44"]
 
-[sub_resource type="Resource" id="Resource_nanye"]
-script = ExtResource("1_kkyi5")
+[sub_resource type="Resource" id="Resource_pgwgv"]
+script = ExtResource("1_kwjg4")
 action_name = "Ankle Bite"
 dice_count = 2
 dice_sides = 4
 
-[sub_resource type="Resource" id="Resource_p8p44"]
-script = ExtResource("1_kkyi5")
+[sub_resource type="Resource" id="Resource_m55ay"]
+script = ExtResource("1_kwjg4")
+action_name = "Necro Nibble"
+action_type = 9
+dice_count = 1
+dice_sides = 4
+status_id = "decayed"
+duration = 1
+
+[sub_resource type="Resource" id="Resource_uiykm"]
+script = ExtResource("1_kwjg4")
 action_name = "Double Tap"
-action_type = 3
-dice_sides = 0
-status_id = "main_character_energy"
-charges = 1
+action_type = 6
+status_id = "reanimate_passive"
 
 [resource]
-script = ExtResource("2_kwjg4")
+script = ExtResource("2_nanye")
 enemy_name = "Chicken-less Jockey"
+sprite_texture = ExtResource("3_p8p44")
 minimum_hp = 4
-gold_dice = 1
-hp_dice_count = 8
-hp_dice_sides = 1
-action_pool = Array[ExtResource("1_kkyi5")]([SubResource("Resource_nanye")])
-passives = Array[ExtResource("1_kkyi5")]([SubResource("Resource_p8p44")])
+gold_dice_sides = 0
+hp_dice_sides = 8
+action_pool = Array[ExtResource("1_kwjg4")]([SubResource("Resource_pgwgv"), SubResource("Resource_m55ay")])
+passives = Array[ExtResource("1_kwjg4")]([SubResource("Resource_uiykm")])

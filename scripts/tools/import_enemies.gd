@@ -28,7 +28,7 @@ func _run():
 	
 	while not file.eof_reached():
 		var line = file.get_csv_line("\t")
-		if line.size() < 5: continue # Empty line or invalid
+		if line.size() < 24: continue # Ensure we have enough columns
 		
 		var char_name = line[4]
 		
@@ -36,19 +36,8 @@ func _run():
 
 		# Enemy Stats
 		var min_hp = line[5].to_int()
-		var hp_dice_sides = line[6].to_int()
-		var hp_dice_count = line[7].to_int()
-		
-		# Action
-		var action_name = line[10]
-		var action_dice_count = line[11].to_int()
-		var action_dice_sides = line[12].to_int()
-		# line[13] is Eff (EVal calculation), ignored.
-		var action_type_str = line[16]
-		var additional_effects = line[17]
-		var e_val = 0.0
-		if line.size() > 19:
-			e_val = line[19].to_float()
+		var hp_dice_count = line[6].to_int() # N
+		var hp_dice_sides = line[7].to_int() # M
 		
 		# Create/Get EnemyData
 		var enemy_data: EnemyData
@@ -71,17 +60,64 @@ func _run():
 				push_warning("Sprite not found for '%s' at '%s'" % [char_name, sprite_path])
 				
 			enemies_cache[char_name] = enemy_data
+		
+		# Gold
+		if line.size() > 28:
+			var min_gold = line[26].to_int()
+			var gold_dice_count = line[27].to_int()
+			var gold_dice_sides = line[28].to_int()
 			
-		eval_sums[char_name] = eval_sums.get(char_name, 0.0) + e_val
-		eval_counts[char_name] = eval_counts.get(char_name, 0) + 1
+			enemy_data.gold_minimum = min_gold
+			enemy_data.gold_dice = gold_dice_count
+			enemy_data.gold_dice_sides = gold_dice_sides
+
+		# Parse Passive
+		var p_name = line[10]
+		if not p_name.is_empty():
+			var has_passive = false
+			for p in enemy_data.passives:
+				if p.action_name == p_name:
+					has_passive = true
+					break
+			
+			if not has_passive:
+				var passive = EnemyAction.new()
+				passive.action_name = p_name
+				passive.action_type = EnemyAction.ActionType.BUFF # Default for passive
+				
+				var p_type = line[11].to_lower()
+				var p_val = line[12].to_int()
+				
+				if "thorns" in p_type:
+					passive.status_id = "spiky"
+					passive.charges = p_val
+				elif "rage" in p_type:
+					passive.status_id = "raging"
+					passive.duration = -1
+				elif "revive" in p_type:
+					passive.status_id = "main_character_energy"
+					passive.charges = 1
+				elif "reanimate" in p_type:
+					passive.status_id = "reanimate_passive"
+					passive.duration = -1
+				elif "crash out" in p_name.to_lower():
+					passive.status_id = "crash_out"
+					passive.duration = -1
+				
+				enemy_data.passives.append(passive)
 
 		# Create Action
+		var action_name = line[13]
 		if not action_name.is_empty():
 			var action = EnemyAction.new()
 			action.action_name = action_name
-			action.dice_count = action_dice_count
-			action.dice_sides = action_dice_sides
-			action.base_value = 0
+			action.dice_count = line[14].to_int()
+			action.dice_sides = line[15].to_int()
+			
+			var action_type_str = line[19]
+			var additional_effects = line[23]
+			var applied_effect_str = ""
+			if line.size() > 22: applied_effect_str = line[22].strip_edges()
 			
 			# Parse Action Type
 			if "Attack" in action_type_str:
@@ -111,55 +147,50 @@ func _run():
 			if "SD" in additional_effects or action_name == "De20nate":
 				action.self_destructs = true
 			
+			# Parse Applied Effect Column
+			if not applied_effect_str.is_empty():
+				var clean_effect = applied_effect_str.to_lower().replace(" ", "_")
+				
+				# Map variations to StatusLibrary IDs
+				if clean_effect == "silenced": clean_effect = "silence"
+				elif clean_effect == "charmed": clean_effect = "charming"
+				elif clean_effect == "taunted": clean_effect = "taunting"
+				elif clean_effect == "locked_down": clean_effect = "lock_down"
+				elif clean_effect == "ri-posted_up": clean_effect = "ri-posted up"
+				
+				if clean_effect == "bone_apart":
+					pass # Bone Apart is a self-damage effect, not a status.
+				else:
+					print("Setting status_id '%s' for action '%s'" % [clean_effect, action_name])
+					action.status_id = clean_effect
+				
+				var val = 1 # Default to 1 as DVal (col 25) is an evaluation metric, not duration
+				
+				if clean_effect in ["bleeding", "burning", "spiky", "dazed", "echoing_impact", "main_character_energy", "ri-posted up"]:
+					action.charges = val
+				else:
+					action.duration = val
+
 			# Parse Additional Effects for Status
-			var lower_effects = additional_effects.to_lower()
-			var lower_name = action_name.to_lower()
+			if action.status_id == "":
+				var lower_effects = additional_effects.to_lower()
+				if "bleed" in lower_effects: action.status_id = "bleeding"; action.charges = _extract_number(lower_effects, "bleed")
+				elif "shrink" in lower_effects: action.status_id = "shrunk"; action.duration = _extract_number(lower_effects, "shrink")
+				elif "daze" in lower_effects: action.status_id = "dazed"; action.charges = _extract_number(lower_effects, "daze")
+				elif "silence" in lower_effects: action.status_id = "silence"; action.duration = _extract_number(lower_effects, "silence")
+				elif "burn" in lower_effects: action.status_id = "burning"; action.charges = _extract_number(lower_effects, "burn")
+				elif "taunt" in lower_effects: action.status_id = "taunting"; action.duration = _extract_number(lower_effects, "taunt")
+				elif "charm" in lower_effects: action.status_id = "charming"; action.duration = _extract_number(lower_effects, "charm")
+				elif "lock-down" in lower_effects: action.status_id = "lock_down"; action.duration = 1
 			
-			if "bleed" in lower_effects: action.status_id = "bleeding"; action.charges = _extract_number(lower_effects, "bleed")
-			elif "shrink" in lower_effects: action.status_id = "shrunk"; action.duration = _extract_number(lower_effects, "shrink")
-			elif "daze" in lower_effects: action.status_id = "dazed"; action.charges = _extract_number(lower_effects, "daze")
-			elif "silence" in lower_effects: action.status_id = "silence"; action.duration = _extract_number(lower_effects, "silence")
-			elif "burn" in lower_effects: action.status_id = "burning"; action.charges = _extract_number(lower_effects, "burn")
-			elif "taunt" in lower_effects: action.status_id = "taunting"; action.duration = _extract_number(lower_effects, "taunt")
-			elif "charm" in lower_effects: action.status_id = "charming"; action.duration = _extract_number(lower_effects, "charm")
-			elif "lock-down" in lower_effects: action.status_id = "lock_down"; action.duration = 1
-			elif "crash out" in lower_name: action.status_id = "crash_out"; action.duration = -1
-			elif "main character energy" in lower_name or "double tap" in lower_name: action.status_id = "main_character_energy"; action.charges = 1
+			if "bone apart" in additional_effects.to_lower() or "bone apart" in applied_effect_str.to_lower():
+				action.self_damage = 2
 			
-			if "Passive" in action_type_str:
-				enemy_data.passives.append(action)
-			else:
-				enemy_data.action_pool.append(action)
-
-
+			enemy_data.action_pool.append(action)
 
 	# Save Resources with Gold Calculation
 	for name in enemies_cache:
 		var data = enemies_cache[name]
-		
-		# Calculate Gold
-		var avg_eval = 0.0
-		if eval_counts.has(name) and eval_counts[name] > 0:
-			avg_eval = eval_sums[name] / eval_counts[name]
-		
-		var target_gold = avg_eval / 10.0
-		# Variance: Use Dice (d6)
-		# Avg d6 = 3.5
-		# Dice Count = floor(target / 3.5)
-		# Remainder = target - (count * 3.5)
-		var dice_sides = 6
-		var avg_die_val = 3.5
-		var dice_count = floor(target_gold / avg_die_val)
-		var remainder = target_gold - (dice_count * avg_die_val)
-		
-		# Ensure at least 0
-		if dice_count < 0: dice_count = 0
-		if remainder < 0: remainder = 0
-		
-		data.gold_dice = int(dice_count)
-		data.gold_dice_sides = dice_sides
-		data.gold_minimum = int(round(remainder))
-		
 		var safe_name = name.to_lower().replace(" ", "_").replace("'", "")
 		ResourceSaver.save(data, ENEMY_SAVE_PATH + safe_name + ".tres")
 	

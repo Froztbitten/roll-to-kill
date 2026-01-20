@@ -28,17 +28,16 @@ dice_sides = 12
 script = ExtResource("1_6io7g")
 action_name = "Crash Out"
 action_type = 6
-dice_sides = 0
-status_id = "crash_out"
+status_id = "raging"
 
 [resource]
 script = ExtResource("2_74g23")
 enemy_name = "White Knight"
 sprite_texture = ExtResource("3_asck8")
-minimum_hp = 20
-gold_minimum = 2
-gold_dice = 16
-hp_dice_count = 6
-hp_dice_sides = 4
+minimum_hp = 10
+gold_minimum = 20
+gold_dice = 25
+gold_dice_sides = 2
+hp_dice_count = 4
 action_pool = Array[ExtResource("1_6io7g")]([SubResource("Resource_jspo1"), SubResource("Resource_srm2n"), SubResource("Resource_5hhvp")])
 passives = Array[ExtResource("1_6io7g")]([SubResource("Resource_yucyx")])

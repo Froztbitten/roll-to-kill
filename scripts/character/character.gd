@@ -3,6 +3,7 @@ class_name Character
 
 signal died(character)
 signal statuses_changed(statuses)
+signal block_changed(new_block)
 
 @export var hp: int = 100
 @export var max_hp: int = 100
@@ -17,6 +18,9 @@ const STATUS_BLEEDING = "Bleeding"
 const STATUS_BURNING = "Burning"
 const STATUS_GLANCE_BLOWS = "Glance Blows"
 const STATUS_SHRUNK = "Shrunk"
+const STATUS_REANIMATE_PASSIVE = "Reanimate"
+const STATUS_REANIMATING = "Reanimating"
+const STATUS_DECAYED = "Decayed"
 
 var current_scale_factor: float = 1.0
 var statuses: Dictionary = {} # {StatusEffect: duration}
@@ -30,6 +34,7 @@ var audio_player: AudioStreamPlayer
 var _death_sound: AudioStream
 var _initial_collision_pos: Vector2
 var _initial_collision_scale: Vector2 = Vector2.ONE
+var _current_decay_amount: int = 0
 
 @onready var health_bar = $Visuals/InfoContainer/HealthBar
 @onready var name_label: Label = $Visuals/InfoContainer.get_node_or_null("NameLabel")
@@ -53,14 +58,14 @@ func _ready():
 	audio_player.process_mode = Node.PROCESS_MODE_ALWAYS
 	add_child(audio_player)
 
-func take_damage(damage: int, play_recoil: bool = true, attacker: Character = null, is_attack_action: bool = false):
+func take_damage(damage: int, play_recoil: bool = true, attacker: Character = null, is_attack_action: bool = false) -> int:
 	if damage <= 0:
-		return
+		return 0
 	
 	# Check if self has Charming buff (cannot be damaged)
 	if has_status(STATUS_CHARMING) and attacker != self:
 		print("%s is Charming and cannot be damaged!" % name)
-		return
+		return 0
 	var old_block = block
 	var damage_to_take = damage
 	if block > 0:
@@ -74,6 +79,7 @@ func take_damage(damage: int, play_recoil: bool = true, attacker: Character = nu
 		print("%s's Glance Blows reduced damage to %d." % [name, damage_to_take])
 	
 	await _apply_damage(damage_to_take, "damage", old_block, play_recoil, attacker, is_attack_action)
+	return damage_to_take
 
 func take_piercing_damage(damage: int, play_recoil: bool = true, attacker: Character = null, is_attack_action: bool = false):
 	# This damage type ignores block.
@@ -166,6 +172,7 @@ func add_block(amount: int):
 		health_bar.update_with_animation(hp, hp, old_block, block, max_hp)
 	else:
 		update_health_display()
+	emit_signal("block_changed", block)
 
 func apply_duration_status(status_id: String, duration: int = 1, _source: Character = null):
 	if _is_dead: return
@@ -178,6 +185,7 @@ func apply_duration_status(status_id: String, duration: int = 1, _source: Charac
 			print("%s gained status '%s' indefinitely." % [name, effect.status_name])
 		else:
 			print("%s gained status '%s' for %d rounds." % [name, effect.status_name, duration])
+		_check_status_side_effects(effect)
 		statuses_changed.emit(statuses)
 	else:
 		push_warning("Attempted to apply unknown status with id: '%s'" % status_id)
@@ -195,6 +203,7 @@ func apply_charges_status(status_id: String, charges: int = 1, _source: Characte
 		_new_statuses_this_turn.append(effect)
 		var total_charges = statuses[effect]
 		print("%s gained %d charges of '%s' status. Total: %d" % [name, charges, effect.status_name, total_charges])
+		_check_status_side_effects(effect)
 		statuses_changed.emit(statuses)
 	else:
 		push_warning("Attempted to apply unknown status with id: '%s'" % status_id)
@@ -223,6 +232,7 @@ func apply_effect(effect: StatusEffect, value: int, _source: Character = null):
 				print("%s gained status '%s' for %d rounds." % [name, effect.status_name, value])
 
 	_new_statuses_this_turn.append(effect)
+	_check_status_side_effects(effect)
 	statuses_changed.emit(statuses)
 
 func remove_status(status_id: String):
@@ -230,7 +240,25 @@ func remove_status(status_id: String):
 	if effect:
 		print("%s lost status '%s'." % [name, effect.status_name])
 		statuses.erase(effect)
+		_check_status_side_effects(effect)
 		statuses_changed.emit(statuses)
+
+func _check_status_side_effects(effect: StatusEffect):
+	if effect.status_name == STATUS_DECAYED:
+		var new_decay = 0
+		if statuses.has(effect):
+			new_decay = statuses[effect]
+		
+		var diff = new_decay - _current_decay_amount
+		if diff != 0:
+			max_hp -= diff
+			_current_decay_amount = new_decay
+			# Clamp HP to new Max HP
+			if hp > max_hp:
+				hp = max_hp
+			
+			update_health_display()
+			print("%s Max HP adjusted by Decay: %d (Total Decay: %d)" % [name, -diff, _current_decay_amount])
 
 func has_status(status_name: String) -> bool:
 	# Check if any of the active status effects match the given name.
@@ -260,7 +288,7 @@ func tick_down_statuses():
 	
 	for status in statuses_to_process:
 		# Skip processing for statuses that were just applied this turn.
-		if _new_statuses_this_turn.has(status):
+		if _new_statuses_this_turn.has(status) and status.status_name != STATUS_REANIMATING:
 			continue
 
 		# --- Triggerable Effects ---
@@ -272,6 +300,15 @@ func tick_down_statuses():
 			keys_to_remove.append(status)
 			changed = true
 			continue
+			
+		if status.status_name == STATUS_REANIMATING:
+			if statuses[status] == 1: # About to expire (1 -> 0)
+				# Revive logic
+				hp = int(max_hp / 2.0)
+				update_health_display()
+				modulate.a = 1.0
+				apply_duration_status("reanimate_passive", -1)
+				print("%s reanimated!" % name)
 
 		# Skip ticking down for charge-based effects. Since Spikes is a permanent
 		# charge buff, we add an explicit check to ensure it never decays. Debuffs
@@ -287,6 +324,7 @@ func tick_down_statuses():
 		if statuses[status] <= 0:
 			keys_to_remove.append(status)
 			print("%s lost status '%s'." % [name, status.status_name])
+			_check_status_side_effects(status)
 			
 	_new_statuses_this_turn.clear()
 	
@@ -349,6 +387,21 @@ func die() -> void:
 			update_health_display()
 		print("%s's Main Character Energy activates!" % name)
 		# A visual/sound effect could be added here in the future.
+		return
+		
+	if has_status(STATUS_REANIMATE_PASSIVE) and not has_status(STATUS_REANIMATING):
+		var old_hp = hp
+		var old_block = block
+		block = 0
+		hp = 0
+		remove_status("reanimate_passive")
+		apply_duration_status("reanimating", 2)
+		modulate.a = 0.5
+		if health_bar.has_method("update_with_animation"):
+			health_bar.update_with_animation(old_hp, hp, old_block, block, max_hp)
+		else:
+			update_health_display()
+		print("%s enters reanimation state!" % name)
 		return
 
 	if _is_dead: return

@@ -7,7 +7,6 @@
 
 [resource]
 script = ExtResource("5_encounter")
-encounter_type = 1
 enemies = Array[Dictionary]([{
 "data": ExtResource("1_qas4q"),
 "max": 2.0,

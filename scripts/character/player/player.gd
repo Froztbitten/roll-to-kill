@@ -104,7 +104,12 @@ func reset_for_new_round():
 	_dice_discard.clear()
 	dice_discard_changed.emit(_dice_discard.size())
 	
-	statuses.clear()
+	var preserved_statuses = {}
+	for status in statuses:
+		if status.status_name == STATUS_DECAYED:
+			preserved_statuses[status] = statuses[status]
+	
+	statuses = preserved_statuses
 	_new_statuses_this_turn.clear()
 	statuses_changed.emit(statuses)
 	

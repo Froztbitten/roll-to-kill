@@ -1,16 +1,17 @@
-[gd_resource type="Resource" script_class="EnemyData" load_steps=6 format=3 uid="uid://dqdge1wabaoxh"]
+[gd_resource type="Resource" script_class="EnemyData" load_steps=7 format=3 uid="uid://dqdge1wabaoxh"]
 
-[ext_resource type="Script" uid="uid://djeev1jhalfah" path="res://scripts/character/enemy/enemy_action.gd" id="1_w5nl8"]
-[ext_resource type="Script" uid="uid://dv6r7tro15lnf" path="res://scripts/character/enemy/enemy_data.gd" id="2_1krsd"]
+[ext_resource type="Script" uid="uid://djeev1jhalfah" path="res://scripts/character/enemy/enemy_action.gd" id="1_1krsd"]
+[ext_resource type="Script" uid="uid://dv6r7tro15lnf" path="res://scripts/character/enemy/enemy_data.gd" id="2_sob7b"]
+[ext_resource type="Texture2D" uid="uid://da2vqoavdoucl" path="res://assets/ai/characters/cryptologist.png" id="3_5hqe3"]
 
-[sub_resource type="Resource" id="Resource_sob7b"]
-script = ExtResource("1_w5nl8")
+[sub_resource type="Resource" id="Resource_3wrvd"]
+script = ExtResource("1_1krsd")
 action_name = "Decrypt Decrepit"
 action_type = 5
 dice_sides = 0
 
-[sub_resource type="Resource" id="Resource_5hqe3"]
-script = ExtResource("1_w5nl8")
+[sub_resource type="Resource" id="Resource_q062a"]
+script = ExtResource("1_1krsd")
 action_name = "Crypto's Graphic Hash"
 action_type = 9
 dice_count = 6
@@ -18,16 +19,19 @@ dice_sides = 4
 status_id = "lock_down"
 duration = 1
 
-[sub_resource type="Resource" id="Resource_3wrvd"]
-script = ExtResource("1_w5nl8")
+[sub_resource type="Resource" id="Resource_1vnyw"]
+script = ExtResource("1_1krsd")
 action_name = "Siphon Decypher"
 dice_count = 3
+status_id = "lifesteal"
+duration = 1
 
 [resource]
-script = ExtResource("2_1krsd")
+script = ExtResource("2_sob7b")
 enemy_name = "Cryptologist"
-minimum_hp = 4
-gold_minimum = 3
-gold_dice = 9
+sprite_texture = ExtResource("3_5hqe3")
+minimum_hp = 10
+gold_dice_sides = 0
 hp_dice_count = 6
-action_pool = Array[ExtResource("1_w5nl8")]([SubResource("Resource_sob7b"), SubResource("Resource_5hqe3"), SubResource("Resource_3wrvd")])
+hp_dice_sides = 10
+action_pool = Array[ExtResource("1_1krsd")]([SubResource("Resource_3wrvd"), SubResource("Resource_q062a"), SubResource("Resource_1vnyw")])

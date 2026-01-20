@@ -5,8 +5,11 @@
 
 [resource]
 script = ExtResource("3_yyhm4")
+encounter_type = 1
 enemies = Array[Dictionary]([{
 "data": ExtResource("1_inmgv"),
 "max": 1.0,
 "min": 1.0
 }])
+node_type = "dragons_roost"
+region = "rpg"

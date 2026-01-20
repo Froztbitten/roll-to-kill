@@ -1,7 +1,7 @@
 [gd_scene load_steps=6 format=3 uid="uid://bvyv5m1pde7i7"]
 
 [ext_resource type="Script" uid="uid://2e3o4437htl" path="res://scripts/character/player/player.gd" id="1_5x0h4"]
-[ext_resource type="Texture2D" uid="uid://bulxxtlabqtiy" path="res://assets/ai/characters/icon.svg" id="1_prhyt"]
+[ext_resource type="Texture2D" path="res://assets/ai/characters/player.png" id="1_prhyt"]
 [ext_resource type="PackedScene" uid="uid://cgrc3aet23kli" path="res://scenes/characters/health_bar.tscn" id="3_2x3j7"]
 [ext_resource type="PackedScene" uid="uid://b7c8eae0f1g2" path="res://scenes/ui/status_effect_display.tscn" id="4_status"]
 
@@ -13,9 +13,15 @@ script = ExtResource("1_5x0h4")
 
 [node name="Visuals" type="Node2D" parent="."]
 
-[node name="Sprite2D" type="Sprite2D" parent="Visuals"]
-position = Vector2(0, -20)
+[node name="Sprite2D" type="TextureRect" parent="Visuals"]
+offset_left = -64.0
+offset_top = -84.0
+offset_right = 64.0
+offset_bottom = 44.0
+mouse_filter = 2
 texture = ExtResource("1_prhyt")
+expand_mode = 1
+stretch_mode = 5
 
 [node name="InfoContainer" type="VBoxContainer" parent="Visuals"]
 offset_left = -50.0

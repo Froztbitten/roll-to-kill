@@ -12,17 +12,14 @@ dice_sides = 4
 [sub_resource type="Resource" id="Resource_qppkj"]
 script = ExtResource("1_a2vhb")
 action_name = "Double Tap"
-action_type = 3
-dice_sides = 0
-status_id = "main_character_energy"
-charges = 1
+action_type = 6
+status_id = "reanimate_passive"
 
 [resource]
 script = ExtResource("2_ep6or")
 enemy_name = "Decrepit Undead"
 minimum_hp = 0
-gold_minimum = 1
-hp_dice_count = 4
-hp_dice_sides = 1
+gold_dice_sides = 0
+hp_dice_sides = 4
 action_pool = Array[ExtResource("1_a2vhb")]([SubResource("Resource_4qgrx")])
 passives = Array[ExtResource("1_a2vhb")]([SubResource("Resource_qppkj")])

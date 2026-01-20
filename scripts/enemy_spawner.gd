@@ -53,6 +53,18 @@ func spawn_random_encounter(encounter_type: EncounterData.EncounterType):
 	push_warning("%s pool is empty!", [encounter_type])
 	return []
 
+func spawn_node_encounter(node_type: String, encounter_type: EncounterData.EncounterType) -> Array:
+	var valid_encounters = encounter_pool.filter(func(e): 
+		return e.node_type == node_type and e.encounter_type == encounter_type
+	)
+	
+	if valid_encounters.is_empty():
+		push_warning("No encounters found for node '%s' with type %s" % [node_type, encounter_type])
+		return []
+		
+	var chosen = valid_encounters.pick_random()
+	return _spawn_enemies(chosen)
+
 func spawn_specific_encounter(encounter: EncounterData) -> Array:
 	if not encounter:
 		push_error("spawn_specific_encounter: EncounterData is null.")
