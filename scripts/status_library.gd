@@ -139,6 +139,12 @@ func _define_statuses():
 		-1,
 		0
 	)
+	statuses["brittle"] = StatusEffect.new(
+		"Brittle",
+		true,
+		"Takes 2 extra damage from all sources.",
+		load("res://assets/ai/status_icons/brittle.svg")
+	)
 
 func get_status(id: String) -> StatusEffect:
 	if statuses.has(id):

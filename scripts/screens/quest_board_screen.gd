@@ -209,13 +209,11 @@ func _roll_quest_dice():
 	hbox.add_child(disp)
 	
 	var results_map = {}
-	var finished_count = 0
 	
 	disp.roll_finished.connect(func(id, val): 
 		results_map[id] = val
-		finished_count += 1
 		# If all dice are done, update pending results immediately
-		if finished_count == 3:
+		if results_map.size() == 3:
 			var temp_results: Array[int] = []
 			for i in range(3):
 				temp_results.append(results_map.get(i, 1))
@@ -235,14 +233,14 @@ func _roll_quest_dice():
 	
 	# Wait for results with timeout to prevent hanging
 	var timeout_frames = 300 # Approx 5 seconds
-	while finished_count < 3 and is_rolling and timeout_frames > 0:
+	while results_map.size() < 3 and is_rolling and timeout_frames > 0:
 		await get_tree().process_frame
 		timeout_frames -= 1
 		
 	if not is_rolling: return
 	
 	# Force finish any stuck dice
-	if finished_count < 3:
+	if results_map.size() < 3:
 		disp.skip_animation()
 		# Allow signals to propagate
 		await get_tree().process_frame
@@ -275,7 +273,7 @@ func _roll_quest_dice():
 	current_roll_overlay = null
 	is_rolling = false
 
-func _on_die_placed_in_quest(die_display, die_data, quest_data, vbox_container):
+func _on_die_placed_in_quest(_die_display, die_data, _quest_data, vbox_container):
 	var val = die_data.result_value
 	var info_label = vbox_container.get_node("InfoLabel")
 	
@@ -297,7 +295,7 @@ func _on_die_placed_in_quest(die_display, die_data, quest_data, vbox_container):
 	
 	_check_confirm_status()
 
-func _on_die_removed_from_quest(die_display, quest_data, vbox_container):
+func _on_die_removed_from_quest(die_display, _quest_data, vbox_container):
 	# Return die to pool
 	dice_pool.add_die_display(die_display)
 	

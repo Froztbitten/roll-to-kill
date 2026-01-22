@@ -3,7 +3,7 @@
 [ext_resource type="Script" uid="uid://djeev1jhalfah" path="res://scripts/character/enemy/enemy_action.gd" id="1_s6wuf"]
 [ext_resource type="Script" uid="uid://dv6r7tro15lnf" path="res://scripts/character/enemy/enemy_data.gd" id="2_upytg"]
 
-[sub_resource type="Resource" id="Resource_2nfwm"]
+[sub_resource type="Resource" id="Resource_s6wuf"]
 script = ExtResource("1_s6wuf")
 action_name = "Blow-off Steam"
 action_type = 9
@@ -12,13 +12,13 @@ dice_sides = 8
 status_id = "dazed"
 charges = 1
 
-[sub_resource type="Resource" id="Resource_4pinx"]
+[sub_resource type="Resource" id="Resource_upytg"]
 script = ExtResource("1_s6wuf")
 action_name = "Smokescreen"
 action_type = 1
 dice_count = 1
 
-[sub_resource type="Resource" id="Resource_npkwj"]
+[sub_resource type="Resource" id="Resource_2nfwm"]
 script = ExtResource("1_s6wuf")
 action_name = "Pocket Soot"
 dice_sides = 0
@@ -31,4 +31,4 @@ enemy_name = "Pump Operator"
 minimum_hp = 10
 gold_dice_sides = 0
 hp_dice_count = 5
-action_pool = Array[ExtResource("1_s6wuf")]([SubResource("Resource_2nfwm"), SubResource("Resource_4pinx"), SubResource("Resource_npkwj")])
+action_pool = Array[ExtResource("1_s6wuf")]([SubResource("Resource_s6wuf"), SubResource("Resource_upytg"), SubResource("Resource_2nfwm")])

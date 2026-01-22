@@ -4,14 +4,14 @@
 [ext_resource type="Script" uid="uid://dv6r7tro15lnf" path="res://scripts/character/enemy/enemy_data.gd" id="2_mj8yy"]
 [ext_resource type="Texture2D" uid="uid://c18yq0cs7th1c" path="res://assets/ai/characters/gastrognome.png" id="3_5l080"]
 
-[sub_resource type="Resource" id="Resource_u3sjk"]
+[sub_resource type="Resource" id="Resource_67kkb"]
 script = ExtResource("1_67kkb")
 action_name = "Buffet"
 action_type = 3
 dice_count = 3
 dice_sides = 4
 
-[sub_resource type="Resource" id="Resource_7ogo4"]
+[sub_resource type="Resource" id="Resource_mj8yy"]
 script = ExtResource("1_67kkb")
 action_name = "Frying Pan"
 dice_count = 1
@@ -24,4 +24,4 @@ sprite_texture = ExtResource("3_5l080")
 minimum_hp = 10
 gold_dice_sides = 0
 hp_dice_count = 5
-action_pool = Array[ExtResource("1_67kkb")]([SubResource("Resource_u3sjk"), SubResource("Resource_7ogo4")])
+action_pool = Array[ExtResource("1_67kkb")]([SubResource("Resource_67kkb"), SubResource("Resource_mj8yy")])

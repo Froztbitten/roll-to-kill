@@ -4,7 +4,7 @@
 [ext_resource type="Script" uid="uid://dv6r7tro15lnf" path="res://scripts/character/enemy/enemy_data.gd" id="2_s5ib7"]
 [ext_resource type="Texture2D" uid="uid://b54xuiojsg1jr" path="res://assets/ai/characters/d8.png" id="3_rrxbo"]
 
-[sub_resource type="Resource" id="Resource_pmlri"]
+[sub_resource type="Resource" id="Resource_1twpg"]
 script = ExtResource("1_1twpg")
 action_name = "Get 8ehind me!"
 action_type = 2
@@ -19,4 +19,4 @@ minimum_hp = 0
 gold_minimum = 5
 gold_dice = 5
 hp_dice_sides = 8
-action_pool = Array[ExtResource("1_1twpg")]([SubResource("Resource_pmlri")])
+action_pool = Array[ExtResource("1_1twpg")]([SubResource("Resource_1twpg")])

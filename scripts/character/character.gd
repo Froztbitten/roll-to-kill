@@ -4,6 +4,7 @@ class_name Character
 signal died(character)
 signal statuses_changed(statuses)
 signal block_changed(new_block)
+signal hp_changed(new_hp, max_hp)
 
 @export var hp: int = 100
 @export var max_hp: int = 100
@@ -21,6 +22,7 @@ const STATUS_SHRUNK = "Shrunk"
 const STATUS_REANIMATE_PASSIVE = "Reanimate"
 const STATUS_REANIMATING = "Reanimating"
 const STATUS_DECAYED = "Decayed"
+const STATUS_BRITTLE = "Brittle"
 
 var current_scale_factor: float = 1.0
 var statuses: Dictionary = {} # {StatusEffect: duration}
@@ -58,14 +60,30 @@ func _ready():
 	audio_player.process_mode = Node.PROCESS_MODE_ALWAYS
 	add_child(audio_player)
 
-func take_damage(damage: int, play_recoil: bool = true, attacker: Character = null, is_attack_action: bool = false) -> int:
+func take_damage(damage: int, play_recoil: bool = true, attacker: Character = null, is_attack_action: bool = false, hit_count: int = 1) -> int:
 	if damage <= 0:
 		return 0
+	
+	# If hit_count is default (1), try to fetch the actual dice count from the global player
+	if hit_count <= 1:
+		var player_node = get_tree().get_first_node_in_group("player")
+		if player_node and not self.is_in_group("player"):
+			var count = player_node.get("current_attack_dice_count")
+			if count != null and count > 1:
+				hit_count = count
+				print("Adjusted hit_count to %d based on player dice count" % hit_count)
+	
+	hit_count = max(1, hit_count)
 	
 	# Check if self has Charming buff (cannot be damaged)
 	if has_status(STATUS_CHARMING) and attacker != self:
 		print("%s is Charming and cannot be damaged!" % name)
 		return 0
+	
+	if has_status(STATUS_BRITTLE):
+		damage += 2 * hit_count
+		print("%s is Brittle! Taking %d extra damage (Hit Count: %d)." % [name, 2 * hit_count, hit_count])
+
 	var old_block = block
 	var damage_to_take = damage
 	if block > 0:
@@ -81,15 +99,31 @@ func take_damage(damage: int, play_recoil: bool = true, attacker: Character = nu
 	await _apply_damage(damage_to_take, "damage", old_block, play_recoil, attacker, is_attack_action)
 	return damage_to_take
 
-func take_piercing_damage(damage: int, play_recoil: bool = true, attacker: Character = null, is_attack_action: bool = false):
+func take_piercing_damage(damage: int, play_recoil: bool = true, attacker: Character = null, is_attack_action: bool = false, hit_count: int = 1):
 	# This damage type ignores block.
 	if damage <= 0:
 		return
+	
+	# If hit_count is default (1), try to fetch the actual dice count from the global player
+	if hit_count <= 1:
+		var player_node = get_tree().get_first_node_in_group("player")
+		if player_node and not self.is_in_group("player"):
+			var count = player_node.get("current_attack_dice_count")
+			if count != null and count > 1:
+				hit_count = count
+				print("Adjusted hit_count to %d based on player dice count" % hit_count)
+	
+	hit_count = max(1, hit_count)
 	
 	# Check if self has Charming buff (cannot be damaged)
 	if has_status(STATUS_CHARMING) and attacker != self:
 		print("%s is Charming and cannot be damaged!" % name)
 		return
+	
+	if has_status(STATUS_BRITTLE):
+		damage += 2 * hit_count
+		print("%s is Brittle! Taking %d extra damage (Hit Count: %d)." % [name, 2 * hit_count, hit_count])
+
 	await _apply_damage(damage, "piercing damage", block, play_recoil, attacker, is_attack_action)
 
 func _apply_damage(amount: int, type: String, old_block_value: int, play_recoil: bool = true, attacker: Character = null, is_attack_action: bool = false) -> void:
@@ -435,6 +469,7 @@ func die() -> void:
 func update_health_display(intended_damage: int = 0, intended_block: int = 0):
 	if health_bar:
 		health_bar.update_display(hp, max_hp, block + intended_block, intended_damage)
+	hp_changed.emit(hp, max_hp)
 
 func update_scale(factor: float):
 	current_scale_factor = factor

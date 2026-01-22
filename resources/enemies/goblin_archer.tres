@@ -4,13 +4,13 @@
 [ext_resource type="Script" uid="uid://dv6r7tro15lnf" path="res://scripts/character/enemy/enemy_data.gd" id="2_g4trc"]
 [ext_resource type="Texture2D" uid="uid://cwqublumk4eff" path="res://assets/ai/characters/goblin_archer.png" id="3_xbyo6"]
 
-[sub_resource type="Resource" id="Resource_v16vd"]
+[sub_resource type="Resource" id="Resource_qu8um"]
 script = ExtResource("1_qu8um")
 action_name = "Toothpick"
 dice_count = 1
 dice_sides = 10
 
-[sub_resource type="Resource" id="Resource_8k5n1"]
+[sub_resource type="Resource" id="Resource_g4trc"]
 script = ExtResource("1_qu8um")
 action_name = "Reload"
 action_type = 7
@@ -24,4 +24,4 @@ minimum_hp = 8
 gold_dice = 1
 gold_dice_sides = 4
 hp_dice_sides = 8
-action_pool = Array[ExtResource("1_qu8um")]([SubResource("Resource_v16vd"), SubResource("Resource_8k5n1")])
+action_pool = Array[ExtResource("1_qu8um")]([SubResource("Resource_qu8um"), SubResource("Resource_g4trc")])

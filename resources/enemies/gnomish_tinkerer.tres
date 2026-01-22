@@ -4,19 +4,19 @@
 [ext_resource type="Script" uid="uid://dv6r7tro15lnf" path="res://scripts/character/enemy/enemy_data.gd" id="2_sarfa"]
 [ext_resource type="Texture2D" uid="uid://x8u1m0dh5e4p" path="res://assets/ai/characters/gnomish_tinkerer.png" id="3_5kaby"]
 
-[sub_resource type="Resource" id="Resource_sr6ba"]
+[sub_resource type="Resource" id="Resource_8qdxh"]
 script = ExtResource("1_8qdxh")
 action_name = "Eureka!"
 action_type = 5
 dice_sides = 0
 
-[sub_resource type="Resource" id="Resource_bxcqh"]
+[sub_resource type="Resource" id="Resource_sarfa"]
 script = ExtResource("1_8qdxh")
 action_name = "Spanner Toss"
 dice_count = 2
 dice_sides = 8
 
-[sub_resource type="Resource" id="Resource_sh4ty"]
+[sub_resource type="Resource" id="Resource_5kaby"]
 script = ExtResource("1_8qdxh")
 action_name = "Shrink Ray"
 action_type = 9
@@ -33,4 +33,4 @@ minimum_hp = 8
 gold_dice = 3
 hp_dice_count = 3
 hp_dice_sides = 4
-action_pool = Array[ExtResource("1_8qdxh")]([SubResource("Resource_sr6ba"), SubResource("Resource_bxcqh"), SubResource("Resource_sh4ty")])
+action_pool = Array[ExtResource("1_8qdxh")]([SubResource("Resource_8qdxh"), SubResource("Resource_sarfa"), SubResource("Resource_5kaby")])

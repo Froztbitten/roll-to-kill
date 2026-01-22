@@ -1,6 +1,6 @@
-[gd_scene load_steps=4 format=3 uid="uid://rhythm_game_ui_id"]
+[gd_scene load_steps=4 format=3 uid="uid://cja8heqqtvmvi"]
 
-[ext_resource type="Script" path="res://scripts/ui/rhythm_game_ui.gd" id="1_script"]
+[ext_resource type="Script" uid="uid://bg71ucf68ph1s" path="res://scripts/ui/rhythm_game_ui.gd" id="1_script"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_bg"]
 bg_color = Color(0.1, 0.1, 0.1, 0.85)
@@ -91,6 +91,11 @@ offset_bottom = 25.0
 grow_vertical = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_hitzone")
 
+[node name="ResultLabel" type="Label" parent="Panel/VBoxContainer"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 20
+horizontal_alignment = 1
+
 [node name="HitButton" type="Button" parent="Panel"]
 layout_mode = 1
 anchors_preset = 15
@@ -98,12 +103,7 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-flat = true
 text = "Click to the Beat!"
-
-[node name="ResultLabel" type="Label" parent="Panel/VBoxContainer"]
-layout_mode = 2
-theme_override_font_sizes/font_size = 20
-horizontal_alignment = 1
+flat = true
 
 [connection signal="pressed" from="Panel/HitButton" to="." method="_on_hit_button_pressed"]

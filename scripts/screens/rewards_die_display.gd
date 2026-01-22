@@ -34,7 +34,7 @@ func _ready():
 	add_theme_stylebox_override("hover", new_style)
 	add_theme_stylebox_override("pressed", new_style)
 
-	face_grid.set_anchors_preset(Control.PRESET_TOP_WIDE)
+	face_grid.set_anchors_preset(Control.PRESET_TOP_LEFT)
 	die_label.label_settings = null # Allow theme overrides
 	die_label.vertical_alignment = VERTICAL_ALIGNMENT_TOP
 
@@ -217,10 +217,10 @@ func _on_mouse_exited():
 		var first_cell_label = face_grid.get_child(0).get_node("Label") as Label
 		first_cell_label.text = original_grid_text
 
-func _clean_bbcode(text: String) -> String:
+func _clean_bbcode(bbcode_text: String) -> String:
 	var regex = RegEx.new()
 	regex.compile("\\[.*?\\]")
-	return regex.sub(text, "", true)
+	return regex.sub(bbcode_text, "", true)
 
 func _add_effect_panel_to_list(parent_container: VBoxContainer, effect: DieFaceEffect, face_value_placeholder: String):
 	var panel = PanelContainer.new()
@@ -241,8 +241,8 @@ func _add_effect_panel_to_list(parent_container: VBoxContainer, effect: DieFaceE
 	var tooltip_desc = effect.description
 	tooltip_desc = tooltip_desc.replace("{value}", face_value_placeholder)
 	tooltip_desc = tooltip_desc.replace("{value / 2}", face_value_placeholder + " / 2")
-	var tooltip_text = _clean_bbcode(tooltip_desc)
-	panel.mouse_entered.connect(_on_control_hover_entered.bind(panel, tooltip_text))
+	var cleaned_tooltip_text = _clean_bbcode(tooltip_desc)
+	panel.mouse_entered.connect(_on_control_hover_entered.bind(panel, cleaned_tooltip_text))
 	
 	var label = Label.new()
 	label.text = effect.name
@@ -322,7 +322,7 @@ func _update_layout():
 	var current_y = 5 * current_scale_factor
 	
 	if die_label.visible:
-		die_label.set_anchors_preset(Control.PRESET_TOP_WIDE)
+		die_label.set_anchors_preset(Control.PRESET_TOP_LEFT)
 		die_label.position.y = current_y
 		die_label.size.x = size.x
 		die_label.size.y = 0 # Reset to allow auto-sizing
@@ -331,6 +331,7 @@ func _update_layout():
 
 	# Position the grid
 	face_grid.position.y = current_y
+	face_grid.size.x = size.x
 	
 	# If the upgrades list is visible, position it below the grid
 	var content_bottom = face_grid.position.y + face_grid.get_minimum_size().y
@@ -347,11 +348,11 @@ func update_scale(factor: float):
 
 # --- Custom Tooltip Handlers ---
 
-func _on_control_hover_entered(control: Control, text: String):
+func _on_control_hover_entered(control: Control, p_tooltip_text: String):
 	_tooltip_timer.stop()
 	_hide_tooltip(false)
 	_hovered_control = control
-	_tooltip_label.text = text
+	_tooltip_label.text = p_tooltip_text
 	_tooltip_timer.start()
 	if not control.is_connected("mouse_exited", _on_control_hover_exited):
 		control.mouse_exited.connect(_on_control_hover_exited)

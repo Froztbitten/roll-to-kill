@@ -4,19 +4,19 @@
 [ext_resource type="Script" uid="uid://dv6r7tro15lnf" path="res://scripts/character/enemy/enemy_data.gd" id="2_0k5e7"]
 [ext_resource type="Texture2D" uid="uid://b80ne2bp1rrex" path="res://assets/ai/characters/tutorial_dummy.png" id="3_llb3a"]
 
-[sub_resource type="Resource" id="Resource_2q47u"]
+[sub_resource type="Resource" id="Resource_nod3o"]
 script = ExtResource("1_nod3o")
 action_name = "Nothing"
 action_type = 7
 dice_sides = 0
 
-[sub_resource type="Resource" id="Resource_bwol0"]
+[sub_resource type="Resource" id="Resource_0k5e7"]
 script = ExtResource("1_nod3o")
 action_name = "Example Attack"
 dice_count = 4
 dice_sides = 1
 
-[sub_resource type="Resource" id="Resource_oq874"]
+[sub_resource type="Resource" id="Resource_llb3a"]
 script = ExtResource("1_nod3o")
 action_name = "Example Block"
 action_type = 1
@@ -31,4 +31,4 @@ minimum_hp = 4
 gold_dice_sides = 0
 hp_dice_count = 0
 hp_dice_sides = 0
-action_pool = Array[ExtResource("1_nod3o")]([SubResource("Resource_2q47u"), SubResource("Resource_bwol0"), SubResource("Resource_oq874")])
+action_pool = Array[ExtResource("1_nod3o")]([SubResource("Resource_nod3o"), SubResource("Resource_0k5e7"), SubResource("Resource_llb3a")])

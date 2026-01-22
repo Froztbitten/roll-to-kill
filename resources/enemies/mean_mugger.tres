@@ -3,13 +3,13 @@
 [ext_resource type="Script" uid="uid://djeev1jhalfah" path="res://scripts/character/enemy/enemy_action.gd" id="1_dbk4h"]
 [ext_resource type="Script" uid="uid://dv6r7tro15lnf" path="res://scripts/character/enemy/enemy_data.gd" id="2_ygyk5"]
 
-[sub_resource type="Resource" id="Resource_kl566"]
+[sub_resource type="Resource" id="Resource_dbk4h"]
 script = ExtResource("1_dbk4h")
 action_name = "Swiper More Swiping!"
 dice_count = 4
 dice_sides = 4
 
-[sub_resource type="Resource" id="Resource_78bg0"]
+[sub_resource type="Resource" id="Resource_ygyk5"]
 script = ExtResource("1_dbk4h")
 action_name = "Stand & Deliver!"
 dice_count = 1
@@ -17,7 +17,7 @@ dice_sides = 4
 status_id = "pickpocket"
 duration = 1
 
-[sub_resource type="Resource" id="Resource_gbuwh"]
+[sub_resource type="Resource" id="Resource_kl566"]
 script = ExtResource("1_dbk4h")
 action_name = "Outta Dodge"
 action_type = 8
@@ -31,4 +31,4 @@ minimum_hp = 4
 gold_minimum = 2
 gold_dice = 2
 hp_dice_count = 3
-action_pool = Array[ExtResource("1_dbk4h")]([SubResource("Resource_kl566"), SubResource("Resource_78bg0"), SubResource("Resource_gbuwh")])
+action_pool = Array[ExtResource("1_dbk4h")]([SubResource("Resource_dbk4h"), SubResource("Resource_ygyk5"), SubResource("Resource_kl566")])

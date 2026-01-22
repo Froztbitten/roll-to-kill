@@ -2,13 +2,8 @@ extends Control
 
 signal node_selected(node_data)
 signal open_quest_board
-signal open_shop
-signal open_forge
-signal open_dice_shop
-signal open_inn
 
 const DIE_RENDERER_SCENE = preload("res://scenes/ui/die_3d_renderer.tscn")
-const TriangleButton = preload("res://scripts/ui/triangle_button.gd")
 const REWARDS_DIE_DISPLAY = preload("res://scenes/screens/rewards_die_display.tscn")
 
 @onready var map_container = $ScrollContainer/MapContainer
@@ -241,11 +236,11 @@ func _ready():
 	_on_viewport_size_changed()
 
 func _create_noise_texture(noise: FastNoiseLite, gradient: Gradient) -> ImageTexture:
-	var size = 512
-	var image = Image.create(size, size, false, Image.FORMAT_RGBA8)
+	var tex_size = 512
+	var image = Image.create(tex_size, tex_size, false, Image.FORMAT_RGBA8)
 	
-	for y in range(size):
-		for x in range(size):
+	for y in range(tex_size):
+		for x in range(tex_size):
 			var value = noise.get_noise_2d(x, y)
 			# Normalize from [-1, 1] to [0, 1]
 			var normalized = (value + 1.0) / 2.0
@@ -1007,7 +1002,7 @@ func _process(delta):
 	# Animate water UVs
 	if visible:
 		var time = Time.get_ticks_msec() / 1000.0
-		var offset = Vector2(time * 0.05, time * 0.02)
+		var _offset = Vector2(time * 0.05, time * 0.02)
 		for child in map_container.get_children():
 			if child is TriangleButton:
 				for sub in child.get_children():
@@ -1116,15 +1111,15 @@ func generate_new_map():
 		var near_corner = _get_nodes_in_radius([corner], 3)
 		for n in near_corner:
 			valid_boss_starts.append(n)
-	var boss_room_nodes = _pick_random_cluster(2, ["start", "town", "goblin_camp", "dragon_roost", "crypt", "dwarven_forge", "safe_path"], valid_boss_starts)
+	var generated_boss_nodes = _pick_random_cluster(2, ["start", "town", "goblin_camp", "dragon_roost", "crypt", "dwarven_forge", "safe_path"], valid_boss_starts)
 	
 	# Fallback: If corner placement fails, place randomly anywhere valid
-	if boss_room_nodes.is_empty():
+	if generated_boss_nodes.is_empty():
 		print("Warning: Could not place Boss Room near corners. Placing randomly.")
-		boss_room_nodes = _pick_random_cluster(2, ["start", "town", "goblin_camp", "dragon_roost", "crypt", "dwarven_forge", "safe_path"])
+		generated_boss_nodes = _pick_random_cluster(2, ["start", "town", "goblin_camp", "dragon_roost", "crypt", "dwarven_forge", "safe_path"])
 	
-	for n in boss_room_nodes: n.type = "final_boss"
-	self.boss_room_nodes = boss_room_nodes
+	for n in generated_boss_nodes: n.type = "final_boss"
+	self.boss_room_nodes = generated_boss_nodes
 
 	# 8. Generate Terrain & Enforce Constraints
 	var goblin_zone = _get_nodes_in_radius(goblin_nodes, 2)
@@ -1665,7 +1660,7 @@ func get_neighbors(node):
 			neighbors.append(grid_data[cand])
 	return neighbors
 
-func _pick_random_cluster(size: int, excluded_types: Array, valid_starts: Array = []) -> Array:
+func _pick_random_cluster(cluster_size: int, excluded_types: Array, valid_starts: Array = []) -> Array:
 	var attempts = 0
 	while attempts < 100:
 		attempts += 1
@@ -1685,11 +1680,11 @@ func _pick_random_cluster(size: int, excluded_types: Array, valid_starts: Array 
 		neighbors.shuffle()
 		
 		for n in neighbors:
-			if cluster.size() >= size: break
+			if cluster.size() >= cluster_size: break
 			if n.type not in excluded_types:
 				cluster.append(n)
 		
-		if cluster.size() == size:
+		if cluster.size() == cluster_size:
 			return cluster
 	return []
 
@@ -1849,12 +1844,12 @@ func _find_path_ignoring_terrain(from_node, to_node):
 	came_from[from_node] = null
 	
 	while not queue.is_empty():
-		var curr = queue.pop_front()
-		if curr == to_node: break
+		var processing_node = queue.pop_front()
+		if processing_node == to_node: break
 		
-		for n in get_neighbors(curr):
+		for n in get_neighbors(processing_node):
 			if not came_from.has(n):
-				came_from[n] = curr
+				came_from[n] = processing_node
 				queue.append(n)
 	
 	# Reconstruct
@@ -1871,11 +1866,11 @@ func find_path(from_node, to_node):
 	var came_from = {from_node: null}
 	
 	while not queue.is_empty():
-		var current = queue.pop_front()
-		if current == to_node:
+		var processing_node = queue.pop_front()
+		if processing_node == to_node:
 			break
 		
-		for next in get_neighbors(current):
+		for next in get_neighbors(processing_node):
 			if next.type == "mountain" or next.type == "water":
 				continue
 			
@@ -1883,7 +1878,7 @@ func find_path(from_node, to_node):
 				continue
 
 			if not came_from.has(next):
-				came_from[next] = current
+				came_from[next] = processing_node
 				queue.append(next)
 	
 	if not came_from.has(to_node):

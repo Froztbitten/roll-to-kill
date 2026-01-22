@@ -4,25 +4,25 @@
 [ext_resource type="Script" uid="uid://dv6r7tro15lnf" path="res://scripts/character/enemy/enemy_data.gd" id="2_llmkn"]
 [ext_resource type="Texture2D" uid="uid://bslv2gdd45abe" path="res://assets/ai/characters/greedy_gluttonous_gourmand.png" id="3_j6en8"]
 
-[sub_resource type="Resource" id="Resource_ts1yo"]
+[sub_resource type="Resource" id="Resource_lxilf"]
 script = ExtResource("1_lxilf")
 action_name = "Belly Flop"
 dice_count = 1
 
-[sub_resource type="Resource" id="Resource_h3b0j"]
+[sub_resource type="Resource" id="Resource_llmkn"]
 script = ExtResource("1_lxilf")
 action_name = "Roly-Poly"
 dice_count = 1
 dice_sides = 4
 
-[sub_resource type="Resource" id="Resource_ce0bk"]
+[sub_resource type="Resource" id="Resource_j6en8"]
 script = ExtResource("1_lxilf")
 action_name = "Shock Absorb"
 action_type = 1
 dice_count = 2
 dice_sides = 4
 
-[sub_resource type="Resource" id="Resource_vnxsn"]
+[sub_resource type="Resource" id="Resource_ts1yo"]
 script = ExtResource("1_lxilf")
 action_name = "Gluttony"
 action_type = 6
@@ -35,5 +35,5 @@ minimum_hp = 10
 gold_dice_sides = 0
 hp_dice_count = 5
 hp_dice_sides = 10
-action_pool = Array[ExtResource("1_lxilf")]([SubResource("Resource_ts1yo"), SubResource("Resource_h3b0j"), SubResource("Resource_ce0bk")])
-passives = Array[ExtResource("1_lxilf")]([SubResource("Resource_vnxsn")])
+action_pool = Array[ExtResource("1_lxilf")]([SubResource("Resource_lxilf"), SubResource("Resource_llmkn"), SubResource("Resource_j6en8")])
+passives = Array[ExtResource("1_lxilf")]([SubResource("Resource_ts1yo")])

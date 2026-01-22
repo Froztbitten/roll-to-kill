@@ -72,7 +72,7 @@ func _run():
 			enemy_data.gold_dice_sides = gold_dice_sides
 
 		# Parse Passive
-		var p_name = line[10]
+		var p_name = line[10].strip_edges()
 		if not p_name.is_empty():
 			var has_passive = false
 			for p in enemy_data.passives:
@@ -85,7 +85,7 @@ func _run():
 				passive.action_name = p_name
 				passive.action_type = EnemyAction.ActionType.BUFF # Default for passive
 				
-				var p_type = line[11].to_lower()
+				var p_type = line[11].strip_edges().to_lower()
 				var p_val = line[12].to_int()
 				
 				if "thorns" in p_type:
@@ -102,6 +102,9 @@ func _run():
 					passive.duration = -1
 				elif "crash out" in p_name.to_lower():
 					passive.status_id = "crash_out"
+					passive.duration = -1
+				elif "brittle" in p_type or "brittle" in p_name.to_lower():
+					passive.status_id = "brittle"
 					passive.duration = -1
 				
 				enemy_data.passives.append(passive)

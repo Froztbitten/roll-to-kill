@@ -4,13 +4,13 @@
 [ext_resource type="Script" uid="uid://dv6r7tro15lnf" path="res://scripts/character/enemy/enemy_data.gd" id="2_w1lfj"]
 [ext_resource type="Texture2D" uid="uid://be7s14scrxsqr" path="res://assets/ai/characters/john_smith.png" id="3_co0o2"]
 
-[sub_resource type="Resource" id="Resource_a240g"]
+[sub_resource type="Resource" id="Resource_8sdkc"]
 script = ExtResource("1_8sdkc")
 action_name = "Zombite"
 dice_count = 3
 dice_sides = 4
 
-[sub_resource type="Resource" id="Resource_cjkmp"]
+[sub_resource type="Resource" id="Resource_w1lfj"]
 script = ExtResource("1_8sdkc")
 action_name = "Mortifying Mastication"
 action_type = 9
@@ -19,7 +19,7 @@ dice_sides = 4
 status_id = "decayed"
 duration = 1
 
-[sub_resource type="Resource" id="Resource_8uyn3"]
+[sub_resource type="Resource" id="Resource_co0o2"]
 script = ExtResource("1_8sdkc")
 action_name = "Double Tap"
 action_type = 6
@@ -32,5 +32,5 @@ sprite_texture = ExtResource("3_co0o2")
 minimum_hp = 4
 gold_dice_sides = 0
 hp_dice_count = 2
-action_pool = Array[ExtResource("1_8sdkc")]([SubResource("Resource_a240g"), SubResource("Resource_cjkmp")])
-passives = Array[ExtResource("1_8sdkc")]([SubResource("Resource_8uyn3")])
+action_pool = Array[ExtResource("1_8sdkc")]([SubResource("Resource_8sdkc"), SubResource("Resource_w1lfj")])
+passives = Array[ExtResource("1_8sdkc")]([SubResource("Resource_co0o2")])

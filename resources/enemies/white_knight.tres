@@ -4,27 +4,27 @@
 [ext_resource type="Script" uid="uid://dv6r7tro15lnf" path="res://scripts/character/enemy/enemy_data.gd" id="2_74g23"]
 [ext_resource type="Texture2D" uid="uid://dj4i2eipee563" path="res://assets/ai/characters/white_knight.png" id="3_asck8"]
 
-[sub_resource type="Resource" id="Resource_jspo1"]
+[sub_resource type="Resource" id="Resource_6io7g"]
 script = ExtResource("1_6io7g")
 action_name = "M'lady"
 action_type = 3
 dice_count = 4
 dice_sides = 8
 
-[sub_resource type="Resource" id="Resource_srm2n"]
+[sub_resource type="Resource" id="Resource_74g23"]
 script = ExtResource("1_6io7g")
 action_name = "Chilvalry isn't Dead"
 action_type = 1
 dice_count = 8
 dice_sides = 8
 
-[sub_resource type="Resource" id="Resource_5hhvp"]
+[sub_resource type="Resource" id="Resource_asck8"]
 script = ExtResource("1_6io7g")
 action_name = "Incel-sior"
 dice_count = 2
 dice_sides = 12
 
-[sub_resource type="Resource" id="Resource_yucyx"]
+[sub_resource type="Resource" id="Resource_jspo1"]
 script = ExtResource("1_6io7g")
 action_name = "Crash Out"
 action_type = 6
@@ -39,5 +39,5 @@ gold_minimum = 20
 gold_dice = 25
 gold_dice_sides = 2
 hp_dice_count = 4
-action_pool = Array[ExtResource("1_6io7g")]([SubResource("Resource_jspo1"), SubResource("Resource_srm2n"), SubResource("Resource_5hhvp")])
-passives = Array[ExtResource("1_6io7g")]([SubResource("Resource_yucyx")])
+action_pool = Array[ExtResource("1_6io7g")]([SubResource("Resource_6io7g"), SubResource("Resource_74g23"), SubResource("Resource_asck8")])
+passives = Array[ExtResource("1_6io7g")]([SubResource("Resource_jspo1")])

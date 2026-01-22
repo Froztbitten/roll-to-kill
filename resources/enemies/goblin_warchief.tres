@@ -4,31 +4,31 @@
 [ext_resource type="Script" uid="uid://dv6r7tro15lnf" path="res://scripts/character/enemy/enemy_data.gd" id="2_xfce6"]
 [ext_resource type="Texture2D" uid="uid://bljrp3qtw3wo8" path="res://assets/ai/characters/goblin_warchief.png" id="3_rkup4"]
 
-[sub_resource type="Resource" id="Resource_viilu"]
+[sub_resource type="Resource" id="Resource_df5qo"]
 script = ExtResource("1_df5qo")
 action_name = "King of Cowards"
 action_type = 1
 dice_count = 1
 dice_sides = 8
 
-[sub_resource type="Resource" id="Resource_st6dj"]
+[sub_resource type="Resource" id="Resource_xfce6"]
 script = ExtResource("1_df5qo")
 action_name = "Warstrike"
 dice_count = 1
 dice_sides = 4
 
-[sub_resource type="Resource" id="Resource_uy2lr"]
+[sub_resource type="Resource" id="Resource_rkup4"]
 script = ExtResource("1_df5qo")
 action_name = "Fight"
 dice_count = 1
 
-[sub_resource type="Resource" id="Resource_36qek"]
+[sub_resource type="Resource" id="Resource_viilu"]
 script = ExtResource("1_df5qo")
 action_name = "Flight"
 action_type = 8
 dice_sides = 0
 
-[sub_resource type="Resource" id="Resource_3cwoy"]
+[sub_resource type="Resource" id="Resource_st6dj"]
 script = ExtResource("1_df5qo")
 action_name = "Fright"
 action_type = 7
@@ -42,4 +42,4 @@ minimum_hp = 6
 gold_dice = 12
 gold_dice_sides = 4
 hp_dice_count = 2
-action_pool = Array[ExtResource("1_df5qo")]([SubResource("Resource_viilu"), SubResource("Resource_st6dj"), SubResource("Resource_uy2lr"), SubResource("Resource_36qek"), SubResource("Resource_3cwoy")])
+action_pool = Array[ExtResource("1_df5qo")]([SubResource("Resource_df5qo"), SubResource("Resource_xfce6"), SubResource("Resource_rkup4"), SubResource("Resource_viilu"), SubResource("Resource_st6dj")])

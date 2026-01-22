@@ -4,13 +4,13 @@
 [ext_resource type="Script" uid="uid://dv6r7tro15lnf" path="res://scripts/character/enemy/enemy_data.gd" id="2_e2j4v"]
 [ext_resource type="Texture2D" uid="uid://d0pbkap4a87fs" path="res://assets/ai/characters/d10.png" id="3_knlj2"]
 
-[sub_resource type="Resource" id="Resource_dredu"]
+[sub_resource type="Resource" id="Resource_us7bc"]
 script = ExtResource("1_us7bc")
 action_name = "Flip f10p"
 dice_count = 1
 dice_sides = 10
 
-[sub_resource type="Resource" id="Resource_juu6b"]
+[sub_resource type="Resource" id="Resource_e2j4v"]
 script = ExtResource("1_us7bc")
 action_name = "F10p Flip"
 action_type = 1
@@ -24,4 +24,4 @@ sprite_texture = ExtResource("3_knlj2")
 minimum_hp = 0
 gold_dice = 1
 hp_dice_sides = 10
-action_pool = Array[ExtResource("1_us7bc")]([SubResource("Resource_dredu"), SubResource("Resource_juu6b")])
+action_pool = Array[ExtResource("1_us7bc")]([SubResource("Resource_us7bc"), SubResource("Resource_e2j4v")])

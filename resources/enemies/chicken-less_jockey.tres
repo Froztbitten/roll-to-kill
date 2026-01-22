@@ -4,13 +4,13 @@
 [ext_resource type="Script" uid="uid://dv6r7tro15lnf" path="res://scripts/character/enemy/enemy_data.gd" id="2_nanye"]
 [ext_resource type="Texture2D" uid="uid://dca02omkna5w4" path="res://assets/ai/characters/chicken-less_jockey.png" id="3_p8p44"]
 
-[sub_resource type="Resource" id="Resource_pgwgv"]
+[sub_resource type="Resource" id="Resource_kwjg4"]
 script = ExtResource("1_kwjg4")
 action_name = "Ankle Bite"
 dice_count = 2
 dice_sides = 4
 
-[sub_resource type="Resource" id="Resource_m55ay"]
+[sub_resource type="Resource" id="Resource_nanye"]
 script = ExtResource("1_kwjg4")
 action_name = "Necro Nibble"
 action_type = 9
@@ -19,7 +19,7 @@ dice_sides = 4
 status_id = "decayed"
 duration = 1
 
-[sub_resource type="Resource" id="Resource_uiykm"]
+[sub_resource type="Resource" id="Resource_p8p44"]
 script = ExtResource("1_kwjg4")
 action_name = "Double Tap"
 action_type = 6
@@ -32,5 +32,5 @@ sprite_texture = ExtResource("3_p8p44")
 minimum_hp = 4
 gold_dice_sides = 0
 hp_dice_sides = 8
-action_pool = Array[ExtResource("1_kwjg4")]([SubResource("Resource_pgwgv"), SubResource("Resource_m55ay")])
-passives = Array[ExtResource("1_kwjg4")]([SubResource("Resource_uiykm")])
+action_pool = Array[ExtResource("1_kwjg4")]([SubResource("Resource_kwjg4"), SubResource("Resource_nanye")])
+passives = Array[ExtResource("1_kwjg4")]([SubResource("Resource_p8p44")])

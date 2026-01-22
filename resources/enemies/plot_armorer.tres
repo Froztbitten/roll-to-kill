@@ -4,14 +4,14 @@
 [ext_resource type="Script" uid="uid://dv6r7tro15lnf" path="res://scripts/character/enemy/enemy_data.gd" id="2_tbcas"]
 [ext_resource type="Texture2D" uid="uid://dxx7wx206mcch" path="res://assets/ai/characters/plot_armorer.png" id="3_nqgan"]
 
-[sub_resource type="Resource" id="Resource_ipti5"]
+[sub_resource type="Resource" id="Resource_tbf7h"]
 script = ExtResource("1_tbf7h")
 action_name = "Plot Twist"
 dice_count = 1
 status_id = "piercing"
 duration = 1
 
-[sub_resource type="Resource" id="Resource_ngoro"]
+[sub_resource type="Resource" id="Resource_tbcas"]
 script = ExtResource("1_tbf7h")
 action_name = "Monologue"
 action_type = 6
@@ -19,13 +19,13 @@ dice_sides = 0
 status_id = "inspired"
 duration = 1
 
-[sub_resource type="Resource" id="Resource_qwx8c"]
+[sub_resource type="Resource" id="Resource_nqgan"]
 script = ExtResource("1_tbf7h")
 action_name = "Climatic Strike"
 dice_count = 2
 dice_sides = 12
 
-[sub_resource type="Resource" id="Resource_aj3ev"]
+[sub_resource type="Resource" id="Resource_ipti5"]
 script = ExtResource("1_tbf7h")
 action_name = "Main Character Energy"
 action_type = 6
@@ -42,5 +42,5 @@ gold_dice = 4
 gold_dice_sides = 12
 hp_dice_count = 4
 hp_dice_sides = 10
-action_pool = Array[ExtResource("1_tbf7h")]([SubResource("Resource_ipti5"), SubResource("Resource_ngoro"), SubResource("Resource_qwx8c")])
-passives = Array[ExtResource("1_tbf7h")]([SubResource("Resource_aj3ev")])
+action_pool = Array[ExtResource("1_tbf7h")]([SubResource("Resource_tbf7h"), SubResource("Resource_tbcas"), SubResource("Resource_nqgan")])
+passives = Array[ExtResource("1_tbf7h")]([SubResource("Resource_ipti5")])

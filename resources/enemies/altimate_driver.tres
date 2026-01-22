@@ -3,25 +3,25 @@
 [ext_resource type="Script" uid="uid://djeev1jhalfah" path="res://scripts/character/enemy/enemy_action.gd" id="1_ndbdj"]
 [ext_resource type="Script" uid="uid://dv6r7tro15lnf" path="res://scripts/character/enemy/enemy_data.gd" id="2_qjwpt"]
 
-[sub_resource type="Resource" id="Resource_n4sma"]
+[sub_resource type="Resource" id="Resource_ndbdj"]
 script = ExtResource("1_ndbdj")
 action_name = "Roadrage"
 dice_count = 1
 dice_sides = 8
 
-[sub_resource type="Resource" id="Resource_3ygrd"]
+[sub_resource type="Resource" id="Resource_qjwpt"]
 script = ExtResource("1_ndbdj")
 action_name = "Roadrage 2"
 dice_count = 1
 dice_sides = 10
 
-[sub_resource type="Resource" id="Resource_jxvr4"]
+[sub_resource type="Resource" id="Resource_n4sma"]
 script = ExtResource("1_ndbdj")
 action_name = "Roadrage 3"
 dice_count = 1
 dice_sides = 12
 
-[sub_resource type="Resource" id="Resource_6mxi3"]
+[sub_resource type="Resource" id="Resource_3ygrd"]
 script = ExtResource("1_ndbdj")
 action_name = "Roadrage 4"
 dice_count = 1
@@ -36,4 +36,4 @@ gold_dice = 3
 gold_dice_sides = 8
 hp_dice_count = 4
 hp_dice_sides = 12
-action_pool = Array[ExtResource("1_ndbdj")]([SubResource("Resource_n4sma"), SubResource("Resource_3ygrd"), SubResource("Resource_jxvr4"), SubResource("Resource_6mxi3")])
+action_pool = Array[ExtResource("1_ndbdj")]([SubResource("Resource_ndbdj"), SubResource("Resource_qjwpt"), SubResource("Resource_n4sma"), SubResource("Resource_3ygrd")])

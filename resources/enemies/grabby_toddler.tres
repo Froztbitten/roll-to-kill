@@ -7,6 +7,5 @@
 script = ExtResource("2_g34wt")
 enemy_name = "Grabby Toddler"
 minimum_hp = 0
-gold_dice_sides = 0
 hp_dice_count = 0
 hp_dice_sides = 0

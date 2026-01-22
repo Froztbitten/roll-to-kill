@@ -287,9 +287,15 @@ func roll_all():
 	set_process(true)
 	
 	# Failsafe: Force finish after max duration if physics never settles
-	get_tree().create_timer(4.0).timeout.connect(func():
-		if is_instance_valid(self) and _is_rolling:
+	var timer = Timer.new()
+	timer.wait_time = 4.0
+	timer.one_shot = true
+	timer.autostart = true
+	add_child(timer)
+	timer.timeout.connect(func():
+		if _is_rolling:
 			skip_animation()
+		timer.queue_free()
 	)
 
 func _roll_body(rigid_body: RigidBody3D):

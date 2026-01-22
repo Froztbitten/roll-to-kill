@@ -3,25 +3,25 @@
 [ext_resource type="Script" uid="uid://djeev1jhalfah" path="res://scripts/character/enemy/enemy_action.gd" id="1_lxl0m"]
 [ext_resource type="Script" uid="uid://dv6r7tro15lnf" path="res://scripts/character/enemy/enemy_data.gd" id="2_pp52h"]
 
-[sub_resource type="Resource" id="Resource_aebsb"]
+[sub_resource type="Resource" id="Resource_lxl0m"]
 script = ExtResource("1_lxl0m")
 action_name = "Gear 1"
 dice_count = 1
 dice_sides = 8
 
-[sub_resource type="Resource" id="Resource_y60er"]
+[sub_resource type="Resource" id="Resource_pp52h"]
 script = ExtResource("1_lxl0m")
 action_name = "Gear 2"
 dice_count = 1
 dice_sides = 10
 
-[sub_resource type="Resource" id="Resource_262rn"]
+[sub_resource type="Resource" id="Resource_aebsb"]
 script = ExtResource("1_lxl0m")
 action_name = "Gear 3"
 dice_count = 1
 dice_sides = 12
 
-[sub_resource type="Resource" id="Resource_0fkuy"]
+[sub_resource type="Resource" id="Resource_y60er"]
 script = ExtResource("1_lxl0m")
 action_name = "Gear 4"
 dice_count = 1
@@ -36,4 +36,4 @@ gold_dice = 7
 gold_dice_sides = 4
 hp_dice_count = 5
 hp_dice_sides = 8
-action_pool = Array[ExtResource("1_lxl0m")]([SubResource("Resource_aebsb"), SubResource("Resource_y60er"), SubResource("Resource_262rn"), SubResource("Resource_0fkuy")])
+action_pool = Array[ExtResource("1_lxl0m")]([SubResource("Resource_lxl0m"), SubResource("Resource_pp52h"), SubResource("Resource_aebsb"), SubResource("Resource_y60er")])

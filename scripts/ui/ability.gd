@@ -21,7 +21,7 @@ var tween: Tween
 var hide_timer: Timer
 
 signal die_returned_from_slot(die_display)
-signal ability_activated(ability_ui)
+signal ability_activated(ability_ui, dice_count)
 
 func _ready():
 	# Store the original style and create a new one for the "active" state.
@@ -114,7 +114,15 @@ func _check_if_all_slots_filled():
 		print("Ability '%s' has been triggered!" % ability_data.title)
 		is_consumed_this_turn = true
 		add_theme_stylebox_override("panel", active_stylebox)
-		emit_signal("ability_activated", self)
+		
+		# Explicitly update the global player instance to ensure Character.gd finds the correct value
+		var global_player = get_tree().get_first_node_in_group("player")
+		if global_player:
+			var count = get_dice_count()
+			global_player.set("current_attack_dice_count", count)
+			print("Ability activated. Dice count: %d. Global Player variable updated." % count)
+			
+		emit_signal("ability_activated", self, get_dice_count())
 		
 		# Gray out the ability to show it's been used this turn.
 		modulate = Color(0.5, 0.5, 0.5)
@@ -135,6 +143,13 @@ func get_slotted_dice_displays() -> Array[DieDisplay]:
 		if slot is DieSlotUI and slot.current_die_display:
 			displays.append(slot.current_die_display)
 	return displays
+
+func get_dice_count() -> int:
+	var count = 0
+	for slot in dice_slots_container.get_children():
+		if slot is DieSlotUI and slot.current_die_display:
+			count += 1
+	return count
 	
 func reset_for_new_turn() -> Array[Die]:
 	var dice_to_discard: Array[Die] = []

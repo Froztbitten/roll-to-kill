@@ -56,11 +56,7 @@ const BOSS_ROUND = 10
 @export var start_with_boss_fight := false
 
 # Testing values
-var starting_abilities: Array[AbilityData] = [load("res://resources/abilities/heal.tres"), 
-	load("res://resources/abilities/sweep.tres"), load("res://resources/abilities/hold.tres"),
-	load("res://resources/abilities/roulette.tres"), load("res://resources/abilities/explosive_shot.tres"),
-	load("res://resources/abilities/higher_lower.tres"), load("res://resources/abilities/even_odd.tres"),
-	load("res://resources/abilities/rhythm_game.tres")]
+var starting_abilities: Array[AbilityData] = []
 
 var pause_menu_ui: Control
 var debug_ability_ui: Control
@@ -233,6 +229,11 @@ func _ready() -> void:
 	for child: Node in abilities_ui.get_children():
 		child.queue_free()
 	if debug_mode:
+		starting_abilities = [load("res://resources/abilities/heal.tres"), 
+			load("res://resources/abilities/sweep.tres"), load("res://resources/abilities/hold.tres"),
+			load("res://resources/abilities/roulette.tres"), load("res://resources/abilities/explosive_shot.tres"),
+			load("res://resources/abilities/higher_lower.tres"), load("res://resources/abilities/even_odd.tres"),
+			load("res://resources/abilities/rhythm_game.tres")]
 		for ability in starting_abilities:
 			player.add_ability(ability)
 
@@ -256,10 +257,6 @@ func _ready() -> void:
 		# Connect Triangle Map town signals
 		map_screen.open_quest_board.connect(func(): 
 			quest_board_screen.open(player)
-			map_screen.close_town_menu()
-		)
-		map_screen.open_shop.connect(func(): 
-			shop_screen.open()
 			map_screen.close_town_menu()
 		)
 		# map_screen.open_forge.connect(...) 
@@ -323,7 +320,7 @@ func _ready() -> void:
 	_tooltip_timer.timeout.connect(_show_tooltip)
 	add_child(_tooltip_timer)
 
-func _process(delta):
+func _process(_delta):
 	# The new steam manager uses signals, so we connect to it in _setup_multiplayer_game
 	pass
 
@@ -620,7 +617,7 @@ func enemy_turn() -> void:
 						var damage_dealt = false
 						var hp_before = player.hp
 						if enemy.next_action_value > 0:
-							var unblocked_damage = await player.take_damage(enemy.next_action_value, true, enemy, true)
+							var _unblocked_damage = await player.take_damage(enemy.next_action_value, true, enemy, true)
 							if player.hp < hp_before:
 								damage_dealt = true
 						
@@ -814,6 +811,7 @@ func _on_character_clicked(character: Character) -> void:
 				return
 
 	var total_roll = 0
+	var hit_count = 0
 	var dice_to_discard: Array[Die] = []
 	
 	# Make a copy because we will be modifying the dice pool
@@ -831,6 +829,7 @@ func _on_character_clicked(character: Character) -> void:
 		
 		if not is_piercing:
 			total_roll += die_display.die.result_value
+			hit_count += 1
 		dice_to_discard.append(die_display.die)
 
 	# Animate the dice, which will also remove them from the hand UI.
@@ -865,7 +864,7 @@ func _on_character_clicked(character: Character) -> void:
 	else: # It's an enemy
 		var enemy_target: Enemy = character
 		emit_signal("player_performed_action", "attack", enemy_target)
-		await enemy_target.take_damage(total_roll, false, player, true)
+		await enemy_target.take_damage(total_roll, false, player, true, hit_count)
 		print("Dealt %d damage to %s" % [total_roll, enemy_target.name])
 
 		# After the main action, process any effects from the dice faces
@@ -1632,7 +1631,11 @@ func _roll_dice_3d(dice: Array[Die]) -> Dictionary:
 
 	# Wait for finish signal or timeout
 	# The timer calls skip_animation, which forces the signal to emit, breaking the await.
-	var safety_timer = get_tree().create_timer(10.0)
+	var safety_timer = Timer.new()
+	safety_timer.wait_time = 10.0
+	safety_timer.one_shot = true
+	safety_timer.autostart = true
+	roll_overlay.add_child(safety_timer)
 	safety_timer.timeout.connect(func(): if is_instance_valid(r): r.skip_animation())
 	
 	await r.all_dice_settled
@@ -1974,11 +1977,15 @@ func _on_enemy_gold_dropped(amount: int, source_enemy: Node2D):
 	_show_gold_popup(amount, source_enemy.global_position)
 	_animate_gold_collection(amount, source_enemy)
 	
+	var enemy_name = "enemy"
+	if is_instance_valid(source_enemy) and source_enemy.enemy_data:
+		enemy_name = source_enemy.enemy_data.enemy_name
+	
 	# Delay adding gold until the animation (approx) finishes so the counter updates when gold arrives
 	get_tree().create_timer(0.8).timeout.connect(func(): 
 		player.add_gold(amount)
 		if has_node("/root/GameAnalyticsManager"):
-			get_node("/root/GameAnalyticsManager").track_gold_source(amount, "loot", source_enemy.enemy_data.enemy_name if source_enemy.enemy_data else "enemy")
+			get_node("/root/GameAnalyticsManager").track_gold_source(amount, "loot", enemy_name)
 	)
 
 func _show_gold_popup(amount: int, pos: Vector2):
@@ -2044,18 +2051,18 @@ func _generate_reward_dice() -> Array[Die]:
 	
 	# Scaling Logic based on round_number
 	var available_sizes = [4, 6]
-	var max_effects = 1
+	var _max_effects = 1
 	var tier_limit = 1
 	
 	if round_number >= 3:
 		available_sizes.append(8)
-		max_effects = 2
+		_max_effects = 2
 	if round_number >= 5:
 		available_sizes.erase(4)
 		tier_limit = 2
 	if round_number >= 7:
 		available_sizes.append(10)
-		max_effects = 3
+		_max_effects = 3
 	if round_number >= 9:
 		available_sizes.erase(6)
 		available_sizes.append(12)
@@ -2730,8 +2737,8 @@ func _setup_multiplayer_game():
 		var pool_height = 80
 		remote_dp_ui.set_anchors_preset(Control.PRESET_CENTER_TOP)
 		remote_dp_ui.offset_top = 60 + (i * (pool_height + 10))
-		remote_dp_ui.offset_left = -pool_width / 2
-		remote_dp_ui.offset_right = pool_width / 2
+		remote_dp_ui.offset_left = -pool_width / 2.0
+		remote_dp_ui.offset_right = pool_width / 2.0
 		remote_dp_ui.offset_bottom = remote_dp_ui.offset_top + pool_height
 		remote_dp_ui.scale = Vector2(0.7, 0.7)
 

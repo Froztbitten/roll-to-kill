@@ -20,6 +20,7 @@ func _run():
 	if not dir.dir_exists(ENCOUNTER_SAVE_PATH):
 		dir.make_dir_recursive(ENCOUNTER_SAVE_PATH)
 
+
 	# Skip header
 	file.get_csv_line("\t")
 

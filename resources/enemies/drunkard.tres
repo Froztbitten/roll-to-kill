@@ -4,19 +4,19 @@
 [ext_resource type="Script" uid="uid://dv6r7tro15lnf" path="res://scripts/character/enemy/enemy_data.gd" id="2_6xkhj"]
 [ext_resource type="Texture2D" uid="uid://n1vu2prqedip" path="res://assets/ai/characters/drunkard.png" id="3_3rrek"]
 
-[sub_resource type="Resource" id="Resource_dmn7q"]
+[sub_resource type="Resource" id="Resource_ob3xt"]
 script = ExtResource("1_ob3xt")
 action_name = "Dizzying Swipe"
 dice_count = 1
 dice_sides = 12
 
-[sub_resource type="Resource" id="Resource_exahq"]
+[sub_resource type="Resource" id="Resource_6xkhj"]
 script = ExtResource("1_ob3xt")
 action_name = "All Offense"
 dice_count = 3
 dice_sides = 4
 
-[sub_resource type="Resource" id="Resource_x3in5"]
+[sub_resource type="Resource" id="Resource_3rrek"]
 script = ExtResource("1_ob3xt")
 action_name = "Too much to drink"
 action_type = 7
@@ -31,4 +31,4 @@ gold_minimum = 2
 gold_dice = 2
 gold_dice_sides = 4
 hp_dice_count = 3
-action_pool = Array[ExtResource("1_ob3xt")]([SubResource("Resource_dmn7q"), SubResource("Resource_exahq"), SubResource("Resource_x3in5")])
+action_pool = Array[ExtResource("1_ob3xt")]([SubResource("Resource_ob3xt"), SubResource("Resource_6xkhj"), SubResource("Resource_3rrek")])

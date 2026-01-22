@@ -69,6 +69,7 @@ func setup():
 	if enemy_data.passives:
 		for passive in enemy_data.passives:
 			if passive.status_id != "":
+				print("Applying passive status: %s to %s" % [passive.status_id, name])
 				if passive.charges > -1:
 					apply_charges_status(passive.status_id, passive.charges)
 				elif passive.duration > -1:

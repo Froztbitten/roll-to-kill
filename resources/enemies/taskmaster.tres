@@ -3,7 +3,7 @@
 [ext_resource type="Script" uid="uid://djeev1jhalfah" path="res://scripts/character/enemy/enemy_action.gd" id="1_1s08p"]
 [ext_resource type="Script" uid="uid://dv6r7tro15lnf" path="res://scripts/character/enemy/enemy_data.gd" id="2_k1ut7"]
 
-[sub_resource type="Resource" id="Resource_wi78u"]
+[sub_resource type="Resource" id="Resource_1s08p"]
 script = ExtResource("1_1s08p")
 action_name = "Whip Into Shape"
 dice_count = 3
@@ -17,4 +17,4 @@ enemy_name = "Taskmaster"
 minimum_hp = 10
 gold_dice_sides = 0
 hp_dice_count = 8
-action_pool = Array[ExtResource("1_1s08p")]([SubResource("Resource_wi78u")])
+action_pool = Array[ExtResource("1_1s08p")]([SubResource("Resource_1s08p")])

@@ -4,7 +4,7 @@
 [ext_resource type="Script" uid="uid://dv6r7tro15lnf" path="res://scripts/character/enemy/enemy_data.gd" id="2_ntvjq"]
 [ext_resource type="Texture2D" uid="uid://camr61vuk0y4a" path="res://assets/ai/characters/koko_the_pelican.png" id="3_ngf4w"]
 
-[sub_resource type="Resource" id="Resource_ucqof"]
+[sub_resource type="Resource" id="Resource_vlkxi"]
 script = ExtResource("1_vlkxi")
 action_name = "Peck"
 dice_count = 1
@@ -17,4 +17,4 @@ sprite_texture = ExtResource("3_ngf4w")
 minimum_hp = 0
 gold_dice_sides = 0
 hp_dice_sides = 12
-action_pool = Array[ExtResource("1_vlkxi")]([SubResource("Resource_ucqof")])
+action_pool = Array[ExtResource("1_vlkxi")]([SubResource("Resource_vlkxi")])

@@ -4,7 +4,7 @@
 [ext_resource type="Script" uid="uid://dv6r7tro15lnf" path="res://scripts/character/enemy/enemy_data.gd" id="2_rfdkb"]
 [ext_resource type="Texture2D" uid="uid://dgwrxfq1wr8w" path="res://assets/ai/characters/wick-walk.png" id="3_4kulr"]
 
-[sub_resource type="Resource" id="Resource_2ckmg"]
+[sub_resource type="Resource" id="Resource_kvu4a"]
 script = ExtResource("1_kvu4a")
 action_name = "...Damned if You Don't"
 dice_count = 2
@@ -19,4 +19,4 @@ sprite_texture = ExtResource("3_4kulr")
 minimum_hp = 0
 gold_dice_sides = 0
 hp_dice_sides = 4
-action_pool = Array[ExtResource("1_kvu4a")]([SubResource("Resource_2ckmg")])
+action_pool = Array[ExtResource("1_kvu4a")]([SubResource("Resource_kvu4a")])

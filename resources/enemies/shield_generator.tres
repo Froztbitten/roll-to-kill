@@ -4,7 +4,7 @@
 [ext_resource type="Script" uid="uid://dv6r7tro15lnf" path="res://scripts/character/enemy/enemy_data.gd" id="2_kkbfm"]
 [ext_resource type="Texture2D" uid="uid://buxmcsv23mbyr" path="res://assets/ai/characters/shield_generator.png" id="3_bqdmw"]
 
-[sub_resource type="Resource" id="Resource_neago"]
+[sub_resource type="Resource" id="Resource_h58lv"]
 script = ExtResource("1_h58lv")
 action_name = "0100100001101001"
 action_type = 1
@@ -18,4 +18,4 @@ minimum_hp = 0
 gold_dice_sides = 0
 hp_dice_count = 3
 hp_dice_sides = 4
-action_pool = Array[ExtResource("1_h58lv")]([SubResource("Resource_neago")])
+action_pool = Array[ExtResource("1_h58lv")]([SubResource("Resource_h58lv")])

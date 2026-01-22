@@ -4,14 +4,14 @@
 [ext_resource type="Script" uid="uid://dv6r7tro15lnf" path="res://scripts/character/enemy/enemy_data.gd" id="2_idnmq"]
 [ext_resource type="Texture2D" uid="uid://cl5ykhr62ersk" path="res://assets/ai/characters/hobo.png" id="3_tdwwr"]
 
-[sub_resource type="Resource" id="Resource_onv0y"]
+[sub_resource type="Resource" id="Resource_onflx"]
 script = ExtResource("1_onflx")
 action_name = "Foul Breath"
 action_type = 9
 dice_count = 1
 dice_sides = 4
 
-[sub_resource type="Resource" id="Resource_tqxbc"]
+[sub_resource type="Resource" id="Resource_idnmq"]
 script = ExtResource("1_onflx")
 action_name = "Take a Slash"
 action_type = 9
@@ -25,4 +25,4 @@ sprite_texture = ExtResource("3_tdwwr")
 minimum_hp = 4
 gold_dice = 1
 hp_dice_count = 3
-action_pool = Array[ExtResource("1_onflx")]([SubResource("Resource_onv0y"), SubResource("Resource_tqxbc")])
+action_pool = Array[ExtResource("1_onflx")]([SubResource("Resource_onflx"), SubResource("Resource_idnmq")])

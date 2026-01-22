@@ -4,7 +4,7 @@
 [ext_resource type="Script" uid="uid://dv6r7tro15lnf" path="res://scripts/character/enemy/enemy_data.gd" id="2_q5f4f"]
 [ext_resource type="Texture2D" uid="uid://bvc73ewu1nlcy" path="res://assets/ai/characters/keyboard_warrior.png" id="3_p5usx"]
 
-[sub_resource type="Resource" id="Resource_ydafe"]
+[sub_resource type="Resource" id="Resource_cj5mh"]
 script = ExtResource("1_cj5mh")
 action_name = "Vibe Killer"
 action_type = 9
@@ -12,7 +12,7 @@ dice_count = 2
 status_id = "bleeding"
 charges = 1
 
-[sub_resource type="Resource" id="Resource_bnqk0"]
+[sub_resource type="Resource" id="Resource_q5f4f"]
 script = ExtResource("1_cj5mh")
 action_name = "Ragebait"
 action_type = 9
@@ -30,4 +30,4 @@ gold_dice = 3
 gold_dice_sides = 8
 hp_dice_count = 2
 hp_dice_sides = 10
-action_pool = Array[ExtResource("1_cj5mh")]([SubResource("Resource_ydafe"), SubResource("Resource_bnqk0")])
+action_pool = Array[ExtResource("1_cj5mh")]([SubResource("Resource_cj5mh"), SubResource("Resource_q5f4f")])

@@ -1,21 +1,27 @@
-[gd_resource type="Resource" script_class="EnemyData" load_steps=6 format=3 uid="uid://bl5un6w53yk3n"]
+[gd_resource type="Resource" script_class="EnemyData" load_steps=7 format=3 uid="uid://bl5un6w53yk3n"]
 
 [ext_resource type="Script" uid="uid://djeev1jhalfah" path="res://scripts/character/enemy/enemy_action.gd" id="1_3kbdv"]
 [ext_resource type="Script" uid="uid://dv6r7tro15lnf" path="res://scripts/character/enemy/enemy_data.gd" id="2_ueiwd"]
 [ext_resource type="Texture2D" uid="uid://qvmp6ntsv1y8" path="res://assets/ai/characters/femus.png" id="3_dn3dv"]
 
-[sub_resource type="Resource" id="Resource_deiij"]
+[sub_resource type="Resource" id="Resource_3kbdv"]
 script = ExtResource("1_3kbdv")
 action_name = "Bone Toss"
 dice_count = 2
-status_id = "bone_apart"
 duration = 1
+self_damage = 2
 
-[sub_resource type="Resource" id="Resource_orpr3"]
+[sub_resource type="Resource" id="Resource_ueiwd"]
 script = ExtResource("1_3kbdv")
-action_name = "Double Tap"
+action_name = "Bone Block"
+action_type = 1
+dice_count = 2
+
+[sub_resource type="Resource" id="Resource_dn3dv"]
+script = ExtResource("1_3kbdv")
+action_name = "Glass Bones"
 action_type = 6
-status_id = "reanimate_passive"
+status_id = "brittle"
 
 [resource]
 script = ExtResource("2_ueiwd")
@@ -23,5 +29,5 @@ enemy_name = "Femus"
 sprite_texture = ExtResource("3_dn3dv")
 minimum_hp = 4
 gold_dice_sides = 0
-action_pool = Array[ExtResource("1_3kbdv")]([SubResource("Resource_deiij")])
-passives = Array[ExtResource("1_3kbdv")]([SubResource("Resource_orpr3")])
+action_pool = Array[ExtResource("1_3kbdv")]([SubResource("Resource_3kbdv"), SubResource("Resource_ueiwd")])
+passives = Array[ExtResource("1_3kbdv")]([SubResource("Resource_dn3dv")])

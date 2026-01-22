@@ -17,6 +17,7 @@ var _held_dice: Array[Die] = []
 var gold: int = 50
 var die_removal_cost: int = 50
 var _shield_sound: AudioStream
+var current_attack_dice_count: int = 1
 @onready var status_display: HBoxContainer = $Visuals/InfoContainer/StatusEffectDisplay
 @onready var info_container: VBoxContainer = $Visuals/InfoContainer
 
@@ -25,6 +26,7 @@ var dice_pool_size = 4
 
 func _ready():
 	super._ready()
+	add_to_group("player")
 	_shield_sound = load("res://assets/ai/sounds/shield.wav")
 	statuses_changed.connect(_on_statuses_changed)
 	info_container.resized.connect(_on_info_container_resized)
@@ -103,6 +105,7 @@ func reset_for_new_round():
 	
 	_dice_discard.clear()
 	dice_discard_changed.emit(_dice_discard.size())
+	current_attack_dice_count = 1
 	
 	var preserved_statuses = {}
 	for status in statuses:

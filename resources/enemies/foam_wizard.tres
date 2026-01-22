@@ -4,7 +4,7 @@
 [ext_resource type="Script" uid="uid://dv6r7tro15lnf" path="res://scripts/character/enemy/enemy_data.gd" id="2_qbgdc"]
 [ext_resource type="Texture2D" uid="uid://durd4tcoqodg7" path="res://assets/ai/characters/foam_wizard.png" id="3_cajbx"]
 
-[sub_resource type="Resource" id="Resource_34epe"]
+[sub_resource type="Resource" id="Resource_bj3wa"]
 script = ExtResource("1_bj3wa")
 action_name = "Lightning Bolt"
 dice_count = 8
@@ -18,4 +18,4 @@ gold_minimum = 30
 gold_dice = 8
 hp_dice_count = 4
 hp_dice_sides = 4
-action_pool = Array[ExtResource("1_bj3wa")]([SubResource("Resource_34epe")])
+action_pool = Array[ExtResource("1_bj3wa")]([SubResource("Resource_bj3wa")])

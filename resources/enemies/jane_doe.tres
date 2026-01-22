@@ -1,22 +1,29 @@
-[gd_resource type="Resource" script_class="EnemyData" load_steps=6 format=3 uid="uid://ccnsds57lidp8"]
+[gd_resource type="Resource" script_class="EnemyData" load_steps=7 format=3 uid="uid://ccnsds57lidp8"]
 
 [ext_resource type="Script" uid="uid://djeev1jhalfah" path="res://scripts/character/enemy/enemy_action.gd" id="1_hkcyq"]
 [ext_resource type="Script" uid="uid://dv6r7tro15lnf" path="res://scripts/character/enemy/enemy_data.gd" id="2_bslxq"]
 [ext_resource type="Texture2D" uid="uid://drpfmlim86h74" path="res://assets/ai/characters/jane_doe.png" id="3_w8gtb"]
 
-[sub_resource type="Resource" id="Resource_pg2db"]
+[sub_resource type="Resource" id="Resource_hkcyq"]
 script = ExtResource("1_hkcyq")
 action_name = "Bone Toss"
 dice_count = 2
 dice_sides = 8
-status_id = "bone_apart"
 duration = 1
+self_damage = 2
 
-[sub_resource type="Resource" id="Resource_fdbty"]
+[sub_resource type="Resource" id="Resource_bslxq"]
 script = ExtResource("1_hkcyq")
-action_name = "Double Tap"
+action_name = "Bone Block"
+action_type = 1
+dice_count = 2
+dice_sides = 8
+
+[sub_resource type="Resource" id="Resource_w8gtb"]
+script = ExtResource("1_hkcyq")
+action_name = "Glass Bones"
 action_type = 6
-status_id = "reanimate_passive"
+status_id = "brittle"
 
 [resource]
 script = ExtResource("2_bslxq")
@@ -25,5 +32,5 @@ sprite_texture = ExtResource("3_w8gtb")
 minimum_hp = 4
 gold_dice_sides = 0
 hp_dice_count = 2
-action_pool = Array[ExtResource("1_hkcyq")]([SubResource("Resource_pg2db")])
-passives = Array[ExtResource("1_hkcyq")]([SubResource("Resource_fdbty")])
+action_pool = Array[ExtResource("1_hkcyq")]([SubResource("Resource_hkcyq"), SubResource("Resource_bslxq")])
+passives = Array[ExtResource("1_hkcyq")]([SubResource("Resource_w8gtb")])

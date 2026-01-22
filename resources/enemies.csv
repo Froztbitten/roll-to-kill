@@ -20,10 +20,12 @@ RPG	Goblin Camp	Mini-Boss	Goblet Gobblin Goblins	Gastrognome	10	5	6	27.5	7.64			
 RPG	Goblin Camp	Mini-Boss	Goblet Gobblin Goblins	Gastrognome	10	5	6	27.5	7.64				Frying Pan	1	10		5.5	2.87	Attack	Single Enemy			If no greedy gluttonous, only do this		151.25				0.00	0.00
 RPG	Crypt	Normal	Orphanage Memorial	Chicken-less Jockey	4	1	8	8.5	4.58	Double Tap	Reanimate	4	Ankle Bite	2	4		5.0	1.58	Attack	Single Enemy					76.5				0.00	0.00
 RPG	Crypt	Normal	Orphanage Memorial	Chicken-less Jockey	4	1	8	8.5	4.58	Double Tap	Reanimate	4	Necro Nibble	1	4	2	4.5	1.12	Attack, Debuff	Single Enemy		Decayed			72.25				0.00	0.00
-RPG	Crypt	Normal	Orphanage Memorial	Femus	4	1	6	7.5	3.42	Double Tap	Reanimate	4	Bone Toss	2	6	-2	5.0	2.42	Attack	Single Enemy, Self		Bone Apart	If > 2hp; Deal 2 damage to self		67.5				0.00	0.00
-RPG	Crypt	Normal	Stereotypical Graveyard	Jane Doe	4	2	6	11.0	4.83	Double Tap	Reanimate	4	Bone Toss	2	8	-2	7.0	3.24	Attack	Single Enemy, Self		Bone Apart	If > 2hp; Deal 2 damage to self		121				0.00	0.00
+RPG	Crypt	Normal	Orphanage Memorial	Femus	4	1	6	7.5	3.42	Glass Bones	Brittle	-3	Bone Toss	2	6	-2	5.0	2.42	Attack	Single Enemy, Self		Bone Apart	If > 2hp; Deal 2 damage to self		15				0.00	0.00
+RPG	Crypt	Normal	Orphanage Memorial	Femus	4	1	6	7.5	3.42	Glass Bones	Brittle	-3	Bone Block	2	6		7.0	2.42	Defense	Self					30				0.00	0.00
 RPG	Crypt	Normal	Stereotypical Graveyard	John Smith	4	2	6	11.0	4.83	Double Tap	Reanimate	4	Zombite	3	4		7.5	1.94	Attack	Single Enemy					126.5				0.00	0.00
 RPG	Crypt	Normal	Stereotypical Graveyard	John Smith	4	2	6	11.0	4.83	Double Tap	Reanimate	4	Mortifying Mastication	2	4	2	7.0	1.58	Attack, Debuff	Single Enemy		Decayed			121				0.00	0.00
+RPG	Crypt	Normal	Stereotypical Graveyard	Jane Doe	4	2	6	11.0	4.83	Glass Bones	Brittle	-3	Bone Toss	2	8	-2	7.0	3.24	Attack	Single Enemy, Self		Bone Apart	If > 2hp; Deal 2 damage to self		44				0.00	0.00
+RPG	Crypt	Normal	Stereotypical Graveyard	Jane Doe	4	2	6	11.0	4.83	Glass Bones	Brittle	-3	Bone Block	2	8		9.0	3.24	Defense	Self					66				0.00	0.00
 RPG	Crypt	Mini-Boss	Cryptologist	Cryptologist	10	6	10	43.0	14.07				Decrypt Decrepit			10	10.0	0.00	Summon	3 Allies	Decrepit Undead		<50% summon 5 decrepit undeads		430				0.00	0.00
 RPG	Crypt	Mini-Boss	Cryptologist	Cryptologist	10	6	10	43.0	14.07				Crypto's Graphic Hash	6	4	3	18.0	2.74	Attack, Debuff	All Enemies		Locked Down			1935				0.00	0.00
 RPG	Crypt	Mini-Boss	Cryptologist	Cryptologist	10	6	10	43.0	14.07				Siphon Decypher	3	6	3	13.5	2.96	Attack, Buff	Single Enemy, Self		Lifesteal			580.5				0.00	0.00
@@ -101,4 +103,4 @@ Toy Store		Normal	Adult Collections	Shonen Figures																					0
 Toy Store		Normal	Occupational Heroes	Firefighter																					0					
 Toy Store		Normal	Occupational Heroes	Logger																					0					
 Toy Store		Normal	Occupational Heroes	Medic																					0					
-Toy Store		Boss	Grabby Toddler	Grabby Toddler																					0					
+Toy Store		Boss	Grabby Toddler	Grabby Toddler																					0

@@ -4,25 +4,25 @@
 [ext_resource type="Script" uid="uid://dv6r7tro15lnf" path="res://scripts/character/enemy/enemy_data.gd" id="2_na7ep"]
 [ext_resource type="Texture2D" uid="uid://bksvsd5olmcb3" path="res://assets/ai/characters/evil_dice_tower.png" id="3_fgw5n"]
 
-[sub_resource type="Resource" id="Resource_sayl4"]
+[sub_resource type="Resource" id="Resource_mpbxs"]
 script = ExtResource("1_mpbxs")
 action_name = "Summon Minions"
 action_type = 5
 dice_sides = 0
 
-[sub_resource type="Resource" id="Resource_owyre"]
+[sub_resource type="Resource" id="Resource_na7ep"]
 script = ExtResource("1_mpbxs")
 action_name = "Die Cast"
 dice_count = 1
 dice_sides = 20
 
-[sub_resource type="Resource" id="Resource_pxbtf"]
+[sub_resource type="Resource" id="Resource_fgw5n"]
 script = ExtResource("1_mpbxs")
 action_name = "Inspiration"
 action_type = 6
 dice_sides = 0
 
-[sub_resource type="Resource" id="Resource_x6d88"]
+[sub_resource type="Resource" id="Resource_sayl4"]
 script = ExtResource("1_mpbxs")
 action_name = "Withdrawl-bridge"
 action_type = 1
@@ -38,4 +38,4 @@ gold_dice = 10
 gold_dice_sides = 10
 hp_dice_count = 5
 hp_dice_sides = 10
-action_pool = Array[ExtResource("1_mpbxs")]([SubResource("Resource_sayl4"), SubResource("Resource_owyre"), SubResource("Resource_pxbtf"), SubResource("Resource_x6d88")])
+action_pool = Array[ExtResource("1_mpbxs")]([SubResource("Resource_mpbxs"), SubResource("Resource_na7ep"), SubResource("Resource_fgw5n"), SubResource("Resource_sayl4")])

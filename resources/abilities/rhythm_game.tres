@@ -1,7 +1,7 @@
-[gd_resource type="Resource" script_class="AbilityData" load_steps=3 format=3]
+[gd_resource type="Resource" script_class="AbilityData" load_steps=3 format=3 uid="uid://cttjxm5mrk4ap"]
 
-[ext_resource type="Script" path="res://scripts/character/player/ability_data.gd" id="1_script"]
-[ext_resource type="Texture2D" uid="uid://c1vj2f3g4h5i6" path="res://assets/ai/ability_icons/rhythm_game_icon.svg" id="2_icon"]
+[ext_resource type="Script" uid="uid://uw8x16ewdua0" path="res://scripts/character/player/ability_data.gd" id="1_script"]
+[ext_resource type="Texture2D" uid="uid://ddx3murmjquus" path="res://assets/ai/ability_icons/rhythm_game_icon.svg" id="2_icon"]
 
 [resource]
 script = ExtResource("1_script")
