@@ -3,6 +3,7 @@ class_name QuestBoardScreen
 
 signal quests_confirmed(quests_data)
 signal close_requested
+signal reward_claimed(quest_id)
 
 @onready var quests_container = $Panel/VBoxContainer/Content/QuestsContainer
 @onready var dice_pool = $Panel/VBoxContainer/Content/DicePoolContainer/DicePool
@@ -62,11 +63,23 @@ func _input(event):
 		_skip_roll_animation()
 		get_viewport().set_input_as_handled()
 
-func open(p_player: Player, directions: Dictionary = {}):
+func open(p_player: Player, directions: Dictionary = {}, current_quests: Dictionary = {}):
 	player = p_player
 	visible = true
 	current_directions = directions
 	dice_pool.player = player
+	
+	if not current_quests.is_empty():
+		_show_active_quests(current_quests)
+		$Panel/VBoxContainer/Content/DicePoolContainer.visible = false
+		confirm_button.visible = false
+		return
+	else:
+		$Panel/VBoxContainer/Content/DicePoolContainer.visible = true
+		confirm_button.visible = true
+		confirm_button.disabled = false
+		confirm_button.text = "Confirm Allocation"
+		is_confirmed = false
 	
 	if is_first_time:
 		_generate_initial_quests()
@@ -81,12 +94,6 @@ func open(p_player: Player, directions: Dictionary = {}):
 		else:
 			slot.mouse_filter = Control.MOUSE_FILTER_STOP
 	
-	if is_confirmed:
-		confirm_button.text = "Confirmed"
-		confirm_button.disabled = true
-	else:
-		confirm_button.text = "Confirm Allocation"
-		_check_confirm_status()
 
 func _generate_initial_quests():
 	# Clear existing
@@ -175,6 +182,70 @@ func _create_quest_paper(data: Dictionary):
 	info_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	info_label.add_theme_color_override("font_color", Color(0.4, 0.4, 0.4))
 	vbox.add_child(info_label)
+	
+	quests_container.add_child(paper)
+
+func _show_active_quests(quests: Dictionary):
+	for child in quests_container.get_children():
+		child.queue_free()
+	active_quest_slots.clear()
+	
+	for q_id in quests:
+		var q_data = quests[q_id]
+		_create_active_quest_paper(q_data)
+
+func _create_active_quest_paper(data: Dictionary):
+	var paper = PanelContainer.new()
+	var style = StyleBoxFlat.new()
+	style.bg_color = Color(0.85, 0.75, 0.6) # Parchment color
+	style.border_width_left = 4
+	style.border_width_top = 4
+	style.border_width_right = 4
+	style.border_width_bottom = 4
+	style.border_color = Color(0.4, 0.3, 0.2)
+	style.corner_radius_top_left = 4
+	style.corner_radius_top_right = 4
+	style.corner_radius_bottom_right = 4
+	style.corner_radius_bottom_left = 4
+	style.content_margin_left = 15
+	style.content_margin_top = 15
+	style.content_margin_right = 15
+	style.content_margin_bottom = 15
+	paper.add_theme_stylebox_override("panel", style)
+	paper.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	
+	var vbox = VBoxContainer.new()
+	vbox.add_theme_constant_override("separation", 10)
+	paper.add_child(vbox)
+	
+	if data.has("icon") and data.icon != "":
+		var icon_rect = TextureRect.new()
+		icon_rect.texture = load(data.icon)
+		icon_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		icon_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		icon_rect.custom_minimum_size = Vector2(80, 80)
+		icon_rect.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+		vbox.add_child(icon_rect)
+	
+	var title = Label.new()
+	title.text = data.name
+	title.add_theme_color_override("font_color", Color(0.2, 0.1, 0.05))
+	title.add_theme_font_size_override("font_size", 24)
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	vbox.add_child(title)
+	
+	if data.get("completed", false):
+		var claim_btn = Button.new()
+		claim_btn.text = "Claim Reward"
+		claim_btn.custom_minimum_size = Vector2(0, 50)
+		claim_btn.pressed.connect(func(): emit_signal("reward_claimed", data.id))
+		vbox.add_child(claim_btn)
+	else:
+		var status = Label.new()
+		status.text = "IN PROGRESS\nDifficulty: %d" % data.die_value
+		status.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		status.add_theme_color_override("font_color", Color(0.6, 0.2, 0.1))
+		vbox.add_child(status)
 	
 	quests_container.add_child(paper)
 
@@ -307,12 +378,7 @@ func _on_die_removed_from_quest(die_display, _quest_data, vbox_container):
 
 func _check_confirm_status():
 	if is_confirmed: return
-	var all_filled = true
-	for slot in active_quest_slots:
-		if slot.current_die_display == null:
-			all_filled = false
-			break
-	confirm_button.disabled = not all_filled
+	confirm_button.disabled = false
 
 func _on_confirm_pressed():
 	# Gather final data
@@ -325,6 +391,8 @@ func _on_confirm_pressed():
 			final_quests.append(q_data)
 	
 	emit_signal("quests_confirmed", final_quests)
+	
+	dice_pool.clear_pool()
 	
 	is_confirmed = true
 	confirm_button.disabled = true

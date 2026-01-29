@@ -15,6 +15,7 @@ script = ExtResource("2_ntvjq")
 enemy_name = "Koko the Pelican"
 sprite_texture = ExtResource("3_ngf4w")
 minimum_hp = 0
+gold_minimum = 1
 gold_dice_sides = 0
 hp_dice_sides = 12
 action_pool = Array[ExtResource("1_vlkxi")]([SubResource("Resource_vlkxi")])

@@ -9,6 +9,7 @@ signal intent_changed
 
 var next_action: EnemyAction
 var next_action_value: int = 0
+var stored_dice_results: Array[int] = []
 var _is_charging := false
 var _turn_count := 0
 var _provided_shields: Array[Dictionary] = []
@@ -70,8 +71,13 @@ func setup():
 		for passive in enemy_data.passives:
 			if passive.status_id != "":
 				print("Applying passive status: %s to %s" % [passive.status_id, name])
-				if passive.charges > -1:
-					apply_charges_status(passive.status_id, passive.charges)
+				
+				var charges = passive.charges
+				if passive.status_id == "gluttony" and charges == -1:
+					charges = 0
+				
+				if charges > -1:
+					apply_charges_status(passive.status_id, charges)
 				elif passive.duration > -1:
 					apply_duration_status(passive.status_id, passive.duration)
 				else:
@@ -110,15 +116,25 @@ func declare_intent(active_enemies: Array):
 	print("Next action: ", next_action.action_name)
 	# Roll the dice for that action and sum the result
 	next_action_value = next_action.base_value
+	stored_dice_results.clear()
+	var effective_dice_count = next_action.dice_count
+
 	if not next_action.ignore_dice_roll:
 		var advantage = has_status("Advantageous")
 		var raging = has_status("Raging")
 		var multiplier = 2 if raging else 1
 		
+		if has_status(STATUS_GLUTTONY):
+			var gluttony_status = StatusLibrary.get_status("gluttony")
+			if statuses.has(gluttony_status):
+				effective_dice_count += statuses[gluttony_status]
+		
 		for i in range(multiplier):
-			for j in range(next_action.dice_count):
+			for j in range(effective_dice_count):
 				var d = Die.new(next_action.dice_sides)
-				next_action_value += d.roll(advantage)
+				var val = d.roll(advantage)
+				stored_dice_results.append(val)
+				next_action_value += val
 	
 	# Safely get the icon for the intent display.
 	# This prevents a crash if an action has no dice.
@@ -127,21 +143,26 @@ func declare_intent(active_enemies: Array):
 		die_sides_for_icon = next_action.dice_sides
 
 	var intent_icon_type = "attack"
-	if next_action.dice_count == 0 and next_action.base_value == 0:
+	if effective_dice_count == 0 and next_action.base_value == 0:
 		# Any action with no dice AND no value is considered a "charge" or "setup" move.
 		intent_icon_type = "charge"
 	elif next_action.action_type == EnemyAction.ActionType.SHIELD or next_action.action_type == EnemyAction.ActionType.SUPPORT_SHIELD:
 		intent_icon_type = "shield"
 	elif next_action.action_type == EnemyAction.ActionType.HEAL_ALLY:
 		intent_icon_type = "heal"
+	elif next_action.action_type == EnemyAction.ActionType.SPAWN_MINIONS:
+		intent_icon_type = "summon"
+	elif next_action.status_id == "lifesteal":
+		intent_icon_type = "lifesteal_attack"
 
 	# Update the UI to show the intent
-	intent_display.update_display(next_action.action_name, next_action_value, die_sides_for_icon, intent_icon_type, next_action.dice_count, next_action.status_id)
+	intent_display.update_display(next_action.action_name, next_action_value, die_sides_for_icon, intent_icon_type, effective_dice_count, next_action.status_id)
 	intent_display.visible = true
 
 
 func clear_intent():
 	next_action_value = 0
+	stored_dice_results.clear()
 	next_action = null
 	intent_display.visible = false
 	emit_signal("intent_changed")

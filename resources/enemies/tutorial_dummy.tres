@@ -28,6 +28,7 @@ script = ExtResource("2_0k5e7")
 enemy_name = "Tutorial Dummy"
 sprite_texture = ExtResource("3_llb3a")
 minimum_hp = 4
+gold_minimum = 1
 gold_dice_sides = 0
 hp_dice_count = 0
 hp_dice_sides = 0

@@ -54,6 +54,9 @@ func spawn_random_encounter(encounter_type: EncounterData.EncounterType):
 	return []
 
 func spawn_node_encounter(node_type: String, encounter_type: EncounterData.EncounterType) -> Array:
+	if node_type == "dragon_roost":
+		node_type = "dragons_roost"
+
 	var valid_encounters = encounter_pool.filter(func(e): 
 		return e.node_type == node_type and e.encounter_type == encounter_type
 	)

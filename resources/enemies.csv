@@ -13,9 +13,9 @@ RPG	Goblin Camp	Normal	Goblin Warchief	Goblin Warchief	6	2	6	13.0	4.83				Fight	
 RPG	Goblin Camp	Normal	Goblin Warchief	Goblin Warchief	6	2	6	13.0	4.83				Flight	0	0	1	1.0	0.00	Flee	Self			If guards are dead, Escapes		13	0	12	4	30.00	2.31
 RPG	Goblin Camp	Normal	Goblin Warchief	Goblin Warchief	6	2	6	13.0	4.83				Fright	0	0		0.0	0.00	Nothing	Self			If guards are dead		0	0	12	4	30.00	#DIV/0!
 RPG	Goblin Camp	Normal	Goblin Warchief	Ogre Bodyguard	12	3	10	28.5	9.95				Smash	1	10		5.5	2.87	Attack	Single Enemy					156.75	0	1	2	1.50	0.01
-RPG	Goblin Camp	Mini-Boss	Goblet Gobblin Goblins	Greedy Gluttonous Gourmand	10	5	10	37.5	12.85	Gluttony	Momentum	4	Belly Flop	1	6		3.5	1.71	Attack	Single Enemy					281.25				0.00	0.00
-RPG	Goblin Camp	Mini-Boss	Goblet Gobblin Goblins	Greedy Gluttonous Gourmand	10	5	10	37.5	12.85	Gluttony	Momentum	4	Roly-Poly	1	4		2.5	1.12	Attack	All Enemies					384.375				0.00	0.00
-RPG	Goblin Camp	Mini-Boss	Goblet Gobblin Goblins	Greedy Gluttonous Gourmand	10	5	10	37.5	12.85	Gluttony	Momentum	4	Shock Absorb	2	4		5.0	1.58	Defense	Self					337.5				0.00	0.00
+RPG	Goblin Camp	Mini-Boss	Goblet Gobblin Goblins	Greedy Gluttonous Gourmand	10	5	10	37.5	12.85	Gluttony	Gluttony	4	Belly Flop	1	6		3.5	1.71	Attack	Single Enemy					281.25				0.00	0.00
+RPG	Goblin Camp	Mini-Boss	Goblet Gobblin Goblins	Greedy Gluttonous Gourmand	10	5	10	37.5	12.85	Gluttony	Gluttony	4	Roly-Poly	1	4		2.5	1.12	Attack	All Enemies					384.375				0.00	0.00
+RPG	Goblin Camp	Mini-Boss	Goblet Gobblin Goblins	Greedy Gluttonous Gourmand	10	5	10	37.5	12.85	Gluttony	Gluttony	4	Shock Absorb	2	4		5.0	1.58	Defense	Self					337.5				0.00	0.00
 RPG	Goblin Camp	Mini-Boss	Goblet Gobblin Goblins	Gastrognome	10	5	6	27.5	7.64				Buffet	3	4		7.5	1.94	Heal	Custom Target	Greedy Gluttonous Gourmand				206.25				0.00	0.00
 RPG	Goblin Camp	Mini-Boss	Goblet Gobblin Goblins	Gastrognome	10	5	6	27.5	7.64				Frying Pan	1	10		5.5	2.87	Attack	Single Enemy			If no greedy gluttonous, only do this		151.25				0.00	0.00
 RPG	Crypt	Normal	Orphanage Memorial	Chicken-less Jockey	4	1	8	8.5	4.58	Double Tap	Reanimate	4	Ankle Bite	2	4		5.0	1.58	Attack	Single Enemy					76.5				0.00	0.00
@@ -103,4 +103,4 @@ Toy Store		Normal	Adult Collections	Shonen Figures																					0
 Toy Store		Normal	Occupational Heroes	Firefighter																					0					
 Toy Store		Normal	Occupational Heroes	Logger																					0					
 Toy Store		Normal	Occupational Heroes	Medic																					0					
-Toy Store		Boss	Grabby Toddler	Grabby Toddler																					0
+Toy Store		Boss	Grabby Toddler	Grabby Toddler																					0					

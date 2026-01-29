@@ -5,7 +5,7 @@ extends Node2D
 func _ready():
 	arrange_enemies()
 
-func arrange_enemies():
+func arrange_enemies(animate: bool = false):
 	var enemies = get_children().filter(func(c): return c is Enemy and not c._is_dead and not c.is_queued_for_deletion())
 	var count = enemies.size()
 	
@@ -47,8 +47,15 @@ func arrange_enemies():
 		# Calculate the target X position relative to this container's origin
 		var new_x = start_x + (step_x * (i + 1))
 		# Position the enemy. Y is 0 because it's centered on this container.
-		enemy.position = Vector2(new_x, 0)
-		enemy.update_resting_state()
+		var target_pos = Vector2(new_x, 0)
+		
+		if animate and enemy.is_inside_tree():
+			var tween = create_tween()
+			tween.tween_property(enemy, "position", target_pos, 0.4).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+			enemy._resting_position = target_pos
+		else:
+			enemy.position = target_pos
+			enemy.update_resting_state()
 		
 func clear_everything():
 	for child in get_children():

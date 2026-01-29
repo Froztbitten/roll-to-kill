@@ -15,6 +15,7 @@ script = ExtResource("2_kkbfm")
 enemy_name = "Shield Generator"
 sprite_texture = ExtResource("3_bqdmw")
 minimum_hp = 0
+gold_minimum = 6
 gold_dice_sides = 0
 hp_dice_count = 3
 hp_dice_sides = 4

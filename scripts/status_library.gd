@@ -145,6 +145,22 @@ func _define_statuses():
 		"Takes 2 extra damage from all sources.",
 		load("res://assets/ai/status_icons/brittle.svg")
 	)
+	statuses["gluttony"] = StatusEffect.new(
+		"Gluttony",
+		false,
+		"Gains 1 stack when healed. Loses 1 stack when taking damage. Each stack adds +1 die to actions.",
+		load("res://assets/ai/status_icons/gluttony.svg"),
+		-1,
+		0
+	)
+	statuses["lifesteal"] = StatusEffect.new(
+		"Lifesteal",
+		false,
+		"Heals the user equal to unblocked damage dealt.",
+		load("res://assets/ai/status_icons/bleed.svg"),
+		-1,
+		0
+	)
 
 func get_status(id: String) -> StatusEffect:
 	if statuses.has(id):

@@ -67,6 +67,11 @@ func _run():
 			var gold_dice_count = line[27].to_int()
 			var gold_dice_sides = line[28].to_int()
 			
+			if min_gold == 0 and gold_dice_count == 0 and gold_dice_sides == 0:
+				var d_val = line[25].to_float()
+				if d_val > 0:
+					min_gold = int(d_val / 10.0)
+			
 			enemy_data.gold_minimum = min_gold
 			enemy_data.gold_dice = gold_dice_count
 			enemy_data.gold_dice_sides = gold_dice_sides
@@ -106,6 +111,9 @@ func _run():
 				elif "brittle" in p_type or "brittle" in p_name.to_lower():
 					passive.status_id = "brittle"
 					passive.duration = -1
+				elif "gluttony" in p_type:
+					passive.status_id = "gluttony"
+					passive.charges = 0
 				
 				enemy_data.passives.append(passive)
 
@@ -128,6 +136,16 @@ func _run():
 					action.action_type = EnemyAction.ActionType.DEBUFF
 				else:
 					action.action_type = EnemyAction.ActionType.ATTACK
+			elif "Summon" in action_type_str:
+				action.action_type = EnemyAction.ActionType.SPAWN_MINIONS
+				var target_str = line[20]
+				var target_other_str = line[21]
+				var count = _get_first_number(target_str)
+				action.base_value = count if count > 0 else 1
+				if not target_other_str.is_empty():
+					var names = target_other_str.split(",")
+					for n in names:
+						action.summon_list.append(n.strip_edges())
 			elif "Defense" in action_type_str:
 				if "Shields All" in additional_effects or "allies" in additional_effects or "ally" in additional_effects:
 					action.action_type = EnemyAction.ActionType.SUPPORT_SHIELD
@@ -135,8 +153,6 @@ func _run():
 					action.action_type = EnemyAction.ActionType.SHIELD
 			elif "Heal" in action_type_str:
 				action.action_type = EnemyAction.ActionType.HEAL_ALLY
-			elif "Summon" in action_type_str:
-				action.action_type = EnemyAction.ActionType.SPAWN_MINIONS
 			elif "Buff" in action_type_str:
 				action.action_type = EnemyAction.ActionType.BUFF
 			elif "Flee" in action_type_str:
@@ -206,3 +222,11 @@ func _extract_number(text: String, keyword: String) -> int:
 	if result:
 		return result.get_string(1).to_int()
 	return 1
+
+func _get_first_number(text: String) -> int:
+	var regex = RegEx.new()
+	regex.compile("\\d+")
+	var result = regex.search(text)
+	if result:
+		return result.get_string().to_int()
+	return 0

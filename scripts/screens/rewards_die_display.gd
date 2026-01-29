@@ -72,14 +72,21 @@ func _ready():
 func _process(_delta):
 	# On every frame, check if the mouse is over this control and if ALT is pressed.
 	# This provides immediate feedback to the user.
-	if get_global_rect().has_point(get_global_mouse_position()):
-		if Input.is_key_pressed(KEY_ALT) and average_roll > 0:
-			average_label.text = "Avg:\n%.1f" % average_roll
-			average_label.visible = true
+	var show_avg = MainGame.debug_mode
+	if not show_avg and get_global_rect().has_point(get_global_mouse_position()) and Input.is_key_pressed(KEY_ALT):
+		show_avg = true
+
+	if show_avg and average_roll > 0:
+		if MainGame.debug_mode:
+			var effect_val = 0.0
+			if die.effect:
+				effect_val = die.effect.tier * 1.5 # Estimated weight
+			var total = average_roll + effect_val
+			average_label.text = "Avg: %.1f\nEff: %.1f\nTot: %.1f" % [average_roll, effect_val, total]
 		else:
-			average_label.visible = false
+			average_label.text = "Avg:\n%.1f" % average_roll
+		average_label.visible = true
 	else:
-		# Ensure the label is hidden if the mouse is not hovering.
 		average_label.visible = false
 
 
@@ -169,7 +176,7 @@ func set_die(die_data: Die, force_grid: bool = false, is_upgrade_reward: bool = 
 			else:
 				die_label.remove_theme_font_size_override("font_size")
 				
-			status_label.text = "(New)" if show_status_text else ""
+			status_label.text = ""
 			if die.effect:
 				_add_effect_panel_to_list(upgrades_list, die.effect, "Face Value")
 				upgrades_list.visible = true
@@ -193,8 +200,17 @@ func set_die(die_data: Die, force_grid: bool = false, is_upgrade_reward: bool = 
 		else:
 			die_icon.texture = null
 	
+	# Calculate actual average from faces
+	var sum = 0.0
+	if die.faces.size() > 0:
+		for f in die.faces:
+			sum += f.value
+		average_roll = sum / float(die.faces.size())
+	else:
+		average_roll = 0.0
+		
 	var bonus = die.get_meta("upgrade_count", 0)
-	average_roll = ((float(die.sides) + 1.0) / 2.0) + bonus
+	average_roll += bonus
 
 	_apply_scale()
 	visible = true

@@ -30,6 +30,7 @@ script = ExtResource("2_bslxq")
 enemy_name = "Jane Doe"
 sprite_texture = ExtResource("3_w8gtb")
 minimum_hp = 4
+gold_minimum = 6
 gold_dice_sides = 0
 hp_dice_count = 2
 action_pool = Array[ExtResource("1_hkcyq")]([SubResource("Resource_hkcyq"), SubResource("Resource_bslxq")])

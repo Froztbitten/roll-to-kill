@@ -30,6 +30,7 @@ script = ExtResource("2_w1lfj")
 enemy_name = "John Smith"
 sprite_texture = ExtResource("3_co0o2")
 minimum_hp = 4
+gold_minimum = 12
 gold_dice_sides = 0
 hp_dice_count = 2
 action_pool = Array[ExtResource("1_8sdkc")]([SubResource("Resource_8sdkc"), SubResource("Resource_w1lfj")])

@@ -26,6 +26,7 @@ offset_left = -19.0
 offset_top = -150.0
 offset_right = 81.0
 offset_bottom = -70.0
+custom_minimum_size = Vector2(140, 0)
 
 [node name="NameLabel" type="Label" parent="Visuals/InfoContainer"]
 layout_mode = 2
@@ -33,10 +34,11 @@ theme_override_font_sizes/font_size = 18
 text = "Enemy"
 horizontal_alignment = 1
 vertical_alignment = 1
+autowrap_mode = 3
 
 [node name="HealthBar" parent="Visuals/InfoContainer" instance=ExtResource("3_m1yav")]
 layout_mode = 2
-custom_minimum_size = Vector2(100, 27)
+custom_minimum_size = Vector2(140, 27)
 
 [node name="StatusEffectDisplay" parent="Visuals/InfoContainer" instance=ExtResource("5_status")]
 layout_mode = 2

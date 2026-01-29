@@ -8,7 +8,9 @@
 script = ExtResource("1_8qdxh")
 action_name = "Eureka!"
 action_type = 5
+base_value = 1
 dice_sides = 0
+summon_list = Array[String](["Koko the Pelican", "Wick-walk", "Shield Generator"])
 
 [sub_resource type="Resource" id="Resource_sarfa"]
 script = ExtResource("1_8qdxh")

@@ -17,6 +17,7 @@ script = ExtResource("2_rfdkb")
 enemy_name = "Wick-walk"
 sprite_texture = ExtResource("3_4kulr")
 minimum_hp = 0
+gold_minimum = 4
 gold_dice_sides = 0
 hp_dice_sides = 4
 action_pool = Array[ExtResource("1_kvu4a")]([SubResource("Resource_kvu4a")])

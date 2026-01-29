@@ -28,6 +28,7 @@ script = ExtResource("2_ueiwd")
 enemy_name = "Femus"
 sprite_texture = ExtResource("3_dn3dv")
 minimum_hp = 4
+gold_minimum = 3
 gold_dice_sides = 0
 action_pool = Array[ExtResource("1_3kbdv")]([SubResource("Resource_3kbdv"), SubResource("Resource_ueiwd")])
 passives = Array[ExtResource("1_3kbdv")]([SubResource("Resource_dn3dv")])

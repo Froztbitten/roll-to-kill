@@ -23,6 +23,7 @@ const STATUS_REANIMATE_PASSIVE = "Reanimate"
 const STATUS_REANIMATING = "Reanimating"
 const STATUS_DECAYED = "Decayed"
 const STATUS_BRITTLE = "Brittle"
+const STATUS_GLUTTONY = "Gluttony"
 
 var current_scale_factor: float = 1.0
 var statuses: Dictionary = {} # {StatusEffect: duration}
@@ -128,6 +129,13 @@ func take_piercing_damage(damage: int, play_recoil: bool = true, attacker: Chara
 
 func _apply_damage(amount: int, type: String, old_block_value: int, play_recoil: bool = true, attacker: Character = null, is_attack_action: bool = false) -> void:
 	if amount > 0:
+		if has_status(STATUS_GLUTTONY):
+			var gluttony_status = StatusLibrary.get_status("gluttony")
+			if statuses.has(gluttony_status):
+				statuses[gluttony_status] = max(0, statuses[gluttony_status] - 1)
+				statuses_changed.emit(statuses)
+				print("%s lost a stack of Gluttony. Stacks: %d" % [name, statuses[gluttony_status]])
+
 		# Play the damage sound if one is loaded.
 		if audio_player and _damage_sound:
 			audio_player.stream = _damage_sound
@@ -189,6 +197,9 @@ func heal(amount: int):
 			statuses_changed.emit(statuses)
 	
 	if amount <= 0: return
+
+	if has_status(STATUS_GLUTTONY):
+		apply_charges_status("gluttony", 1)
 
 	var old_hp = hp
 	var old_block = block
@@ -347,7 +358,7 @@ func tick_down_statuses():
 		# Skip ticking down for charge-based effects. Since Spikes is a permanent
 		# charge buff, we add an explicit check to ensure it never decays. Debuffs
 		# like Bleed and Burn are also charge-based and should not decay over time.
-		if status.charges != -1 or status.status_name == STATUS_SPIKY or status.status_name == STATUS_BLEEDING or status.status_name == STATUS_BURNING:
+		if status.charges != -1 or status.status_name == STATUS_SPIKY or status.status_name == STATUS_BLEEDING or status.status_name == STATUS_BURNING or status.status_name == STATUS_GLUTTONY:
 			continue
 		
 		if statuses[status] == -1:

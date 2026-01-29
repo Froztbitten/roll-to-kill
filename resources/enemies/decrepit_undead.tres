@@ -19,6 +19,7 @@ status_id = "reanimate_passive"
 script = ExtResource("2_ep6or")
 enemy_name = "Decrepit Undead"
 minimum_hp = 0
+gold_minimum = 1
 gold_dice_sides = 0
 hp_dice_sides = 4
 action_pool = Array[ExtResource("1_a2vhb")]([SubResource("Resource_a2vhb")])

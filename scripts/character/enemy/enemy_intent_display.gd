@@ -32,7 +32,9 @@ func _ready():
 		"attack": load("res://assets/ai/ui/sword.svg"),
 		"shield": load("res://assets/ai/ui/shield.svg"),
 		"charge": load("res://assets/ai/ui/reload.svg"),
-		"heal": load("res://assets/ai/ability_icons/heal_ability_icon.svg")
+		"heal": load("res://assets/ai/ability_icons/heal_ability_icon.svg"),
+		"summon": load("res://assets/ai/ui/summon.svg"),
+		"lifesteal_attack": load("res://assets/ai/ui/sword.svg")
 	}
 	
 	_setup_tooltip()
@@ -91,6 +93,14 @@ func update_display(action_name: String, value: int, sides: int, action_type: St
 		action_type_icon.visible = true
 		dice_count_label.visible = false
 		icon.modulate = Color.WHITE # Reset color just in case
+	elif action_type == "summon":
+		roll_label.visible = true
+		roll_label.text = str(value)
+		icon.visible = false
+		action_type_icon.texture = ACTION_ICONS["summon"]
+		action_type_icon.visible = true
+		dice_count_label.visible = false
+		icon.modulate = Color.WHITE
 	else:
 		# For standard attack/shield actions, show all info.
 		roll_label.visible = true
@@ -120,6 +130,8 @@ func update_display(action_name: String, value: int, sides: int, action_type: St
 			icon.modulate = Color(0.6, 0.7, 1, 1) # Same blue as player's shield
 		elif action_type == "heal":
 			icon.modulate = Color.PALE_GREEN
+		elif action_type == "lifesteal_attack":
+			icon.modulate = Color.CRIMSON
 		else:
 			icon.modulate = Color.WHITE # Default color
 

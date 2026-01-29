@@ -8,7 +8,9 @@
 script = ExtResource("1_mpbxs")
 action_name = "Summon Minions"
 action_type = 5
+base_value = 3
 dice_sides = 0
+summon_list = Array[String](["D20", "D12", "D10", "D8", "D6", "D4"])
 
 [sub_resource type="Resource" id="Resource_na7ep"]
 script = ExtResource("1_mpbxs")

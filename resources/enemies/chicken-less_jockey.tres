@@ -30,6 +30,7 @@ script = ExtResource("2_nanye")
 enemy_name = "Chicken-less Jockey"
 sprite_texture = ExtResource("3_p8p44")
 minimum_hp = 4
+gold_minimum = 7
 gold_dice_sides = 0
 hp_dice_sides = 8
 action_pool = Array[ExtResource("1_kwjg4")]([SubResource("Resource_kwjg4"), SubResource("Resource_nanye")])

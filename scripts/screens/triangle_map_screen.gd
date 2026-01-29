@@ -23,7 +23,6 @@ var path_line: Line2D
 var full_path_line: Line2D
 var distance_label: Label
 var full_distance_label: Label
-var turn_limit_label: Label
 var moves_label: Label
 var is_moving = false
 var is_rolling = false
@@ -71,20 +70,31 @@ var spell_shop_charms_grid: GridContainer
 var reroll_charms_button: Button
 var reroll_charms_cost = 25
 var spell_shop_generated = false
+var dice_shop_generated = false
 var view_only = false
 var close_map_button: Button
-var limit_container: MarginContainer
 var log_margin: MarginContainer
 var current_highlighted_nodes = {} # node -> original_color
 var current_highlighted_visuals = {} # "icon" -> icon_node, "label" -> label_node
 var current_highlight_identifier = null
 var highlight_clear_timer: Timer
+var current_scale_factor = 1.0
 var boss_room_nodes = []
 var decayed_nodes = {}
+var current_zoom = 1.0
+var map_base_size = Vector2.ZERO
 
 func _input(event):
 	if not visible: return
 	
+	# If any menu is open, let the event propagate (for scrolling lists etc.)
+	if (town_ui and town_ui.visible) or \
+	   (inn_ui and inn_ui.visible) or \
+	   (dice_shop_ui and dice_shop_ui.visible) or \
+	   (forge_ui and forge_ui.visible) or \
+	   (spell_shop_ui and spell_shop_ui.visible):
+		return
+
 	if event is InputEventMouseButton:
 		if event.button_index == MOUSE_BUTTON_LEFT and event.is_pressed():
 			if is_rolling:
@@ -93,13 +103,6 @@ func _input(event):
 			elif is_moving:
 				_skip_movement_animation()
 				get_viewport().set_input_as_handled()
-		elif event.is_pressed():
-			if event.button_index == MOUSE_BUTTON_WHEEL_UP:
-				fog_radius = min(fog_radius + 1, 10)
-				update_fog()
-			elif event.button_index == MOUSE_BUTTON_WHEEL_DOWN:
-				fog_radius = max(fog_radius - 1, 1)
-				update_fog()
 	
 	if event is InputEventKey and event.pressed and event.keycode == KEY_ENTER:
 		fog_enabled = !fog_enabled
@@ -115,7 +118,12 @@ func _ready():
 			start_turn()
 	)
 	
-	# Wrap MapContainer in a CenterContainer to handle centering and resizing
+	# Hide scrollbars
+	scroll_container.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_SHOW_NEVER
+	scroll_container.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_SHOW_NEVER
+	scroll_container.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	
+	# Wrap MapContainer in a CenterContainer to handle centering
 	var center_container = CenterContainer.new()
 	center_container.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	center_container.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -123,27 +131,18 @@ func _ready():
 	center_container.add_child(map_container)
 	scroll_container.add_child(center_container)
 	
+	# Disable native scrolling on ScrollContainer
+	var scroll_script = GDScript.new()
+	scroll_script.source_code = "extends ScrollContainer\nfunc _gui_input(event):\n\tif event is InputEventMouseButton and (event.button_index == MOUSE_BUTTON_WHEEL_UP or event.button_index == MOUSE_BUTTON_WHEEL_DOWN):\n\t\taccept_event()"
+	scroll_script.reload()
+	scroll_container.set_script(scroll_script)
+	
 	# Setup Static UI
 	ui_layer = Control.new()
 	ui_layer.set_anchors_preset(Control.PRESET_FULL_RECT)
 	ui_layer.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	ui_layer.visible = visible
 	add_child(ui_layer)
-	
-	# Turn Limit Label (Top Right)
-	limit_container = MarginContainer.new()
-	limit_container.set_anchors_preset(Control.PRESET_TOP_RIGHT)
-	limit_container.grow_horizontal = Control.GROW_DIRECTION_BEGIN
-	# Margin updated in _on_viewport_size_changed
-	limit_container.add_theme_constant_override("margin_right", 80)
-	ui_layer.add_child(limit_container)
-	
-	turn_limit_label = Label.new()
-	turn_limit_label.add_theme_font_size_override("font_size", 32)
-	turn_limit_label.add_theme_color_override("font_outline_color", Color.BLACK)
-	turn_limit_label.add_theme_constant_override("outline_size", 4)
-	turn_limit_label.text = "Turn: 0"
-	limit_container.add_child(turn_limit_label)
 	
 	# Quest Log (Top Left)
 	log_margin = MarginContainer.new()
@@ -163,7 +162,7 @@ func _ready():
 	moves_label.add_theme_color_override("font_outline_color", Color.BLACK)
 	moves_label.add_theme_constant_override("outline_size", 4)
 	moves_label.custom_minimum_size = Vector2(100, 30)
-	moves_label.position = Vector2(player_icon.size.x / 2.0 - 50, -35)
+	moves_label.position = Vector2(player_icon.size.x / 2.0 - 50, -80)
 	player_icon.add_child(moves_label)
 	
 	# Initialize Procedural Textures
@@ -542,7 +541,10 @@ func _open_dice_shop_menu():
 	if player:
 		remove_die_button.text = "Remove Die (%dg)" % player.die_removal_cost
 		remove_die_button.disabled = player.gold < player.die_removal_cost
-	_generate_dice_shop_inventory()
+	
+	if not dice_shop_generated:
+		_generate_dice_shop_inventory()
+		dice_shop_generated = true
 
 func _close_dice_shop_menu():
 	dice_shop_ui.visible = false
@@ -1029,7 +1031,8 @@ func generate_new_map():
 	turns_left = 21
 	var height = triangle_size * sqrt(3) / 2.0
 	var total_grid_width = (grid_width * triangle_size / 2.0) + (triangle_size / 2.0)
-	map_container.custom_minimum_size = Vector2(total_grid_width, grid_height * height)
+	map_base_size = Vector2(total_grid_width, grid_height * height)
+	# map_container.custom_minimum_size is set in _fit_map_to_screen
 	var x_offset = 0.0
 	var y_offset = 0.0
 	
@@ -1421,9 +1424,9 @@ func draw_map():
 		icon.texture = load("res://assets/ai/ui/crypt_node.svg")
 		icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-		icon.size = Vector2(40, 40)
+		icon.size = Vector2(50, 50)
 		icon.pivot_offset = icon.size / 2.0
-		icon.position = center_pos - Vector2(20, 20)
+		icon.position = center_pos - (icon.size / 2.0)
 		icon.z_index = 20
 		icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		map_container.add_child(icon)
@@ -1432,12 +1435,15 @@ func draw_map():
 		lbl.text = "Crypt"
 		lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		lbl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-		lbl.add_theme_font_size_override("font_size", 14)
+		lbl.add_theme_font_size_override("font_size", int(14 * current_scale_factor))
 		lbl.add_theme_color_override("font_outline_color", Color.BLACK)
-		lbl.add_theme_constant_override("outline_size", 4)
-		lbl.size = Vector2(100, 30)
+		lbl.add_theme_constant_override("outline_size", int(4 * current_scale_factor))
+		lbl.size = Vector2(200, 30)
 		lbl.pivot_offset = lbl.size / 2.0
-		lbl.position = center_pos - Vector2(50, -15) # Centered on icon
+		var offset_y = 28 * current_scale_factor
+		icon.position = center_pos - (icon.size / 2.0)
+		lbl.position = center_pos - (lbl.size / 2.0) - Vector2(0, offset_y)
+		lbl.visible = false
 		lbl.z_index = 21
 		map_container.add_child(lbl)
 		special_visuals["crypt"] = {"icon": icon, "label": lbl, "nodes": crypt_nodes_for_visuals}
@@ -1453,9 +1459,9 @@ func draw_map():
 		icon.texture = load("res://assets/ai/ui/goblin_camp_node.svg")
 		icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-		icon.size = Vector2(40, 40)
+		icon.size = Vector2(50, 50)
 		icon.pivot_offset = icon.size / 2.0
-		icon.position = center_pos - Vector2(20, 20)
+		icon.position = center_pos - (icon.size / 2.0)
 		icon.z_index = 20
 		icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		map_container.add_child(icon)
@@ -1464,12 +1470,15 @@ func draw_map():
 		lbl.text = "Goblin Camp"
 		lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		lbl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-		lbl.add_theme_font_size_override("font_size", 14)
+		lbl.add_theme_font_size_override("font_size", int(14 * current_scale_factor))
 		lbl.add_theme_color_override("font_outline_color", Color.BLACK)
-		lbl.add_theme_constant_override("outline_size", 4)
-		lbl.size = Vector2(100, 30)
+		lbl.add_theme_constant_override("outline_size", int(4 * current_scale_factor))
+		lbl.size = Vector2(200, 30)
 		lbl.pivot_offset = lbl.size / 2.0
-		lbl.position = center_pos - Vector2(50, -15) # Centered on icon
+		var offset_y = 28 * current_scale_factor
+		icon.position = center_pos - (icon.size / 2.0)
+		lbl.position = center_pos - (lbl.size / 2.0) - Vector2(0, offset_y)
+		lbl.visible = false
 		lbl.z_index = 21
 		map_container.add_child(lbl)
 		special_visuals["goblin_camp"] = {"icon": icon, "label": lbl, "nodes": goblin_nodes_for_visuals}
@@ -1485,9 +1494,9 @@ func draw_map():
 		icon.texture = load("res://assets/ai/ui/dragon_roost_node.svg")
 		icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-		icon.size = Vector2(40, 40)
+		icon.size = Vector2(50, 50)
 		icon.pivot_offset = icon.size / 2.0
-		icon.position = center_pos - Vector2(20, 20)
+		icon.position = center_pos - (icon.size / 2.0)
 		icon.z_index = 20
 		icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		map_container.add_child(icon)
@@ -1496,12 +1505,15 @@ func draw_map():
 		lbl.text = "Dragon Roost"
 		lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		lbl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-		lbl.add_theme_font_size_override("font_size", 14)
+		lbl.add_theme_font_size_override("font_size", int(14 * current_scale_factor))
 		lbl.add_theme_color_override("font_outline_color", Color.BLACK)
-		lbl.add_theme_constant_override("outline_size", 4)
-		lbl.size = Vector2(100, 30)
+		lbl.add_theme_constant_override("outline_size", int(4 * current_scale_factor))
+		lbl.size = Vector2(200, 30)
 		lbl.pivot_offset = lbl.size / 2.0
-		lbl.position = center_pos - Vector2(50, -15) # Centered on icon
+		var offset_y = 28 * current_scale_factor
+		icon.position = center_pos - (icon.size / 2.0)
+		lbl.position = center_pos - (lbl.size / 2.0) - Vector2(0, offset_y)
+		lbl.visible = false
 		lbl.z_index = 21
 		map_container.add_child(lbl)
 		special_visuals["dragon_roost"] = {"icon": icon, "label": lbl, "nodes": dragon_nodes_for_visuals}
@@ -1517,9 +1529,9 @@ func draw_map():
 		icon.texture = load("res://assets/ai/ui/town_node.svg")
 		icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-		icon.size = Vector2(40, 40)
+		icon.size = Vector2(50, 50)
 		icon.pivot_offset = icon.size / 2.0
-		icon.position = center_pos - Vector2(20, 20)
+		icon.position = center_pos - (icon.size / 2.0)
 		icon.z_index = 20
 		icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		map_container.add_child(icon)
@@ -1528,12 +1540,15 @@ func draw_map():
 		lbl.text = "Town"
 		lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		lbl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-		lbl.add_theme_font_size_override("font_size", 14)
+		lbl.add_theme_font_size_override("font_size", int(14 * current_scale_factor))
 		lbl.add_theme_color_override("font_outline_color", Color.BLACK)
-		lbl.add_theme_constant_override("outline_size", 4)
-		lbl.size = Vector2(100, 30)
+		lbl.add_theme_constant_override("outline_size", int(4 * current_scale_factor))
+		lbl.size = Vector2(200, 30)
 		lbl.pivot_offset = lbl.size / 2.0
-		lbl.position = center_pos - Vector2(50, -15) # Centered on icon
+		var offset_y = 28 * current_scale_factor
+		icon.position = center_pos - (icon.size / 2.0)
+		lbl.position = center_pos - (lbl.size / 2.0) - Vector2(0, offset_y)
+		lbl.visible = false
 		lbl.z_index = 21
 		map_container.add_child(lbl)
 		special_visuals["town"] = {"icon": icon, "label": lbl, "nodes": town_nodes_for_visuals}
@@ -1549,9 +1564,9 @@ func draw_map():
 		icon.texture = load("res://assets/ai/ui/dwarven_forge_node.svg")
 		icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-		icon.size = Vector2(40, 40)
+		icon.size = Vector2(50, 50)
 		icon.pivot_offset = icon.size / 2.0
-		icon.position = center_pos - Vector2(20, 20)
+		icon.position = center_pos - (icon.size / 2.0)
 		icon.z_index = 20
 		icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		map_container.add_child(icon)
@@ -1560,12 +1575,15 @@ func draw_map():
 		lbl.text = "Dwarven Forge"
 		lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		lbl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-		lbl.add_theme_font_size_override("font_size", 14)
+		lbl.add_theme_font_size_override("font_size", int(14 * current_scale_factor))
 		lbl.add_theme_color_override("font_outline_color", Color.BLACK)
-		lbl.add_theme_constant_override("outline_size", 4)
-		lbl.size = Vector2(120, 30)
+		lbl.add_theme_constant_override("outline_size", int(4 * current_scale_factor))
+		lbl.size = Vector2(200, 30)
 		lbl.pivot_offset = lbl.size / 2.0
-		lbl.position = center_pos - Vector2(60, -15) # Centered on icon
+		var offset_y = 28 * current_scale_factor
+		icon.position = center_pos - (icon.size / 2.0)
+		lbl.position = center_pos - (lbl.size / 2.0) - Vector2(0, offset_y)
+		lbl.visible = false
 		lbl.z_index = 21
 		map_container.add_child(lbl)
 		special_visuals["dwarven_forge"] = {"icon": icon, "label": lbl, "nodes": dwarven_forge_nodes_for_visuals}
@@ -1581,9 +1599,9 @@ func draw_map():
 		icon.texture = load("res://assets/ai/ui/boss_encounter.svg")
 		icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-		icon.size = Vector2(40, 40)
+		icon.size = Vector2(50, 50)
 		icon.pivot_offset = icon.size / 2.0
-		icon.position = center_pos - Vector2(20, 20)
+		icon.position = center_pos - (icon.size / 2.0)
 		icon.z_index = 20
 		icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		map_container.add_child(icon)
@@ -1592,16 +1610,20 @@ func draw_map():
 		lbl.text = "Boss Room"
 		lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		lbl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-		lbl.add_theme_font_size_override("font_size", 14)
+		lbl.add_theme_font_size_override("font_size", int(14 * current_scale_factor))
 		lbl.add_theme_color_override("font_outline_color", Color.BLACK)
-		lbl.add_theme_constant_override("outline_size", 4)
-		lbl.size = Vector2(100, 30)
+		lbl.add_theme_constant_override("outline_size", int(4 * current_scale_factor))
+		lbl.size = Vector2(200, 30)
 		lbl.pivot_offset = lbl.size / 2.0
-		lbl.position = center_pos - Vector2(50, -15) # Centered on icon
+		var offset_y = 28 * current_scale_factor
+		icon.position = center_pos - (icon.size / 2.0)
+		lbl.position = center_pos - (lbl.size / 2.0) - Vector2(0, offset_y)
+		lbl.visible = false
 		lbl.z_index = 21
 		map_container.add_child(lbl)
 		special_visuals["final_boss"] = {"icon": icon, "label": lbl, "nodes": boss_room_nodes_for_visuals}
 		
+	_fit_map_to_screen()
 	update_visuals()
 
 func update_visuals():
@@ -1614,16 +1636,19 @@ func update_visuals():
 		var btn = node["button"]
 		
 		# Impassible terrain
-		if node.type == "mountain" or node.type == "water":
+		var is_known = explored_nodes.has(pos)
+		if is_known and (node.type == "mountain" or node.type == "water"):
 			btn.disabled = true
 			continue
-		
+			
 		if node == current_node:
 			btn.disabled = true
 		else:
 			btn.disabled = false
 			if node.has("defeated_visual"):
 				node["defeated_visual"].visible = node.get("defeated", false)
+	
+	# _center_view_on_player() is no longer needed as map fits screen
 
 func is_neighbor(node_a, node_b):
 	var r1 = node_a.row
@@ -1871,10 +1896,9 @@ func find_path(from_node, to_node):
 			break
 		
 		for next in get_neighbors(processing_node):
-			if next.type == "mountain" or next.type == "water":
-				continue
-			
-			if next.type != "normal" and next.type != "road" and next.type != "start" and next != to_node and not next.get("defeated", false):
+			var is_known = explored_nodes.has(Vector2(next.row, next.col))
+			# Only treat as obstacle if we know it is one
+			if is_known and (next.type == "mountain" or next.type == "water"):
 				continue
 
 			if not came_from.has(next):
@@ -1953,7 +1977,8 @@ func update_quest_log(active_quests: Array):
 			text += " (%s)" % dir
 		lbl.text = text
 		lbl.add_theme_color_override("font_outline_color", Color.BLACK)
-		lbl.add_theme_constant_override("outline_size", 4)
+		lbl.add_theme_font_size_override("font_size", int(16 * current_scale_factor))
+		lbl.add_theme_constant_override("outline_size", int(4 * current_scale_factor))
 		quest_log_container.add_child(lbl)
 
 func start_turn():
@@ -1964,9 +1989,15 @@ func start_turn():
 	
 	turns_left -= 1
 	
-	turn_limit_label.text = "Turns: %d" % max(0, turns_left)
-	turn_limit_label.modulate = Color.WHITE
-	turn_limit_label.scale = Vector2.ONE
+	var main_game = get_tree().current_scene as MainGame
+	if main_game and main_game.turns_label:
+		main_game.turns_label.text = "Turns: %d" % max(0, turns_left)
+		
+		if turns_left <= 5:
+			var t = 1.0 - (float(turns_left) / 5.0)
+			main_game.turns_label.modulate = Color.WHITE.lerp(Color(1, 0.2, 0.2), t)
+		else:
+			main_game.turns_label.modulate = Color.WHITE
 
 	if turns_left <= 0:
 		await _process_decay()
@@ -2261,13 +2292,39 @@ func get_best_path_to(target_node):
 
 func _on_node_hover(node):
 	highlight_clear_timer.stop()
+	
+	var is_known = explored_nodes.has(Vector2(node.row, node.col))
+	
+	# Check if this is a special node that we should show info for
+	var is_special_visual = false
+	for type in special_visuals:
+		if node in special_visuals[type].nodes:
+			is_special_visual = true
+			break
+			
+	# If it's a known special node, highlight it immediately to show text
+	if is_known and is_special_visual:
+		_highlight_node_structure(node)
+	
 	if view_only: return
 	if is_moving: return
 	if not current_node or node == current_node: return
-	if node.type == "mountain" or node.type == "water": return
+	
+	if is_known and (node.type == "mountain" or node.type == "water"): return
 	
 	var path = get_best_path_to(node)
 	if path.is_empty(): return
+	
+	# Truncate path at first special node (stop at encounters)
+	var safe_path = []
+	if not path.is_empty():
+		safe_path.append(path[0])
+		for i in range(1, path.size()):
+			var n = path[i]
+			safe_path.append(n)
+			if n.type != "normal" and n.type != "road" and n.type != "start" and not n.get("defeated", false):
+				break
+	path = safe_path
 	
 	var distance = path.size() - 1
 	var display_path = path
@@ -2309,7 +2366,9 @@ func _on_node_hover(node):
 		full_distance_label.visible = false
 		
 	if not display_path.is_empty():
-		_highlight_node_structure(display_path.back())
+		# Only highlight the path end if we didn't already highlight a special node target
+		if not (is_known and is_special_visual):
+			_highlight_node_structure(display_path.back())
 
 func _on_node_exit():
 	highlight_clear_timer.start()
@@ -2325,6 +2384,18 @@ func _on_node_pressed(node):
 	
 	_clear_highlights()
 	
+	# Truncate path at first special node (stop at encounters)
+	# This allows pathfinding to "see" through nodes but forces the player to stop and interact.
+	var safe_path = []
+	if not path.is_empty():
+		safe_path.append(path[0])
+		for i in range(1, path.size()):
+			var n = path[i]
+			safe_path.append(n)
+			if n.type != "normal" and n.type != "road" and n.type != "start" and not n.get("defeated", false):
+				break
+	path = safe_path
+
 	var distance = path.size() - 1
 	
 	if distance > moves_remaining:
@@ -2333,7 +2404,6 @@ func _on_node_pressed(node):
 	
 	is_moving = true
 	pending_movement_path = path
-	final_moves_remaining = moves_remaining - distance
 	
 	# If destination is special, we will lose all remaining moves
 	var destination_node = path.back()
@@ -2344,32 +2414,54 @@ func _on_node_pressed(node):
 	full_path_line.clear_points()
 	distance_label.visible = false
 	full_distance_label.visible = false
-	
-	var tween = create_tween()
-	current_tween = tween
-	
-	if not path.is_empty() and path[0] != current_node:
-		tween.tween_method(func(t): _animate_hop(t, current_node.pos, path[0].pos), 0.0, 1.0, 0.15)
+
+	# Step-by-step movement loop
+	var path_index = 0
+	while path_index < path.size() - 1:
+		if not is_moving: break
 		
-	for i in range(1, path.size()):
-		var start_pos = path[i-1].pos
-		var end_pos = path[i].pos
+		var next_node = path[path_index + 1]
+		
+		# Check if the next step is blocked (now that we might have revealed it)
+		if next_node.type == "mountain" or next_node.type == "water":
+			print("Movement blocked by terrain!")
+			break
+			
+		var start_pos = path[path_index].pos
+		var end_pos = next_node.pos
+		
+		var tween = create_tween()
+		current_tween = tween
 		tween.tween_method(func(t): _animate_hop(t, start_pos, end_pos), 0.0, 1.0, 0.2)
-		tween.tween_callback(func():
-			moves_remaining -= 1
-			if moves_remaining > 0:
-				moves_label.text = "%d" % moves_remaining
-			else:
-				moves_label.text = ""
-		)
-	
-	await tween.finished
+		
+		await tween.finished
+		
+		if not is_moving: break # Skipped
+		
+		moves_remaining -= 1
+		if moves_remaining > 0:
+			moves_label.text = "%d" % moves_remaining
+		else:
+			moves_label.text = ""
+		
+		current_node = next_node
+		current_node.cleared = true
+		update_fog()
+		
+		# Apply special node movement penalty immediately upon entering
+		if current_node.type != "normal" and current_node.type != "road" and current_node.type != "start" and not current_node.get("defeated", false):
+			moves_remaining = 0
+			moves_label.text = ""
+			path_index += 1 # Advance index to match current_node
+			break
+			
+		path_index += 1
+		if moves_remaining <= 0: break
+
 	if not is_moving: return
 	
 	pending_movement_path = [] # Movement finished, prevent skip logic from re-running movement completion
 	
-	current_node = destination_node
-	current_node.cleared = true
 	update_visuals()
 	update_fog()
 	
@@ -2386,16 +2478,12 @@ func _on_node_pressed(node):
 			emit_signal("node_selected", boss_node)
 			return
 	
-	# Apply special node movement penalty
-	if current_node.type != "normal" and current_node.type != "road" and current_node.type != "start" and not current_node.get("defeated", false):
-		moves_remaining = 0
-		moves_label.text = ""
-	
 	# Only trigger an encounter (switch to main game view) if it's a special node.
 	if current_node.type == "town":
 		town_ui.visible = true
 		has_rested_in_town = false
 		spell_shop_generated = false
+		dice_shop_generated = false
 		reroll_charms_cost = 25
 	elif current_node.type != "normal" and current_node.type != "road" and current_node.type != "start" and not current_node.get("defeated", false):
 		emit_signal("node_selected", current_node)
@@ -2420,10 +2508,13 @@ func _highlight_node_structure(target_node):
 	var new_identifier = target_node
 	var structure_found = false
 	
+	var is_explored = explored_nodes.has(Vector2(target_node.row, target_node.col))
+	
 	# Check special visuals to determine identifier
 	for type in special_visuals:
 		if target_node in special_visuals[type].nodes:
-			new_identifier = type
+			if is_explored:
+				new_identifier = type
 			break
 	
 	if typeof(current_highlight_identifier) == typeof(new_identifier) and current_highlight_identifier == new_identifier:
@@ -2436,29 +2527,32 @@ func _highlight_node_structure(target_node):
 	for type in special_visuals:
 		var vis = special_visuals[type]
 		if target_node in vis.nodes:
-			structure_found = true
-			
-			# Highlight nodes
-			for n in vis.nodes:
-				if n.has("button") and n.button:
-					current_highlighted_nodes[n] = n.button.modulate
-					n.button.modulate = Color(1.5, 1.5, 1.5) # Brighten
-					_add_highlight_outline(n, vis.nodes)
-			
-			# Enlarge visuals
-			if vis.icon:
-				vis.icon.scale = Vector2(1.3, 1.3)
-				current_highlighted_visuals["icon"] = vis.icon
-			if vis.label:
-				vis.label.scale = Vector2(1.3, 1.3)
-				current_highlighted_visuals["label"] = vis.label
+			if is_explored:
+				structure_found = true
+				
+				# Highlight nodes
+				for n in vis.nodes:
+					if n.has("button") and n.button:
+						current_highlighted_nodes[n] = n.button.modulate
+						n.button.modulate = Color(1.5, 1.5, 1.5) # Brighten
+						_add_highlight_outline(n, vis.nodes)
+				
+				# Enlarge visuals
+				if vis.icon:
+					vis.icon.scale = Vector2(1.3, 1.3)
+					current_highlighted_visuals["icon"] = vis.icon
+				if vis.label:
+					vis.label.scale = Vector2(1.3, 1.3)
+					vis.label.visible = true
+					current_highlighted_visuals["label"] = vis.label
 			break
 	
 	if not structure_found:
 		# Just highlight the single node
 		if target_node.has("button") and target_node.button:
 			current_highlighted_nodes[target_node] = target_node.button.modulate
-			target_node.button.modulate = Color(1.5, 1.5, 1.5)
+			if is_explored:
+				target_node.button.modulate = Color(1.5, 1.5, 1.5)
 			_add_highlight_outline(target_node)
 
 func _clear_highlights():
@@ -2473,6 +2567,7 @@ func _clear_highlights():
 		current_highlighted_visuals["icon"].scale = Vector2.ONE
 	if current_highlighted_visuals.has("label"):
 		current_highlighted_visuals["label"].scale = Vector2.ONE
+		current_highlighted_visuals["label"].visible = false
 	current_highlighted_visuals.clear()
 	current_highlight_identifier = null
 
@@ -2592,21 +2687,34 @@ func _skip_movement_animation():
 	if current_tween and current_tween.is_valid():
 		current_tween.kill()
 	
-	if pending_movement_path.is_empty():
-		is_moving = false
-		# If we were waiting for the end turn timer (path empty but is_moving true), trigger it now
-		if moves_remaining == 0 and current_node and current_node.type != "town" and visible:
-			start_turn()
-		return
+	# Calculate where we end up by simulating the remaining path
+	var target_node = current_node
+	var start_index = pending_movement_path.find(current_node)
+	if start_index == -1: start_index = 0
 	
-	moves_remaining = final_moves_remaining
+	for i in range(start_index + 1, pending_movement_path.size()):
+		var next_node = pending_movement_path[i]
+		
+		# Stop at obstacles
+		if next_node.type == "mountain" or next_node.type == "water":
+			break
+			
+		if moves_remaining <= 0:
+			break
+			
+		target_node = next_node
+		moves_remaining -= 1
+		
+		if target_node.type != "normal" and target_node.type != "road" and target_node.type != "start" and not target_node.get("defeated", false):
+			moves_remaining = 0
+			break
+	
 	if moves_remaining > 0:
 		moves_label.text = "%d" % moves_remaining
 	else:
 		moves_label.text = ""
 	
-	var destination_node = pending_movement_path.back()
-	current_node = destination_node
+	current_node = target_node
 	current_node.cleared = true
 	
 	player_icon.position = current_node.pos - (player_icon.size / 2.0)
@@ -2629,6 +2737,7 @@ func _skip_movement_animation():
 		town_ui.visible = true
 		has_rested_in_town = false
 		spell_shop_generated = false
+		dice_shop_generated = false
 		reroll_charms_cost = 25
 	elif current_node.type != "normal" and current_node.type != "road" and current_node.type != "start":
 		emit_signal("node_selected", current_node)
@@ -2647,18 +2756,62 @@ func _on_viewport_size_changed():
 	var viewport_size = get_viewport().get_visible_rect().size
 	var base_height = 648.0
 	var scale_factor = viewport_size.y / base_height
+	current_scale_factor = scale_factor
 	
 	# Top bar is roughly 60px base.
 	var top_margin = 60 * scale_factor
-	
-	if limit_container:
-		limit_container.add_theme_constant_override("margin_top", int(top_margin))
 	
 	if log_margin:
 		log_margin.add_theme_constant_override("margin_top", int(top_margin))
 		
 	if scroll_container:
 		scroll_container.offset_top = top_margin
+
+	if moves_label:
+		moves_label.add_theme_font_size_override("font_size", int(24 * scale_factor))
+		moves_label.add_theme_constant_override("outline_size", int(4 * scale_factor))
+
+	if close_map_button:
+		close_map_button.custom_minimum_size = Vector2(200, 60) * scale_factor
+		close_map_button.add_theme_font_size_override("font_size", int(24 * scale_factor))
+		close_map_button.offset_left = -220 * scale_factor
+		close_map_button.offset_top = -80 * scale_factor
+		close_map_button.offset_right = -20 * scale_factor
+		close_map_button.offset_bottom = -20 * scale_factor
+
+	if quest_log_container:
+		for child in quest_log_container.get_children():
+			if child is Label:
+				child.add_theme_font_size_override("font_size", int(16 * scale_factor))
+				child.add_theme_constant_override("outline_size", int(4 * scale_factor))
+
+	if distance_label:
+		distance_label.add_theme_font_size_override("font_size", int(24 * scale_factor))
+		distance_label.add_theme_constant_override("outline_size", int(4 * scale_factor))
+
+	if full_distance_label:
+		full_distance_label.add_theme_font_size_override("font_size", int(24 * scale_factor))
+		full_distance_label.add_theme_constant_override("outline_size", int(4 * scale_factor))
+
+	# Scale labels on the map (e.g. "Town", "Crypt")
+	for type in special_visuals:
+		var vis = special_visuals[type]
+		
+		var center_pos = Vector2.ZERO
+		if vis.nodes.size() > 0:
+			for n in vis.nodes:
+				center_pos += n.pos
+			center_pos /= vis.nodes.size()
+			
+		if vis.label:
+			vis.label.add_theme_font_size_override("font_size", int(14 * scale_factor))
+			vis.label.add_theme_constant_override("outline_size", int(4 * scale_factor))
+			vis.label.size = Vector2(200, 30) * scale_factor
+			vis.label.pivot_offset = vis.label.size / 2.0
+			var offset_y = 28 * scale_factor
+			vis.label.position = center_pos - (vis.label.size / 2.0) - Vector2(0, offset_y)
+	_fit_map_to_screen()
+			
 
 func close_town_menu():
 	if town_ui:
@@ -2695,6 +2848,20 @@ func update_fog():
 	for n in visible_nodes:
 		explored_nodes[Vector2(n.row, n.col)] = true
 		
+	# Reveal entire special structures if partially explored
+	for type in special_visuals:
+		var vis = special_visuals[type]
+		var structure_revealed = false
+		
+		for n in vis.nodes:
+			if explored_nodes.has(Vector2(n.row, n.col)):
+				structure_revealed = true
+				break
+		
+		if structure_revealed:
+			for n in vis.nodes:
+				explored_nodes[Vector2(n.row, n.col)] = true
+
 	for pos in grid_data:
 		var node = grid_data[pos]
 		if not node.has("button") or not node.button: continue
@@ -2708,7 +2875,8 @@ func update_fog():
 			else:
 				node.button.modulate = Color(0.5, 0.5, 0.5)
 		else:
-			node.button.visible = false
+			node.button.visible = true
+			node.button.modulate = Color(0, 0, 0, 0)
 			if node.has("shadow") and node.shadow:
 				node.shadow.visible = false
 
@@ -2727,5 +2895,32 @@ func update_fog():
 			vis.icon.visible = is_explored
 			vis.icon.modulate = Color.WHITE if is_currently_visible else Color(0.5, 0.5, 0.5)
 		if vis.label: 
-			vis.label.visible = is_explored
 			vis.label.modulate = Color.WHITE if is_currently_visible else Color(0.5, 0.5, 0.5)
+
+func _fit_map_to_screen():
+	var content_size = Vector2.ZERO
+	
+	# Calculate actual content size from grid data
+	if not grid_data.is_empty():
+		var max_x = 0.0
+		var max_y = 0.0
+		for pos in grid_data:
+			var node = grid_data[pos]
+			if node.has("button") and is_instance_valid(node.button):
+				var rect = node.button.get_rect()
+				if rect.end.x > max_x: max_x = rect.end.x
+				if rect.end.y > max_y: max_y = rect.end.y
+		if max_x > 0 and max_y > 0:
+			content_size = Vector2(max_x, max_y)
+	
+	if content_size == Vector2.ZERO:
+		content_size = map_base_size
+		
+	if content_size == Vector2.ZERO: return
+	
+	# Add padding
+	content_size += Vector2(50, 50)
+	
+	current_zoom = 1.0
+	map_container.scale = Vector2.ONE
+	map_container.custom_minimum_size = content_size

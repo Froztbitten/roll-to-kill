@@ -37,6 +37,7 @@ signal player_performed_action(action_type, target)
 @onready var dice_bag_screen_title: Label = $UI/DiceBagScreen/Panel/VBoxContainer/Label
 @onready var dice_bag_close_button = $UI/DiceBagScreen/Panel/VBoxContainer/CloseButton
 var steam_manager
+var turns_label: Label
 
 enum Turn {PLAYER, ENEMY}
 
@@ -60,6 +61,7 @@ var starting_abilities: Array[AbilityData] = []
 
 var pause_menu_ui: Control
 var debug_ability_ui: Control
+var debug_reward_ui: Control
 
 var active_targeting_ability: AbilityUI = null
 var targeting_arrow: Line2D = null
@@ -109,6 +111,7 @@ var _tooltip_timer: Timer
 var _tooltip_tween: Tween
 var _hovered_control: Control
 
+var last_reward_tier: int = 1
 var active_quests = {}
 
 func _ready() -> void:
@@ -123,6 +126,16 @@ func _ready() -> void:
 	if dice_bag_screen:
 		dice_bag_screen.z_index = 300
 	
+	# Setup Turns Label in GameInfo (Centered)
+	var game_info = $UI/GameInfo
+	turns_label = game_info.get_node_or_null("TurnsLabel")
+	if not turns_label:
+		turns_label = Label.new()
+		turns_label.name = "TurnsLabel"
+		turns_label.text = "Turns: 21"
+		turns_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		game_info.add_child(turns_label)
+
 	# --- Analytics Debug Check ---
 	if has_node("/root/GameAnalyticsManager"):
 		print("MainGame: GameAnalyticsManager is loaded.")
@@ -167,6 +180,7 @@ func _ready() -> void:
 	dice_pool_ui.drag_started.connect(_on_die_drag_started)
 	dice_pool_ui.die_value_changed.connect(_on_die_value_changed)
 	reward_screen.reward_chosen.connect(_on_reward_chosen)
+	reward_screen.reroll_requested.connect(_on_reward_reroll_requested)
 
 	# Multiplayer Setup
 	if get_tree().root.has_node("GameState"):
@@ -187,7 +201,7 @@ func _ready() -> void:
 			if map_screen and map_screen.has_method("get_quest_directions"):
 				directions = map_screen.get_quest_directions()
 			
-			quest_board_screen.open(player, directions)
+			quest_board_screen.open(player, directions, active_quests)
 		)
 		town_screen.open_shop.connect(func(): shop_screen.open())
 		town_screen.open_map.connect(_on_town_open_map)
@@ -202,6 +216,7 @@ func _ready() -> void:
 				map_screen.open_town_menu()
 		)
 		quest_board_screen.quests_confirmed.connect(_on_quests_confirmed)
+		quest_board_screen.reward_claimed.connect(_on_quest_reward_claimed)
 	
 	dice_bag_button.pressed.connect(_on_dice_bag_button_pressed)
 	dice_bag_close_button.pressed.connect(func(): dice_bag_screen.visible = false)
@@ -447,7 +462,7 @@ func _tick_ability_cooldowns():
 		if not dice_to_discard.is_empty():
 			player.discard(dice_to_discard)
 
-func _on_ability_activated(ability_ui: AbilityUI):
+func _on_ability_activated(ability_ui: AbilityUI, _dice_count: int):
 	var ability_data: AbilityData = ability_ui.ability_data
 	var slotted_dice_displays: Array[DieDisplay] = ability_ui.get_slotted_dice_displays()
 
@@ -548,51 +563,77 @@ func enemy_turn() -> void:
 		return # Client waits for host to sync enemy actions
 
 	var active_enemies = get_active_enemies()
+	# Sort enemies by x position to ensure left-to-right execution
+	active_enemies.sort_custom(func(a, b): return a.global_position.x < b.global_position.x)
 
-	await get_tree().create_timer(1.0).timeout
+	await get_tree().create_timer(0.3).timeout
 	if current_turn == Turn.ENEMY:
 		# Each living enemy attacks with its declared damage
 		for enemy in active_enemies:
-			if enemy.hp > 0:
-				await enemy.trigger_start_of_turn_statuses()
+			await enemy.trigger_start_of_turn_statuses()
+			if enemy.hp <= 0 or enemy._is_dead: continue
 			
-			if enemy.hp > 0 and enemy.next_action:
+			if enemy.next_action:
+				var is_blocking = enemy.next_action.action_type == EnemyAction.ActionType.SHIELD or enemy.next_action.action_type == EnemyAction.ActionType.SUPPORT_SHIELD
+				
+				if not is_blocking:
+					# Animate Lunge
+					await _animate_enemy_lunge(enemy)
+				
 				match enemy.next_action.action_type:
 					EnemyAction.ActionType.ATTACK:
-						await player.take_damage(enemy.next_action_value, true, enemy, true)
-						if enemy.next_action.action_name == "Shrink Ray":
+						var damage_dealt = await _perform_multi_attack(enemy, player, false)
+						
+						if enemy.next_action and enemy.next_action.action_name == "Shrink Ray":
 							player.apply_duration_status("shrunk", 1)
 							print("Player has been shrunk!")
 						
+						if enemy.next_action and enemy.next_action.status_id == "lifesteal":
+							if damage_dealt > 0:
+								enemy.heal(damage_dealt)
+								print("%s siphons %d health!" % [enemy.name, damage_dealt])
+
 						if enemy.has_status("Raging"):
 							var recoil = ceili(enemy.next_action_value / 2.0)
 							await enemy.take_damage(recoil, true, enemy, false)
 
 					EnemyAction.ActionType.PIERCING_ATTACK:
-						await player.take_piercing_damage(enemy.next_action_value, true, enemy, true)
+						await _perform_multi_attack(enemy, player, true)
 
 					EnemyAction.ActionType.SHIELD:
-						pass # Proactive shield.
+						pass # Applied at start of round
 					EnemyAction.ActionType.SUPPORT_SHIELD:
-						pass # Proactive shield.
+						pass # Applied at start of round
 					EnemyAction.ActionType.HEAL_ALLY:
-						if enemy.enemy_data.enemy_name == "White Knight" and enemy.next_action.action_name == "M'lady":
-							var femme_fatales = active_enemies.filter(func(e): return e.enemy_data.enemy_name == "Femme Fatale")
-							if not femme_fatales.is_empty():
-								femme_fatales[0].heal(enemy.next_action_value)
-								print("%s heals %s for %d" % [enemy.name, femme_fatales[0].name, enemy.next_action_value])
-						else:
-							# Prioritize healing injured allies
-							var injured_allies = active_enemies.filter(func(e): return e != enemy and e.hp < e.max_hp)
-							if not injured_allies.is_empty():
-								var ally_to_heal = injured_allies.pick_random()
-								ally_to_heal.heal(enemy.next_action_value)
-								print("%s is healing %s for %d" % [enemy.name, ally_to_heal.name, enemy.next_action_value])
+						var heal_dice = enemy.stored_dice_results
+						# Fallback if no dice (fixed value)
+						if heal_dice.is_empty() and enemy.next_action_value > 0:
+							heal_dice.append(enemy.next_action_value)
+						
+						for val in heal_dice:
+							var target = null
+							if enemy.enemy_data.enemy_name == "White Knight" and enemy.next_action.action_name == "M'lady":
+								var femme_fatales = active_enemies.filter(func(e): return e.enemy_data.enemy_name == "Femme Fatale")
+								if not femme_fatales.is_empty():
+									target = femme_fatales[0]
+							else:
+								# Prioritize healing injured allies
+								var injured_allies = active_enemies.filter(func(e): return e != enemy and e.hp < e.max_hp)
+								if not injured_allies.is_empty():
+									target = injured_allies.pick_random()
+							
+							if target:
+								await _animate_enemy_die_throw(enemy, target, val)
+								target.heal(val)
+								print("%s heals %s for %d" % [enemy.name, target.name, val])
+						
 						enemy.update_health_display()
 
 					EnemyAction.ActionType.SPAWN_MINIONS:
 						var spawned_nodes: Array[Enemy] = []
-						if enemy.enemy_data.enemy_name == "Evil Dice Tower":
+						if not enemy.next_action.summon_list.is_empty():
+							spawned_nodes = _spawn_from_list(enemy.next_action.summon_list, enemy.next_action.base_value)
+						elif enemy.enemy_data.enemy_name == "Evil Dice Tower":
 							spawned_nodes = _spawn_boss_minions(3)
 						elif enemy.enemy_data.enemy_name == "Gnomish Tinkerer":
 							spawned_nodes = _spawn_gnomish_invention()
@@ -602,6 +643,10 @@ func enemy_turn() -> void:
 							for node in spawned_nodes:
 								paths.append(node.enemy_data.resource_path)
 							steam_manager.send_p2p_packet_to_all({"type": "spawn_minions", "paths": paths})
+						
+						# Store spawned nodes on the enemy for processing after the return animation
+						if not spawned_nodes.is_empty():
+							enemy.set_meta("just_spawned_minions", spawned_nodes)
 
 					EnemyAction.ActionType.BUFF:
 						# Apply advantage to all allies (including self) for 2 rounds.
@@ -617,11 +662,11 @@ func enemy_turn() -> void:
 						var damage_dealt = false
 						var hp_before = player.hp
 						if enemy.next_action_value > 0:
-							var _unblocked_damage = await player.take_damage(enemy.next_action_value, true, enemy, true)
+							await _perform_multi_attack(enemy, player, false)
 							if player.hp < hp_before:
 								damage_dealt = true
 						
-						if enemy.next_action.status_id != "":
+						if enemy.next_action and enemy.next_action.status_id != "":
 							var effect = StatusLibrary.get_status(enemy.next_action.status_id)
 							if effect:
 								var value = 1
@@ -660,6 +705,22 @@ func enemy_turn() -> void:
 					enemy.die()
 
 				enemy.clear_intent()
+				
+				if not is_blocking:
+					# Return to position
+					await _animate_enemy_return(enemy)
+				
+				# If we spawned minions, arrange and fade them in now
+				if enemy.has_meta("just_spawned_minions"):
+					var new_minions = enemy.get_meta("just_spawned_minions")
+					enemy.remove_meta("just_spawned_minions")
+					if not new_minions.is_empty():
+						enemy_container.arrange_enemies(true)
+						for minion in new_minions:
+							var tween = create_tween()
+							tween.tween_property(minion, "modulate:a", 1.0, 0.5)
+
+				await get_tree().create_timer(0.05).timeout
 			
 			# Tick down statuses at the end of this enemy's turn
 			if not enemy._is_dead:
@@ -673,6 +734,124 @@ func enemy_turn() -> void:
 		else:
 			next_turn()
 			await player_turn()
+
+func _animate_enemy_lunge(enemy: Enemy):
+	var tween = create_tween()
+	# Pivot slightly as if throwing
+	tween.tween_property(enemy, "rotation", deg_to_rad(-15), 0.1).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	await tween.finished
+
+func _animate_enemy_return(enemy: Enemy):
+	var tween = create_tween()
+	# Return to resting rotation
+	tween.tween_property(enemy, "rotation", enemy._resting_rotation, 0.1).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	await tween.finished
+
+func _animate_enemy_die_throw(source: Enemy, target: Character, value: int):
+	var die = Die.new(6)
+	if source.next_action and source.next_action.dice_sides > 0:
+		die.sides = source.next_action.dice_sides
+	
+	# Create a dummy face with the result value if needed, or just set result_value
+	die.result_value = value
+	
+	var display = DIE_DISPLAY_SCENE.instantiate()
+	$UI.add_child(display)
+	display.set_die(die)
+	
+	# Start at enemy
+	var start_pos = source.global_position
+	var sprite = source.get_node_or_null("Visuals/Sprite2D")
+	if sprite:
+		start_pos = sprite.get_global_rect().get_center()
+	
+	display.global_position = start_pos - (display.size / 2)
+	display.scale = Vector2.ZERO
+	
+	var target_pos = target.global_position
+	var t_sprite = target.get_node_or_null("Visuals/Sprite2D")
+	if t_sprite:
+		target_pos = t_sprite.get_global_rect().get_center()
+	
+	var start_display_pos = display.global_position
+	var target_display_pos = target_pos - (display.size / 2)
+	var arc_height = 200.0
+
+	var tween = create_tween()
+	tween.tween_property(display, "scale", Vector2.ONE * source.current_scale_factor, 0.1).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	tween.tween_method(func(t):
+		var linear_pos = start_display_pos.lerp(target_display_pos, t)
+		var height = -arc_height * 4 * t * (1 - t)
+		display.global_position = linear_pos + Vector2(0, height)
+	, 0.0, 1.0, 0.25).set_trans(Tween.TRANS_LINEAR).set_ease(Tween.EASE_IN)
+	tween.tween_callback(display.queue_free)
+	
+	await tween.finished
+
+func _perform_multi_attack(enemy: Enemy, target: Character, is_piercing: bool = false) -> int:
+	var dice_results = enemy.stored_dice_results.duplicate()
+	if dice_results.is_empty() and enemy.next_action_value > 0:
+		dice_results.append(enemy.next_action_value)
+	
+	if dice_results.is_empty(): return 0
+
+	var total_dice = dice_results.size()
+	var total_damage_dealt = 0
+	
+	for i in range(total_dice):
+		if enemy.hp <= 0 or enemy._is_dead: break
+		var val = dice_results[i]
+		total_damage_dealt += await _launch_single_attack(enemy, target, val, is_piercing)
+		
+		if i < total_dice - 1:
+			await get_tree().create_timer(0.1).timeout
+	
+	# Wait for the last attack to likely finish (animation + damage processing)
+	await get_tree().create_timer(0.1).timeout
+	return total_damage_dealt
+
+func _launch_single_attack(enemy: Enemy, target: Character, val: int, is_piercing: bool) -> int:
+	await _animate_enemy_die_throw(enemy, target, val)
+	if is_piercing:
+		await target.take_piercing_damage(val, true, enemy, true)
+		return val # Piercing ignores block, assume full damage for now (or update Character to return it)
+	else:
+		return await target.take_damage(val, true, enemy, true)
+
+func _spawn_from_list(names: Array[String], count: int) -> Array[Enemy]:
+	var spawned_enemies: Array[Enemy] = []
+	var current_enemy_count = get_active_enemies().size()
+	var max_to_spawn = 6 - current_enemy_count
+	var num_to_spawn = min(count, max_to_spawn)
+	
+	if num_to_spawn <= 0: return []
+	
+	var paths_for_packet = []
+	
+	for i in range(num_to_spawn):
+		var enemy_name = names.pick_random()
+		var safe_name = enemy_name.to_lower().replace(" ", "_").replace("'", "")
+		var path = "res://resources/enemies/" + safe_name + ".tres"
+		
+		var data = load(path)
+		if data:
+			var new_enemy = enemy_spawner.ENEMY_UI.instantiate()
+			new_enemy.enemy_data = data
+			enemy_container.add_child(new_enemy)
+			enemy_container.move_child(new_enemy, 0)
+			new_enemy.modulate.a = 0.0
+			new_enemy.died.connect(_on_enemy_died)
+			new_enemy.exploded.connect(_on_enemy_exploded)
+			new_enemy.gold_dropped.connect(_on_enemy_gold_dropped.bind(new_enemy))
+			new_enemy.intent_changed.connect(_update_incoming_damage_prediction)
+			spawned_enemies.append(new_enemy)
+			paths_for_packet.append(path)
+
+	
+	if game_state and game_state.is_multiplayer and steam_manager.is_host and not paths_for_packet.is_empty():
+		steam_manager.send_p2p_packet_to_all({"type": "spawn_minions", "paths": paths_for_packet})
+		
+	return spawned_enemies
 
 func _spawn_boss_minions(count: int) -> Array[Enemy]:
 	var current_enemy_count = get_active_enemies().size()
@@ -698,13 +877,14 @@ func _spawn_boss_minions(count: int) -> Array[Enemy]:
 		var new_enemy: Enemy = enemy_spawner.ENEMY_UI.instantiate()
 		new_enemy.enemy_data = minion_data
 		enemy_container.add_child(new_enemy)
+		enemy_container.move_child(new_enemy, 0)
+		new_enemy.modulate.a = 0.0
 		new_enemy.died.connect(_on_enemy_died)
 		new_enemy.exploded.connect(_on_enemy_exploded)
 		new_enemy.gold_dropped.connect(_on_enemy_gold_dropped.bind(new_enemy))
 		new_enemy.intent_changed.connect(_update_incoming_damage_prediction)
 		spawned_enemies.append(new_enemy)
 	
-	enemy_container.call_deferred("arrange_enemies")
 	return spawned_enemies
 
 func _spawn_gnomish_invention() -> Array[Enemy]:
@@ -720,13 +900,13 @@ func _spawn_gnomish_invention() -> Array[Enemy]:
 	var new_enemy: Enemy = enemy_spawner.ENEMY_UI.instantiate()
 	new_enemy.enemy_data = invention_data
 	enemy_container.add_child(new_enemy)
+	enemy_container.move_child(new_enemy, 0)
+	new_enemy.modulate.a = 0.0
 	# Connect the death signal so the game knows when it's defeated.
 	new_enemy.died.connect(_on_enemy_died)
 	new_enemy.exploded.connect(_on_enemy_exploded)
 	new_enemy.gold_dropped.connect(_on_enemy_gold_dropped.bind(new_enemy))
 	new_enemy.intent_changed.connect(_update_incoming_damage_prediction)
-	# Defer arrangement to prevent physics race conditions.
-	enemy_container.call_deferred("arrange_enemies")
 	print("Eureka! A %s has been summoned!" % invention_data.enemy_name)
 	return [new_enemy]
 
@@ -811,7 +991,6 @@ func _on_character_clicked(character: Character) -> void:
 				return
 
 	var total_roll = 0
-	var hit_count = 0
 	var dice_to_discard: Array[Die] = []
 	
 	# Make a copy because we will be modifying the dice pool
@@ -829,7 +1008,6 @@ func _on_character_clicked(character: Character) -> void:
 		
 		if not is_piercing:
 			total_roll += die_display.die.result_value
-			hit_count += 1
 		dice_to_discard.append(die_display.die)
 
 	# Animate the dice, which will also remove them from the hand UI.
@@ -864,20 +1042,20 @@ func _on_character_clicked(character: Character) -> void:
 	else: # It's an enemy
 		var enemy_target: Enemy = character
 		emit_signal("player_performed_action", "attack", enemy_target)
-		await enemy_target.take_damage(total_roll, false, player, true, hit_count)
-		print("Dealt %d damage to %s" % [total_roll, enemy_target.name])
-
-		# After the main action, process any effects from the dice faces
-		# We iterate over `dice_to_discard` which contains the actual Die objects,
-		# because `used_dice_displays` contains references to nodes that were freed
-		# inside `_animate_dice_to_target`.
+		
 		for die in dice_to_discard:
+			var is_piercing = false
+			if die.effect and die.effect.process_effect == EffectLogic.pierce:
+				is_piercing = true
+			
+			if not is_piercing:
+				await enemy_target.take_damage(die.result_value, false, player, true, 1)
+				print("Dealt %d damage to %s" % [die.result_value, enemy_target.name])
+			
 			if die.effect:
 				var effect = die.effect
-				# Spikes is a self-buff, it should not be applied to enemies.
-				if effect.name == "Spikes":
-					continue
-				_process_die_face_effect(effect, die.result_value, enemy_target, die)
+				if effect.name != "Spikes":
+					await _process_die_face_effect(effect, die.result_value, enemy_target, die)
 
 	# Broadcast action to multiplayer peers
 	_broadcast_player_action(dice_to_discard, character, total_roll if not is_targeting_player else 0, total_roll if is_targeting_player else 0)
@@ -985,6 +1163,12 @@ func _cancel_targeting():
 		for slot in active_targeting_ability.dice_slots_container.get_children():
 			if slot is DieSlotUI:
 				slot.mouse_filter = Control.MOUSE_FILTER_STOP
+				if slot.current_die_display:
+					var die_display = slot.current_die_display
+					slot.remove_child(die_display)
+					slot.current_die_display = null
+					die_display.set_mouse_filter(Control.MOUSE_FILTER_STOP)
+					dice_pool_ui.add_die_display(die_display)
 		
 		active_targeting_ability = null
 
@@ -1885,6 +2069,11 @@ func _advance_dungeon_stage():
 		await _setup_round(spawned_enemies)
 	else:
 		print("%s Completed" % node_type)
+		
+		if active_quests.has(node_type):
+			active_quests[node_type]["completed"] = true
+			print("Quest '%s' completed!" % node_type)
+			
 		current_dungeon_node = null
 		
 		if map_screen.has_method("set_view_only"):
@@ -2042,95 +2231,265 @@ func _animate_gold_collection(amount: int, source_node: Node2D):
 		tween.tween_callback(sprite.queue_free)
 
 func _show_reward_screen():
+	# Check for Dungeon Mini-Boss Rewards (Stage 2)
+	if current_dungeon_node and current_dungeon_stage == 2:
+		match current_dungeon_node.type:
+			"dragon_roost":
+				var abilities = _generate_reward_abilities()
+				reward_screen.player = player
+				reward_screen.display_abilities(abilities)
+				return
+			"crypt":
+				var effects = _generate_reward_effects()
+				reward_screen.player = player
+				reward_screen.display_crypt_rewards(effects)
+				return
+			"dwarven_forge":
+				reward_screen.player = player
+				reward_screen.display_forge_rewards()
+				return
+			"goblin_camp":
+				# Goblin Camp gets better dice via _generate_reward_dice logic below
+				pass
+
 	var reward_dice = _generate_reward_dice()
 	reward_screen.display_rewards(reward_dice)
 	reward_screen.visible = true
 
-func _generate_reward_dice() -> Array[Die]:
+func _generate_reward_dice(difficulty_override: int = -1) -> Array[Die]:
 	var dice_options: Array[Die] = []
 	
-	# Scaling Logic based on round_number
-	var available_sizes = [4, 6]
-	var _max_effects = 1
-	var tier_limit = 1
+	# Determine difficulty
+	var difficulty_tier = 1 # 1=Normal, 2=Rare, 3=Boss
 	
-	if round_number >= 3:
-		available_sizes.append(8)
-		_max_effects = 2
-	if round_number >= 5:
-		available_sizes.erase(4)
-		tier_limit = 2
-	if round_number >= 7:
-		available_sizes.append(10)
-		_max_effects = 3
-	if round_number >= 9:
-		available_sizes.erase(6)
-		available_sizes.append(12)
-		tier_limit = 3
+	if difficulty_override != -1:
+		difficulty_tier = difficulty_override
+	elif current_dungeon_node:
+		# Dungeon logic: Stage 2 is Mini-Boss (Rare)
+		if current_dungeon_stage == 2:
+			difficulty_tier = 2
+			# Goblin Camp Mini-Boss gives better rewards (Tier 3)
+			if current_dungeon_node.type == "goblin_camp":
+				difficulty_tier = 3
+	elif current_encounter_node:
+		if current_encounter_node.type == "rare_combat":
+			difficulty_tier = 2
+		elif current_encounter_node.type == "boss" or current_encounter_node.type == "final_boss":
+			difficulty_tier = 3
+	
+	last_reward_tier = difficulty_tier
+	
+	# Calculate Target Average Roll based on progression
+	# Base average starts around 3.5 (D6) and scales up.
+	var target_avg = 3.5 + (round_number * 0.35)
+	
+	# Difficulty bonus
+	if difficulty_tier == 2: target_avg += 1.0
+	if difficulty_tier == 3: target_avg += 2.0
+	
+	# Quest Bonus
+	var node_type_for_quest = ""
+	if current_dungeon_node:
+		node_type_for_quest = current_dungeon_node.type
+	elif current_encounter_node:
+		node_type_for_quest = current_encounter_node.type
+		
+	if node_type_for_quest != "" and active_quests.has(node_type_for_quest):
+		var q_data = active_quests[node_type_for_quest]
+		var die_val = q_data.get("die_value", 0)
+		var bonus = float(die_val) * 0.3
+		target_avg += bonus
+		if debug_mode:
+			print("Quest Bonus applied: +%.2f (Difficulty %d)" % [bonus, die_val])
+	
+	if debug_mode:
+		print("--- Reward Generation (Tier %d) ---" % difficulty_tier)
+		print("Round: %d" % round_number)
+		print("Target Average: %.2f" % target_avg)
+	
+	var standard_sizes = [4, 6, 8, 10, 12]
+	
+	# Weighted pool for Customized Dice selection
+	# Common: d6, d8 (Weight 4)
+	# Uncommon: d4, d10 (Weight 3)
+	# Rare: d12 (Weight 2)
+	var weighted_custom_pool = []
+	for i in range(4): weighted_custom_pool.append(6); weighted_custom_pool.append(8)
+	for i in range(3): weighted_custom_pool.append(4); weighted_custom_pool.append(10)
+	for i in range(2): weighted_custom_pool.append(12)
+	
+	var tier_limit = 1
+	if round_number >= 5: tier_limit = 2
+	if round_number >= 9: tier_limit = 3
+	if difficulty_tier >= 2: tier_limit = max(tier_limit, 2)
+	if difficulty_tier >= 3: tier_limit = max(tier_limit, 3)
 
-	# --- Option 1 & 2: New Dice with potential effects ---
-	for i in range(2):
-		var sides = available_sizes.pick_random()
-		var new_die = Die.new(sides)
+	for i in range(3):
+		var roll_type = randf()
+		var new_die: Die
 		
-		# Initialize faces 1..N
-		for j in range(sides):
-			new_die.faces[j].value = j + 1
-		
-		# Add an effect
-		var effect = EffectLibrary.get_random_effect_for_die(sides, tier_limit)
-		if effect:
-			new_die.effect = effect
-					
-		dice_options.append(new_die)
-
-	# --- Option 3: Upgrade Existing Die ---
-	if not player._game_dice_bag.is_empty():
-		var original_die = player._game_dice_bag.pick_random()
-		
-		# Create a copy for the offer
-		var upgrade_offer = Die.new(original_die.sides)
-		for j in range(original_die.faces.size()):
-			upgrade_offer.faces[j].value = original_die.faces[j].value
-		upgrade_offer.effect = original_die.effect
+		if roll_type < 0.33:
+			# --- Normal Die ---
+			# Pick the standard size closest to the target average
+			var best_normal_size = 6
+			var min_diff = 999.0
 			
-		# If no effect, add one. If effect exists, maybe replace? 
-		# For now, let's say upgrade adds an effect if missing.
-		if not upgrade_offer.effect:
-			var effect = EffectLibrary.get_random_effect_for_die(upgrade_offer.sides, tier_limit)
+			for s in standard_sizes:
+				var avg = (s + 1.0) / 2.0
+				if abs(avg - target_avg) < min_diff:
+					min_diff = abs(avg - target_avg)
+					best_normal_size = s
+					
+			new_die = Die.new(best_normal_size)
+			
+		elif roll_type < 0.66:
+			# --- Special Die (Effect) ---
+			# Estimate effect value (Tier 1=1.5, Tier 2=2.5, Tier 3=4.0)
+			# We assume an average effect value of 2.0 for selection purposes
+			var estimated_effect_val = 2.0
+			var needed_die_avg = max(2.5, target_avg - estimated_effect_val)
+			
+			var best_special_size = 6
+			var min_s_diff = 999.0
+			# Only consider sizes that have effects (up to D12)
+			var special_sizes = [4, 6, 8, 10, 12]
+			
+			for s in special_sizes:
+				var avg = (s + 1.0) / 2.0
+				if abs(avg - needed_die_avg) < min_s_diff:
+					min_s_diff = abs(avg - needed_die_avg)
+					best_special_size = s
+			
+			new_die = Die.new(best_special_size)
+			
+			var effect = EffectLibrary.get_random_effect_for_die(best_special_size, tier_limit)
 			if effect:
-				upgrade_offer.effect = effect
-		
-		upgrade_offer.set_meta("is_upgrade_reward", true)
-		upgrade_offer.set_meta("upgrade_target", original_die)
-		
-		dice_options.append(upgrade_offer)
-	else:
-		# Fallback if bag is empty
-		var sides = available_sizes.pick_random()
-		var new_die = Die.new(sides)
-		var effect = EffectLibrary.get_random_effect_for_die(sides, tier_limit)
-		if effect:
-			new_die.effect = effect
+				new_die.effect = effect
+			else:
+				# Fallback
+				new_die = Die.new(6)
+				new_die.effect = EffectLibrary.get_random_effect_for_die(6, tier_limit)
+				
+		else:
+			# --- Customized Die ---
+			# Pick a base size, usually smaller than the target average requires, and buff it.
+			var best_normal_size = 6
+			var min_diff = 999.0
+			for s in standard_sizes:
+				var avg = (s + 1.0) / 2.0
+				if abs(avg - target_avg) < min_diff:
+					min_diff = abs(avg - target_avg)
+					best_normal_size = s
+			
+			var custom_size = 6
+			# Allow any size that isn't the "best fit" to be customized.
+			# This allows larger dice (D10, D12) to be nerfed for lower tiers,
+			# and smaller dice to be buffed for higher tiers.
+			var candidate_sizes = weighted_custom_pool.filter(func(s): return s != best_normal_size)
+			
+			if not candidate_sizes.is_empty():
+				custom_size = candidate_sizes.pick_random()
+			else:
+				custom_size = best_normal_size
+				
+			new_die = Die.new(custom_size)
+			
+			var current_avg = (custom_size + 1.0) / 2.0
+			var needed_change = target_avg - current_avg
+			
+			# Total points to distribute = needed_change * number_of_faces
+			var total_points = int(round(needed_change * custom_size))
+			
+			if debug_mode:
+				print("Custom Die: Base D%d (Avg %.1f). Needed Change: %.2f. Total Points: %d" % [custom_size, current_avg, needed_change, total_points])
+			
+			if total_points > 0:
+				# Buff: Add points
+				for k in range(total_points):
+					var face = new_die.faces.pick_random()
+					face.value += 1
+			elif total_points < 0:
+				# Nerf: Remove points
+				var points_to_remove = abs(total_points)
+				var safety = 0
+				while points_to_remove > 0 and safety < 10000:
+					safety += 1
+					# Tournament selection: Pick 3 random faces and reduce the highest one.
+					# This biases the reduction towards higher numbers, preserving a bell-curve-like distribution
+					# and avoiding reducing numbers to 1 unless necessary.
+					var f1 = new_die.faces.pick_random()
+					var f2 = new_die.faces.pick_random()
+					var f3 = new_die.faces.pick_random()
+					var target_face = f1
+					if f2.value > target_face.value: target_face = f2
+					if f3.value > target_face.value: target_face = f3
+					
+					if target_face.value > 1:
+						target_face.value -= 1
+						points_to_remove -= 1
+			else:
+				# Exact match. Apply small variance (+1/-1) to make it "custom"
+				var f1 = new_die.faces.pick_random()
+				var f2 = new_die.faces.pick_random()
+				if f1 != f2 and f2.value > 1:
+					f1.value += 1
+					f2.value -= 1
+				
+			# Sort faces for readability
+			new_die.faces.sort_custom(func(a, b): return a.value < b.value)
+			
 		dice_options.append(new_die)
-
+	
 	return dice_options
 
-func _on_reward_chosen(chosen_die: Die) -> void:
-	if (chosen_die == null):
+func _generate_reward_abilities() -> Array[AbilityData]:
+	var all_abilities = Utils.load_all_resources("res://resources/abilities")
+	var available = []
+	for res in all_abilities:
+		if res is AbilityData:
+			if not player.abilities.has(res):
+				available.append(res)
+	available.shuffle()
+	return available.slice(0, 3)
+
+func _generate_reward_effects() -> Array:
+	var options = []
+	var sizes = [4, 6, 8, 10, 12]
+	sizes.shuffle()
+	
+	for i in range(3):
+		var size = sizes[i % sizes.size()]
+		var effect = EffectLibrary.get_random_effect_for_die(size, 2)
+		if effect:
+			options.append({"effect": effect, "sides": size})
+	return options
+
+func _on_reward_reroll_requested():
+	var reward_dice = _generate_reward_dice(last_reward_tier)
+	reward_screen.display_rewards(reward_dice)
+
+func _on_reward_chosen(result: Variant) -> void:
+	if result == null:
+		# Skip Reward -> Gold
 		player.add_gold(10)
 		if has_node("/root/GameAnalyticsManager"):
 			get_node("/root/GameAnalyticsManager").track_gold_source(10, "reward", "skip_reward")
-	else:
-		if chosen_die.has_meta("is_upgrade_reward"):
-			var target_die = chosen_die.get_meta("upgrade_target")
+	elif result is Die:
+		if result.has_meta("is_upgrade_reward"):
+			var target_die = result.get_meta("upgrade_target")
 			# Apply the upgrade: Replace faces of target with chosen
-			target_die.faces = chosen_die.faces
-			target_die.effect = chosen_die.effect
+			target_die.faces = result.faces
+			target_die.effect = result.effect
 			print("Upgraded existing die via reward.")
 		else:
 			# Add the chosen die to the player's deck
-			player.add_to_game_bag([chosen_die])
+			player.add_to_game_bag([result])
+	elif result is AbilityData:
+		player.add_ability(result)
+		print("Added ability reward: %s" % result.title)
+	elif result is String and result == "done":
+		# Special rewards (Crypt/Forge) handled internally in RewardScreen, just proceed.
+		pass
 	
 	if has_node("/root/GameAnalyticsManager"):
 		get_node("/root/GameAnalyticsManager").complete_round(round_number)
@@ -2339,6 +2698,12 @@ func _create_pause_menu():
 		debug_abilities_btn.custom_minimum_size = Vector2(200, 50)
 		debug_abilities_btn.pressed.connect(_show_debug_ability_selection)
 		vbox.add_child(debug_abilities_btn)
+		
+		var debug_rewards_btn = Button.new()
+		debug_rewards_btn.text = "Debug: Test Rewards"
+		debug_rewards_btn.custom_minimum_size = Vector2(200, 50)
+		debug_rewards_btn.pressed.connect(_show_debug_reward_selection)
+		vbox.add_child(debug_rewards_btn)
 	
 	var menu_btn = Button.new()
 	menu_btn.text = "Main Menu"
@@ -2367,6 +2732,43 @@ func _on_viewport_size_changed():
 	var gold_icon = $UI/GameInfo/TopBar/GoldContainer/GoldIcon
 	if gold_icon:
 		gold_icon.custom_minimum_size = Vector2(50, 50) * scale_factor
+
+	if gold_label:
+		gold_label.add_theme_font_size_override("font_size", int(24 * scale_factor))
+		gold_label.add_theme_constant_override("outline_size", int(4 * scale_factor))
+
+	var top_bar = $UI/GameInfo/TopBar
+	var health_container = top_bar.get_node_or_null("HealthContainer")
+	if not health_container: health_container = top_bar.get_node_or_null("HPContainer")
+	if not health_container: health_container = top_bar.get_node_or_null("Health")
+
+	if health_container:
+		var h_icon = health_container.get_node_or_null("HealthIcon")
+		if not h_icon: h_icon = health_container.get_node_or_null("HPIcon")
+		if not h_icon: h_icon = health_container.get_node_or_null("Icon")
+		if h_icon:
+			h_icon.custom_minimum_size = Vector2(50, 50) * scale_factor
+			h_icon.size = h_icon.custom_minimum_size
+		
+		var h_label = health_container.get_node_or_null("HealthLabel")
+		if not h_label: h_label = health_container.get_node_or_null("HPLabel")
+		if not h_label: h_label = health_container.get_node_or_null("Label")
+		if not h_label: h_label = health_container.get_node_or_null("Value")
+		if h_label:
+			h_label.add_theme_font_size_override("font_size", int(24 * scale_factor))
+			h_label.add_theme_constant_override("outline_size", int(4 * scale_factor))
+
+	if turns_label:
+		turns_label.add_theme_font_size_override("font_size", int(32 * scale_factor))
+		turns_label.add_theme_constant_override("outline_size", int(4 * scale_factor))
+		turns_label.set_anchors_preset(Control.PRESET_CENTER_TOP)
+		turns_label.offset_top = 10 * scale_factor
+		turns_label.offset_left = 0
+		turns_label.offset_right = 0
+
+	if dice_bag_count_label:
+		dice_bag_count_label.add_theme_font_size_override("font_size", int(20 * scale_factor))
+		dice_bag_count_label.add_theme_constant_override("outline_size", int(4 * scale_factor))
 
 	if dice_bag_button:
 		var base_button_size = 50.0
@@ -2554,6 +2956,70 @@ func _create_debug_ability_ui():
 	vbox.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	vbox.add_theme_constant_override("separation", 10)
 	scroll.add_child(vbox)
+
+func _show_debug_reward_selection():
+	_toggle_pause_menu() # Hide pause menu
+	
+	if not debug_reward_ui:
+		_create_debug_reward_ui()
+	
+	debug_reward_ui.visible = true
+
+func _create_debug_reward_ui():
+	var canvas = get_node("UI")
+	var panel = Panel.new()
+	panel.name = "DebugRewardSelector"
+	panel.set_anchors_preset(Control.PRESET_FULL_RECT)
+	var style = StyleBoxFlat.new()
+	style.bg_color = Color(0, 0, 0, 0.9)
+	panel.add_theme_stylebox_override("panel", style)
+	canvas.add_child(panel)
+	debug_reward_ui = panel
+	
+	var center = CenterContainer.new()
+	center.set_anchors_preset(Control.PRESET_FULL_RECT)
+	panel.add_child(center)
+	
+	var vbox = VBoxContainer.new()
+	vbox.add_theme_constant_override("separation", 20)
+	center.add_child(vbox)
+	
+	var label = Label.new()
+	label.text = "Select Reward Difficulty"
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	label.add_theme_font_size_override("font_size", 32)
+	vbox.add_child(label)
+	
+	var tiers = {
+		"Normal (Tier 1)": 1,
+		"Rare (Tier 2)": 2,
+		"Boss (Tier 3)": 3
+	}
+	
+	for tier_name in tiers:
+		var tier_val = tiers[tier_name]
+		var btn = Button.new()
+		btn.text = tier_name
+		btn.custom_minimum_size = Vector2(200, 60)
+		btn.pressed.connect(func(): 
+			debug_reward_ui.visible = false
+			_trigger_debug_reward(tier_val)
+		)
+		vbox.add_child(btn)
+		
+	var close_btn = Button.new()
+	close_btn.text = "Cancel"
+	close_btn.custom_minimum_size = Vector2(200, 50)
+	close_btn.pressed.connect(func(): 
+		debug_reward_ui.visible = false
+		_toggle_pause_menu()
+	)
+	vbox.add_child(close_btn)
+
+func _trigger_debug_reward(tier: int):
+	var reward_dice = _generate_reward_dice(tier)
+	reward_screen.display_rewards(reward_dice)
+	reward_screen.visible = true
 
 func _on_debug_ability_toggled(toggled_on: bool, ability: AbilityData):
 	if toggled_on:
@@ -2915,6 +3381,7 @@ func _handle_remote_spawn(paths: Array):
 	if not (game_state and game_state.is_multiplayer and not steam_manager.is_host):
 		return # Only clients should process this
 	
+	var spawned = []
 	for path in paths:
 		var enemy_data = load(path)
 		if enemy_data:
@@ -2925,8 +3392,14 @@ func _handle_remote_spawn(paths: Array):
 			new_enemy.exploded.connect(_on_enemy_exploded)
 			new_enemy.gold_dropped.connect(_on_enemy_gold_dropped.bind(new_enemy))
 			new_enemy.intent_changed.connect(_update_incoming_damage_prediction)
+			enemy_container.move_child(new_enemy, 0)
+			new_enemy.modulate.a = 0.0
+			spawned.append(new_enemy)
 	
-	enemy_container.call_deferred("arrange_enemies")
+	enemy_container.arrange_enemies(true)
+	for e in spawned:
+		var tween = create_tween()
+		tween.tween_property(e, "modulate:a", 1.0, 0.5)
 
 func _broadcast_enemy_turn_results():
 	if not (game_state and game_state.is_multiplayer and steam_manager.is_host):
@@ -3106,11 +3579,8 @@ func _apply_quest_modifiers(spawned_enemies: Array, quest_id: String):
 	var die_value = quest_data.die_value
 	print("Applying quest modifiers for %s with die value %d" % [quest_id, die_value])
 	
-	var modifier = 1.0
-	if die_value <= 2:
-		modifier = 0.8
-	elif die_value >= 5:
-		modifier = 1.2
+	# 1 slightly increases difficulty, 6 drastically increases
+	var modifier = 1.0 + (float(die_value) * 0.15)
 		
 	for enemy in spawned_enemies:
 		enemy.max_hp = ceili(enemy.max_hp * modifier)
@@ -3121,3 +3591,17 @@ func _apply_quest_modifiers(spawned_enemies: Array, quest_id: String):
 func _on_town_open_map():
 	map_screen.visible = true
 	town_screen.visible = false
+
+func _on_quest_reward_claimed(quest_id):
+	if active_quests.has(quest_id):
+		var q = active_quests[quest_id]
+		var val = q.die_value
+		# Reward: 50 base + 25 per difficulty level
+		var gold = 50 + (val * 25)
+		player.add_gold(gold)
+		active_quests.erase(quest_id)
+		
+		var directions = {}
+		if map_screen and map_screen.has_method("get_quest_directions"):
+			directions = map_screen.get_quest_directions()
+		quest_board_screen.open(player, directions, active_quests)
